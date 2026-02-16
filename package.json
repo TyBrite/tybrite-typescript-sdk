@@ -1,0 +1,41 @@
+{
+  "name": "@tybrite/sdk",
+  "version": "1.0.0",
+  "description": "Official TypeScript SDK for Galactic Core - The Programmable Commerce Layer",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "generate": "openapi --input ../cloudflare-workers/openapi.yaml --output ./src --client fetch --name Tybrite --useOptions && node scripts/post-generate.js",
+    "build": "tsc",
+    "clean": "rimraf src dist",
+    "sync": "node scripts/sync-sdk.js",
+    "deploy": "node scripts/deploy-sdk.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "tybrite",
+    "baas",
+    "api",
+    "sdk",
+    "typescript",
+    "openapi",
+    "galactic-core",
+    "commerce",
+    "headless",
+    "ecommerce"
+  ],
+  "author": "Tybrite Labs",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "openapi-typescript-codegen": "^0.29.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.21.0",
+    "typedoc": "^0.28.16",
+    "typedoc-plugin-markdown": "^4.10.0",
+    "typescript": "^5.7.3"
+  }
+}

@@ -1,0 +1,15 @@
+src
+node_modules
+*.log
+.DS_Store
+src
+scripts
+tsconfig.json
+typedoc.json
+MINTLIFY_CONFIGURATION.md
+.gitignore
+.npmignore
+
+# Artifacts
+docs
+examples
