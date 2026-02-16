@@ -1,4 +1,4 @@
-# @tybrite/sdk
+# @tybrite-labs/sdk
 
 **Galactic Core — The Programmable Commerce Platform**
 
@@ -16,15 +16,15 @@ Galactic Core is the programmable interface layer that transforms GalacticOS int
 - **⚡ Developer First**: Fully typed SDK, automatic retries using idempotency, and field filtering.
 
 ## Installation
-
+To get started with the Tybrite SDK, install it via npm:
 ```bash
-npm install @tybrite/sdk
+npm install @tybrite-labs/sdk
 ```
 
 ## Quick Start
 
 ```typescript
-import { Tybrite } from '@tybrite/sdk';
+import { Tybrite } from '@tybrite-labs/sdk';
 
 // Initialize the client
 const client = new Tybrite({

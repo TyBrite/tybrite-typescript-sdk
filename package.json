@@ -1,5 +1,5 @@
 {
-  "name": "@tybrite/sdk",
+  "name": "@tybrite-labs/sdk",
   "version": "1.0.0",
   "description": "Official TypeScript SDK for Galactic Core - The Programmable Commerce Layer",
   "main": "dist/index.js",
