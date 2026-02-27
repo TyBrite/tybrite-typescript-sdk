@@ -16,6 +16,8 @@ export class PromotionsService {
     public listPromotions({
         status,
         cartTotal,
+        limit = 50,
+        cursor,
         fields,
     }: {
         status?: 'active' | 'inactive' | 'scheduled' | 'expired',
@@ -23,6 +25,11 @@ export class PromotionsService {
          * Filter promotions by minimum cart total requirement (numeric string)
          */
         cartTotal?: string,
+        limit?: number,
+        /**
+         * Cursor for pagination (base64-encoded)
+         */
+        cursor?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -39,7 +46,11 @@ export class PromotionsService {
         fields?: string,
     }): CancelablePromise<{
         promotions?: Array<Promotion>;
-        total?: number;
+        pagination?: {
+            limit?: number;
+            next_cursor?: string | null;
+            has_more?: boolean;
+        };
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -47,6 +58,8 @@ export class PromotionsService {
             query: {
                 'status': status,
                 'cart_total': cartTotal,
+                'limit': limit,
+                'cursor': cursor,
                 'fields': fields,
             },
             errors: {

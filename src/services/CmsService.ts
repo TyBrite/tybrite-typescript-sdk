@@ -16,12 +16,17 @@ export class CmsService {
     public listPosts({
         status,
         category,
-        limit,
+        limit = 20,
+        cursor,
         fields,
     }: {
         status?: 'published' | 'draft',
         category?: string,
         limit?: number,
+        /**
+         * Cursor for pagination (base64-encoded)
+         */
+        cursor?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -35,7 +40,13 @@ export class CmsService {
          */
         fields?: string,
     }): CancelablePromise<{
-        posts?: Array<Post>;
+        posts?: Array<Record<string, any>>;
+        pagination?: {
+            limit?: number;
+            next_cursor?: string | null;
+            has_more?: boolean;
+            $ref?: any;
+        };
         total?: number;
     }> {
         return this.httpRequest.request({
@@ -45,6 +56,7 @@ export class CmsService {
                 'status': status,
                 'category': category,
                 'limit': limit,
+                'cursor': cursor,
                 'fields': fields,
             },
             errors: {
@@ -103,11 +115,16 @@ export class CmsService {
      */
     public listLookbooks({
         status,
-        limit = 50,
+        limit = 20,
+        cursor,
         fields,
     }: {
         status?: 'published' | 'draft',
         limit?: number,
+        /**
+         * Cursor for pagination (base64-encoded)
+         */
+        cursor?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -119,7 +136,11 @@ export class CmsService {
         fields?: string,
     }): CancelablePromise<{
         lookbooks?: Array<Lookbook>;
-        total?: number;
+        pagination?: {
+            limit?: number;
+            next_cursor?: string | null;
+            has_more?: boolean;
+        };
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -127,6 +148,7 @@ export class CmsService {
             query: {
                 'status': status,
                 'limit': limit,
+                'cursor': cursor,
                 'fields': fields,
             },
             errors: {

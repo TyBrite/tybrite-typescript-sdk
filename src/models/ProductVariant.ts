@@ -1,0 +1,60 @@
+/* generated using openapi-typescript-codegen -- do not edit */
+/* istanbul ignore file */
+/* tslint:disable */
+/* eslint-disable */
+/**
+ * Represents a single product variant with only variant-specific fields.
+ * Product-level attributes (name, description, brand, etc.) are NOT duplicated here.
+ *
+ * **Field Filtering:**
+ * Use dot notation to filter variant fields: variants.sku,variants.selling_price,variants.stock
+ * This can reduce payload size by up to 52% by excluding internal fields like threshold, last_restocked.
+ *
+ */
+export type ProductVariant = {
+    /**
+     * Unique variant identifier
+     */
+    variant_id?: string;
+    /**
+     * Stock Keeping Unit for this variant
+     */
+    sku?: string;
+    /**
+     * Base price in cents
+     */
+    price?: number;
+    /**
+     * Sale price in cents (null if not on sale)
+     */
+    sale_price?: number | null;
+    /**
+     * Actual customer-facing price in cents (considers sale_price)
+     */
+    selling_price?: number;
+    /**
+     * Available stock quantity for this variant
+     */
+    stock?: number;
+    /**
+     * Low stock threshold (internal inventory field)
+     */
+    threshold?: number | null;
+    /**
+     * Last restock date (internal inventory field)
+     */
+    last_restocked?: string | null;
+    /**
+     * Variant-specific attributes (e.g., color, size, material)
+     */
+    variant_attributes?: Record<string, any> | null;
+    /**
+     * Display name for this variant
+     */
+    variant_name?: string | null;
+    /**
+     * Whether this is the default variant
+     */
+    is_default?: boolean;
+};
+

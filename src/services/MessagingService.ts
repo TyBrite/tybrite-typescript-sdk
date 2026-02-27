@@ -15,9 +15,16 @@ export class MessagingService {
      */
     public listThreads({
         customerId,
+        limit = 50,
+        cursor,
         fields,
     }: {
         customerId?: string,
+        limit?: number,
+        /**
+         * Cursor for pagination (base64-encoded)
+         */
+        cursor?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -32,12 +39,19 @@ export class MessagingService {
         fields?: string,
     }): CancelablePromise<{
         threads?: Array<Thread>;
+        pagination?: {
+            limit?: number;
+            next_cursor?: string | null;
+            has_more?: boolean;
+        };
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/messaging/threads',
             query: {
                 'customer_id': customerId,
+                'limit': limit,
+                'cursor': cursor,
                 'fields': fields,
             },
             errors: {

@@ -84,15 +84,97 @@ const product = await client.products.getProduct({
 });
 ```
 
-### Idempotency (Safe Retries)
-Prevent duplicate orders during network failures by providing a detailed `Idempotency-Key`.
+### Cursor-Based Pagination
+Efficiently navigate large datasets with cursor-based pagination (no offset limits).
 
 ```typescript
+// Fetch first page
+const page1 = await client.products.listProducts({ limit: 20 });
+
+// Fetch next page using cursor
+if (page1.pagination.has_more) {
+  const page2 = await client.products.listProducts({
+    limit: 20,
+    cursor: page1.pagination.next_cursor
+  });
+}
+
+// Infinite scroll pattern
+let cursor = undefined;
+do {
+  const page = await client.products.listProducts({ limit: 20, cursor });
+  // Process page.products...
+  cursor = page.pagination.next_cursor;
+} while (page.pagination.has_more);
+```
+
+### Idempotency (Safe Retries)
+Prevent duplicate orders and updates during network failures by providing unique `Idempotency-Key` headers.
+
+```typescript
+// Creating an order
 const order = await client.orders.createOrder({
-  idempotencyKey: 'order-2026-02-16-xyz789', // Unique key per operation
+  idempotencyKey: 'order-2026-02-16-xyz789', // Unique per order creation
   requestBody: { ... },
 });
+
+// Updating an order (requires different key)
+const updated = await client.orders.updateOrder({
+  id: order.id,
+  idempotencyKey: 'update-shipping-xyz789-1234567890', // Unique per update operation
+  requestBody: { tracking_number: '1Z999AA10123456784' },
+});
 ```
+
+### HMAC Signature Verification
+Orders and payments require HMAC-SHA256 signatures for security (prevents tampering and replay attacks).
+
+```typescript
+import crypto from 'crypto';
+
+// Example 1: Creating an order
+const timestamp = Math.floor(Date.now() / 1000);
+const orderBody = JSON.stringify({
+  customer_id: 'cust_123',
+  items: [{ product_id: 'prod_abc', quantity: 1, unit_price: 100 }],
+  total_amount: 100
+});
+
+const payload = `${timestamp}.${orderBody}`;
+const signature = crypto.createHmac('sha256', hmacSecret)
+  .update(payload)
+  .digest('base64');
+
+const order = await client.orders.createOrder({
+  idempotencyKey: 'order-unique-key',
+  xTimestamp: timestamp,
+  xSignature: signature,
+  requestBody: JSON.parse(orderBody)
+});
+
+// Example 2: Initializing a payment
+const paymentTimestamp = Math.floor(Date.now() / 1000);
+const paymentBody = JSON.stringify({
+  provider: 'stripe',
+  amount: 100.00,
+  currency: 'usd',
+  email: 'customer@example.com'
+});
+
+const paymentPayload = `${paymentTimestamp}.${paymentBody}`;
+const paymentSignature = crypto.createHmac('sha256', hmacSecret)
+  .update(paymentPayload)
+  .digest('base64');
+
+const payment = await client.payments.initializePayment({
+  idempotencyKey: 'payment-1234567890-abc',
+  xTimestamp: paymentTimestamp,
+  xSignature: paymentSignature,
+  requestBody: JSON.parse(paymentBody)
+});
+```
+
+**Note:** The SDK automatically handles HMAC signing when you provide your HMAC secret during initialization. Get your HMAC secret from Settings → Integration Settings in your dashboard.
 
 ### Anonymous Carts
 Handle carts for users who haven't logged in yet using `X-Session-Id`.

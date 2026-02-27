@@ -2,88 +2,101 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ProductVariant } from './ProductVariant';
 /**
- * Represents a product in the catalog with both physical and online attributes.
+ * Represents a product in the catalog. Response structure varies based on endpoint and variant configuration:
+ *
+ * **List Endpoint (GET /v1/products):**
+ * - Returns flat structure with default variant data only
+ * - No variants array (keeps payload small for browsing)
+ * - Includes has_variants flag to indicate if detail fetch needed
+ *
+ * **Detail Endpoints (GET /v1/products/:id, GET /v1/products/by-slug/:slug):**
+ * - Multi-variant products: Hierarchical structure with product-level data at root + variants array
+ * - Simple products: Flat structure with all data at root (no variants array)
+ *
+ * **Field Filtering:**
+ * - Root-level filtering: Reduce top-level fields
+ * - Nested filtering: Filter specific variant fields using dot notation
+ * - Example: fields=name,price_range,variants.sku,variants.selling_price,variants.stock
+ *
  */
 export type Product = {
+    /**
+     * Main product identifier
+     */
     product_id?: string;
-    variant_id?: string | null;
+    /**
+     * Product name (mapped from online_name or name)
+     */
     name?: string;
     /**
-     * Name used for online display if different from internal name
+     * Product description (mapped from online_description or description)
      */
-    online_name?: string | null;
-    sku?: string;
     description?: string;
     /**
-     * Rich text description for online store
+     * Category UUID
      */
-    online_description?: string | null;
+    category_id?: string | null;
     /**
-     * Base price
+     * Category display name
      */
-    price?: number;
+    category_name?: string | null;
     /**
-     * Price displayed online
+     * Subcategory UUID
      */
-    online_price?: number | null;
+    subcategory_id?: string | null;
     /**
-     * Discounted price for online store
+     * Subcategory display name
      */
-    online_sale_price?: number | null;
+    subcategory_name?: string | null;
     /**
-     * Original price for comparison (strikethrough price)
+     * Product brand
      */
-    compare_at_price?: number | null;
+    brand?: string | null;
     /**
-     * Physical stock count
-     */
-    stock?: number;
-    /**
-     * Stock available for online sales
-     */
-    online_stock?: number;
-    /**
-     * Primary product image URL (legacy/POS)
-     */
-    image?: string;
-    /**
-     * Array of image URLs (legacy)
+     * Array of product image URLs (mapped from online_images or image)
      */
     images?: Array<string>;
     /**
-     * Array of image URLs for online store
+     * SEO-friendly URL slug
      */
-    online_images?: Array<string>;
-    product_slug?: string;
-    is_online_enabled?: boolean;
-    is_active?: boolean;
-    has_variants?: boolean;
-    tracking_mode?: Product.tracking_mode;
+    product_slug?: string | null;
     /**
-     * Low stock threshold
+     * SEO optimized title
      */
-    threshold?: number;
-    brand?: string;
-    barcode?: string;
-    barcode_type?: string;
-    category_id?: string;
-    category_name?: string;
-    subcategory_id?: string;
-    subcategory_name?: string;
+    seo_title?: string | null;
+    /**
+     * SEO optimized description
+     */
+    seo_description?: string | null;
+    /**
+     * SEO keywords
+     */
+    seo_keywords?: string | null;
+    /**
+     * Whether product is featured
+     */
+    featured?: boolean | null;
+    /**
+     * Display order for featured products
+     */
+    featured_order?: number | null;
     /**
      * Merged category/subcategory string
      */
-    online_category?: string;
-    tags?: Array<string>;
+    online_category?: string | null;
     /**
-     * Key-value pairs of product attributes
+     * Product tags
      */
-    attributes?: Record<string, any>;
+    tags?: Array<string> | null;
     /**
-     * Specific attributes for this variant
+     * Product-level attributes (not variant-specific)
      */
-    variant_attributes?: Record<string, any> | null;
+    attributes?: Record<string, any> | null;
+    /**
+     * Shipping dimensions and weight
+     */
     shipping_info?: {
         weight?: number;
         dimensions?: {
@@ -91,14 +104,88 @@ export type Product = {
             width?: number;
             height?: number;
         };
-    };
-    seo_title?: string;
-    seo_description?: string;
-    seo_keywords?: Array<string>;
-    featured?: boolean;
-    featured_order?: number;
-    created_at?: string;
-    updated_at?: string;
+    } | null;
+    /**
+     * Product creation timestamp
+     */
+    created_at?: string | null;
+    /**
+     * Last update timestamp
+     */
+    updated_at?: string | null;
+    /**
+     * Whether product is active
+     */
+    is_active?: boolean | null;
+    /**
+     * Variant identifier (only present for simple products or list endpoint)
+     */
+    variant_id?: string | null;
+    /**
+     * Stock Keeping Unit (only present for simple products or list endpoint)
+     */
+    sku?: string | null;
+    /**
+     * Base price in cents (only present for simple products or list endpoint)
+     */
+    price?: number | null;
+    /**
+     * Sale price in cents if on sale
+     */
+    sale_price?: number | null;
+    /**
+     * Actual customer-facing price (considers sale_price)
+     */
+    selling_price?: number | null;
+    /**
+     * Available stock quantity (only present for simple products or list endpoint)
+     */
+    stock?: number | null;
+    /**
+     * Low stock threshold
+     */
+    threshold?: number | null;
+    /**
+     * Last restock date
+     */
+    last_restocked?: string | null;
+    /**
+     * Variant-specific attributes (e.g., color, size)
+     */
+    variant_attributes?: Record<string, any> | null;
+    /**
+     * Variant display name
+     */
+    variant_name?: string | null;
+    /**
+     * Whether this is the default variant
+     */
+    is_default?: boolean | null;
+    /**
+     * Sum of stock across all variants (only present for multi-variant products)
+     */
+    total_stock?: number | null;
+    /**
+     * Price range across variants using selling_price (only present for multi-variant products)
+     */
+    price_range?: {
+        /**
+         * Minimum selling price in cents
+         */
+        min?: number;
+        /**
+         * Maximum selling price in cents
+         */
+        max?: number;
+    } | null;
+    /**
+     * Whether product has multiple variants
+     */
+    has_variants?: boolean;
+    /**
+     * Number of variants (only present for multi-variant products)
+     */
+    variant_count?: number | null;
     /**
      * Store's default currency code
      */
@@ -108,23 +195,8 @@ export type Product = {
      */
     currency_symbol?: string;
     /**
-     * Calculated base price from pricing engine
+     * Array of product variants (only present for multi-variant products in detail endpoints)
      */
-    base_price?: number;
-    /**
-     * Final calculated price including discounts/rules
-     */
-    resolved_price?: number;
-    /**
-     * Detailed breakdown of price calculation rules
-     */
-    price_breakdown?: Record<string, any>;
+    variants?: Array<ProductVariant> | null;
 };
-export namespace Product {
-    export enum tracking_mode {
-        QUANTITY = 'quantity',
-        STATUS = 'status',
-        NONE = 'none',
-    }
-}
 

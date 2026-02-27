@@ -1,6 +1,6 @@
 {
   "name": "@tybrite-labs/sdk",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "Official TypeScript SDK for Galactic Core - The Programmable Commerce Layer",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -12,6 +12,7 @@
     "build": "tsc",
     "clean": "rimraf src dist",
     "sync": "node scripts/sync-sdk.js",
+    "version:update": "node scripts/version-manager.js",
     "deploy": "node scripts/deploy-sdk.js",
     "prepublishOnly": "npm run build"
   },
@@ -37,5 +38,8 @@
     "typedoc": "^0.28.16",
     "typedoc-plugin-markdown": "^4.10.0",
     "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "@tybrite-labs/sdk": "^1.0.0"
   }
 }

@@ -14,6 +14,12 @@ export class PricingService {
      * - Automatically detects currency based on customer location (coordinates or place name)
      * - Converts prices from store's base currency to detected currency
      * - Falls back to store's default currency if no location provided
+     * - Works with both simple and multi-variant products
+     *
+     * **Multi-Variant Support:**
+     * - Returns flat structure with default variant data (keeps payload small for browsing)
+     * - Use `has_variants` flag to determine if detail fetch needed
+     * - For full variant pricing, use GET /v1/prices/products/:id endpoint
      *
      * **Dynamic Pricing:**
      * - Customer segment-based pricing (RFM segmentation)
@@ -34,6 +40,9 @@ export class PricingService {
      * - Price breakdown showing base price, discounts, and final price
      * - Pricing context with currency info and detection method
      * - Pagination metadata
+     *
+     * **Note:** List endpoint returns flat structure with default variant only.
+     * For full variant pricing, use GET /v1/prices/products/:id
      *
      * @throws ApiError
      */
@@ -77,11 +86,12 @@ export class PricingService {
         /**
          * Comma-separated list of fields to return (reduces bandwidth by 50-90%).
          *
-         * **Allowed fields:** product_id, variant_id, name, sku, description, price, online_price,
-         * stock, image, category_name, base_price, display_price, display_currency, currency_symbol,
+         * **Allowed fields:** product_id, variant_id, name, sku, description, price, selling_price,
+         * stock, image, category_name, brand, has_variants, variant_count, total_stock,
+         * base_price, resolved_price, display_price, base_currency, display_currency, currency_symbol,
          * exchange_rate, price_breakdown, price_breakdown.*, pricing_context, pricing_context.*
          *
-         * **Example:** `fields=name,display_price,display_currency,currency_symbol`
+         * **Example:** `fields=name,display_price,display_currency,currency_symbol,has_variants`
          *
          */
         fields?: string,
@@ -106,6 +116,8 @@ export class PricingService {
          * **Priority:** Coordinates take priority over place_name if both provided.
          *
          * **Accuracy:** Uses PostGIS boundary matching for accurate region detection.
+         *
+         * **Works with variants:** Currency detection applies to all product variants.
          *
          * **Example:** `latitude=40.7128&longitude=-74.0060` (New York) → USD
          *
@@ -168,6 +180,10 @@ export class PricingService {
              */
             base_currency?: string;
             /**
+             * Price after discounts but before currency conversion
+             */
+            resolved_price?: number;
+            /**
              * Price in customer's currency (after conversion and discounts)
              */
             display_price?: number;
@@ -183,6 +199,10 @@ export class PricingService {
              * Exchange rate applied (1.0 if same currency)
              */
             exchange_rate?: number;
+            /**
+             * Whether product has multiple variants
+             */
+            has_variants?: boolean;
             /**
              * Detailed price calculation breakdown
              */
@@ -205,16 +225,15 @@ export class PricingService {
                  * Final price after all discounts
                  */
                 final_price?: number;
-            };
-            /**
-             * Context used for pricing calculation
-             */
-            pricing_context?: {
-                currency?: string;
-                region?: string | null;
-                customer_segment?: string | null;
-                customer_tier?: string | null;
-                quantity?: number | null;
+                /**
+                 * Currency conversion details (null if no conversion)
+                 */
+                currency_conversion?: {
+                    from_currency?: string;
+                    to_currency?: string;
+                    rate?: number;
+                    converted_amount?: number;
+                } | null;
             };
         }>;
         /**
@@ -283,27 +302,40 @@ export class PricingService {
      * Get single product pricing with dynamic pricing and multi-currency support
      * Calculate dynamic price for a single product with geographic currency detection.
      *
+     * **Response Structure:**
+     * - Simple products: Flat structure with all data at root level
+     * - Multi-variant products: Hierarchical structure with product-level data + variants array
+     * - Each variant gets its own pricing calculation and price breakdown
+     *
      * **Multi-Currency Support:**
      * - Automatically detects currency based on customer location
-     * - Converts price from store's base currency to detected currency
+     * - Converts prices from store's base currency to detected currency
      * - Falls back to store's default currency if no location provided
+     * - Works with all variants in multi-variant products
      *
      * **Dynamic Pricing:**
      * - Customer segment/tier-based pricing
      * - Volume/quantity-based discounts
-     * - Region-specific pricing rules
+     * - Region-specific pricing rules (applied per variant)
      * - Time-based promotions
      *
      * **Field Filtering:**
-     * - Use `fields` parameter to reduce bandwidth
-     * - Example: `fields=name,display_price,display_currency,price_breakdown`
+     * - Root-level filtering: Reduce top-level fields
+     * - Nested variant filtering: Filter specific variant fields using dot notation
+     * - Example: `fields=name,price_range,variants.sku,variants.display_price,variants.stock`
+     * - Bandwidth reduction: Up to 55% with nested filtering
      *
      * @returns any Successfully retrieved product with dynamic pricing and currency conversion.
      *
+     * **Response Structure:**
+     * - Simple products: Flat structure with pricing at root
+     * - Multi-variant products: Hierarchical with variants array, each variant has own pricing
+     *
      * **Response includes:**
-     * - Product details with converted price
-     * - Price breakdown showing discounts
+     * - Product details with converted prices
+     * - Price breakdown showing discounts per variant
      * - Pricing context with currency and region info
+     * - Aggregate price_range for multi-variant products
      *
      * @throws ApiError
      */
@@ -325,14 +357,24 @@ export class PricingService {
          */
         id: string,
         /**
-         * Comma-separated list of fields to return (reduces bandwidth).
+         * Comma-separated list of fields to return (reduces bandwidth by up to 55%).
          *
-         * **Example:** `fields=name,display_price,display_currency,currency_symbol,price_breakdown`
+         * **Root-level fields:** product_id, name, brand, description, total_stock, price_range,
+         * has_variants, variant_count, base_currency, display_currency, currency_symbol, exchange_rate
+         *
+         * **Variant fields (use dot notation):** variants.variant_id, variants.sku, variants.display_price,
+         * variants.stock, variants.variant_attributes, variants.price_breakdown, variants.price_breakdown.*
+         *
+         * **Example (35% reduction):** `fields=product_id,name,brand,total_stock,price_range,variants`
+         *
+         * **Example (55% reduction):** `fields=name,price_range,variants.sku,variants.display_price,variants.stock`
          *
          */
         fields?: string,
         /**
          * City or region name for geographic currency detection.
+         *
+         * **Works with variants:** All variant prices converted to detected currency.
          *
          * **Examples:**
          * - `place_name=New York` → USD
@@ -342,7 +384,10 @@ export class PricingService {
          */
         placeName?: string,
         /**
-         * Customer latitude for precise currency detection (use with longitude)
+         * Customer latitude for precise currency detection (use with longitude).
+         *
+         * **Works with variants:** All variant prices converted based on detected region.
+         *
          */
         latitude?: number,
         /**
@@ -380,20 +425,127 @@ export class PricingService {
     }): CancelablePromise<{
         product_id?: string;
         name?: string;
-        sku?: string;
         description?: string;
+        brand?: string | null;
+        category_name?: string | null;
+        images?: Array<string>;
+        product_slug?: string | null;
         /**
-         * Price in store's base currency
+         * Only present for simple products
          */
-        base_price?: number;
+        variant_id?: string | null;
+        /**
+         * Only present for simple products
+         */
+        sku?: string | null;
+        /**
+         * Only present for simple products
+         */
+        stock?: number | null;
+        /**
+         * Price in store's base currency (only for simple products)
+         */
+        base_price?: number | null;
+        /**
+         * Price after discounts before conversion (only for simple products)
+         */
+        resolved_price?: number | null;
+        /**
+         * Final price in customer's currency (only for simple products)
+         */
+        display_price?: number | null;
+        /**
+         * Detailed price calculation (only for simple products)
+         */
+        price_breakdown?: {
+            base_price?: number;
+            discounts?: Array<{
+                rule_id?: string;
+                rule_name?: string;
+                type?: string;
+                value?: number;
+                amount?: number;
+            }>;
+            final_price?: number;
+            currency_conversion?: {
+                from_currency?: string;
+                to_currency?: string;
+                rate?: number;
+                converted_amount?: number;
+            } | null;
+        } | null;
+        /**
+         * Sum of stock across all variants (only for multi-variant)
+         */
+        total_stock?: number | null;
+        /**
+         * Price range calculated from variant display_prices (only for multi-variant)
+         */
+        price_range?: {
+            /**
+             * Minimum display price across variants
+             */
+            min?: number;
+            /**
+             * Maximum display price across variants
+             */
+            max?: number;
+        } | null;
+        /**
+         * Whether product has multiple variants
+         */
+        has_variants?: boolean;
+        /**
+         * Number of variants (only for multi-variant)
+         */
+        variant_count?: number | null;
+        /**
+         * Array of variants with pricing (only for multi-variant)
+         */
+        variants?: Array<{
+            variant_id?: string;
+            sku?: string;
+            stock?: number;
+            variant_attributes?: Record<string, any>;
+            variant_name?: string | null;
+            is_default?: boolean;
+            /**
+             * Price in store's base currency
+             */
+            base_price?: number;
+            /**
+             * Price after discounts before conversion
+             */
+            resolved_price?: number;
+            /**
+             * Final price in customer's currency
+             */
+            display_price?: number;
+            /**
+             * Detailed price calculation for this variant
+             */
+            price_breakdown?: {
+                base_price?: number;
+                discounts?: Array<{
+                    rule_id?: string;
+                    rule_name?: string;
+                    type?: string;
+                    value?: number;
+                    amount?: number;
+                }>;
+                final_price?: number;
+                currency_conversion?: {
+                    from_currency?: string;
+                    to_currency?: string;
+                    rate?: number;
+                    converted_amount?: number;
+                } | null;
+            };
+        }> | null;
         /**
          * Store's base currency code
          */
         base_currency?: string;
-        /**
-         * Price in customer's currency (after conversion and discounts)
-         */
-        display_price?: number;
         /**
          * Customer's currency code
          */
@@ -407,7 +559,208 @@ export class PricingService {
          */
         exchange_rate?: number;
         /**
-         * Detailed price calculation
+         * Global context used for pricing
+         */
+        pricing_context?: {
+            location?: string | null;
+            region?: string | null;
+            customer_segment?: string | null;
+            customer_tier?: string | null;
+            quantity?: number;
+            currency?: string;
+            exchange_rate?: number;
+        };
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/prices/products/{id}',
+            path: {
+                'id': id,
+            },
+            query: {
+                'fields': fields,
+                'place_name': placeName,
+                'latitude': latitude,
+                'longitude': longitude,
+                'location': location,
+                'region': region,
+                'customer_id': customerId,
+                'customer_segment': customerSegment,
+                'customer_tier': customerTier,
+                'quantity': quantity,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
+                429: `Rate limit exceeded`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get product pricing by SEO-friendly slug with dynamic pricing and multi-currency support
+     * Calculate dynamic price for a single product using its SEO-friendly slug with geographic currency detection.
+     *
+     * **SEO-Friendly URLs:**
+     * - Use product slugs instead of UUIDs for better SEO
+     * - Example: `/v1/prices/products/by-slug/sony-wh-1000xm4-a089d`
+     * - Slug format: `{product-name}-{short-id}`
+     *
+     * **Response Structure:**
+     * - Simple products: Flat structure with all data at root level
+     * - Multi-variant products: Hierarchical structure with product-level data + variants array
+     * - Each variant gets its own pricing calculation and price breakdown
+     *
+     * **Multi-Currency Support:**
+     * - Automatically detects currency based on customer location
+     * - Converts prices from store's base currency to detected currency
+     * - Falls back to store's default currency if no location provided
+     * - Works with all variants in multi-variant products
+     *
+     * **Dynamic Pricing:**
+     * - Customer segment/tier-based pricing
+     * - Volume/quantity-based discounts
+     * - Region-specific pricing rules (applied per variant)
+     * - Time-based promotions
+     *
+     * **Field Filtering:**
+     * - Root-level filtering: Reduce top-level fields
+     * - Nested variant filtering: Filter specific variant fields using dot notation
+     * - Example: `fields=name,price_range,variants.sku,variants.display_price,variants.stock`
+     * - Bandwidth reduction: Up to 55% with nested filtering
+     *
+     * @returns any Successfully retrieved product with dynamic pricing and currency conversion.
+     *
+     * **Response Structure:**
+     * - Simple products: Flat structure with pricing at root
+     * - Multi-variant products: Hierarchical with variants array, each variant has own pricing
+     *
+     * **Response includes:**
+     * - Product details with converted prices
+     * - Price breakdown showing discounts per variant
+     * - Pricing context with currency and region info
+     * - Aggregate price_range for multi-variant products
+     *
+     * @throws ApiError
+     */
+    public getProductPriceBySlug({
+        slug,
+        fields,
+        placeName,
+        latitude,
+        longitude,
+        location,
+        region,
+        customerId,
+        customerSegment,
+        customerTier,
+        quantity = 1,
+    }: {
+        /**
+         * Product slug (SEO-friendly URL identifier)
+         */
+        slug: string,
+        /**
+         * Comma-separated list of fields to return (reduces bandwidth by up to 55%).
+         *
+         * **Root-level fields:** product_id, name, brand, description, total_stock, price_range,
+         * has_variants, variant_count, base_currency, display_currency, currency_symbol, exchange_rate
+         *
+         * **Variant fields (use dot notation):** variants.variant_id, variants.sku, variants.display_price,
+         * variants.stock, variants.variant_attributes, variants.price_breakdown, variants.price_breakdown.*
+         *
+         * **Example (35% reduction):** `fields=product_id,name,brand,total_stock,price_range,variants`
+         *
+         * **Example (55% reduction):** `fields=name,price_range,variants.sku,variants.display_price,variants.stock`
+         *
+         */
+        fields?: string,
+        /**
+         * City or region name for geographic currency detection.
+         *
+         * **Works with variants:** All variant prices converted to detected currency.
+         *
+         * **Examples:**
+         * - `place_name=New York` → USD
+         * - `place_name=London, UK` → GBP
+         * - `place_name=Nairobi, Kenya` → KES
+         *
+         */
+        placeName?: string,
+        /**
+         * Customer latitude for precise currency detection (use with longitude).
+         *
+         * **Works with variants:** All variant prices converted based on detected region.
+         *
+         */
+        latitude?: number,
+        /**
+         * Customer longitude for precise currency detection (use with latitude)
+         */
+        longitude?: number,
+        /**
+         * **DEPRECATED:** Use `place_name` instead.
+         *
+         * Location/country for location-based pricing
+         *
+         * @deprecated
+         */
+        location?: string,
+        /**
+         * Manual region override for pricing rules
+         */
+        region?: string,
+        /**
+         * Customer UUID for personalized pricing
+         */
+        customerId?: string,
+        /**
+         * RFM customer segment (Champions, Loyal, etc.)
+         */
+        customerSegment?: string,
+        /**
+         * Customer tier (Gold, Silver, Bronze, VIP)
+         */
+        customerTier?: string,
+        /**
+         * Quantity for volume-based pricing
+         */
+        quantity?: number,
+    }): CancelablePromise<{
+        product_id?: string;
+        name?: string;
+        description?: string;
+        brand?: string | null;
+        category_name?: string | null;
+        images?: Array<string>;
+        product_slug?: string | null;
+        /**
+         * Only present for simple products
+         */
+        variant_id?: string | null;
+        /**
+         * Only present for simple products
+         */
+        sku?: string | null;
+        /**
+         * Only present for simple products
+         */
+        stock?: number | null;
+        /**
+         * Price in store's base currency (only for simple products)
+         */
+        base_price?: number | null;
+        /**
+         * Price after discounts before conversion (only for simple products)
+         */
+        resolved_price?: number | null;
+        /**
+         * Final price in customer's currency (only for simple products)
+         */
+        display_price?: number | null;
+        /**
+         * Detailed price calculation (only for simple products)
          */
         price_breakdown?: {
             base_price?: number;
@@ -419,23 +772,115 @@ export class PricingService {
                 amount?: number;
             }>;
             final_price?: number;
-        };
+            currency_conversion?: {
+                from_currency?: string;
+                to_currency?: string;
+                rate?: number;
+                converted_amount?: number;
+            } | null;
+        } | null;
         /**
-         * Context used for pricing
+         * Sum of stock across all variants (only for multi-variant)
+         */
+        total_stock?: number | null;
+        /**
+         * Price range calculated from variant display_prices (only for multi-variant)
+         */
+        price_range?: {
+            /**
+             * Minimum display price across variants
+             */
+            min?: number;
+            /**
+             * Maximum display price across variants
+             */
+            max?: number;
+        } | null;
+        /**
+         * Whether product has multiple variants
+         */
+        has_variants?: boolean;
+        /**
+         * Number of variants (only for multi-variant)
+         */
+        variant_count?: number | null;
+        /**
+         * Array of variants with pricing (only for multi-variant)
+         */
+        variants?: Array<{
+            variant_id?: string;
+            sku?: string;
+            stock?: number;
+            variant_attributes?: Record<string, any>;
+            variant_name?: string | null;
+            is_default?: boolean;
+            /**
+             * Price in store's base currency
+             */
+            base_price?: number;
+            /**
+             * Price after discounts before conversion
+             */
+            resolved_price?: number;
+            /**
+             * Final price in customer's currency
+             */
+            display_price?: number;
+            /**
+             * Detailed price calculation for this variant
+             */
+            price_breakdown?: {
+                base_price?: number;
+                discounts?: Array<{
+                    rule_id?: string;
+                    rule_name?: string;
+                    type?: string;
+                    value?: number;
+                    amount?: number;
+                }>;
+                final_price?: number;
+                currency_conversion?: {
+                    from_currency?: string;
+                    to_currency?: string;
+                    rate?: number;
+                    converted_amount?: number;
+                } | null;
+            };
+        }> | null;
+        /**
+         * Store's base currency code
+         */
+        base_currency?: string;
+        /**
+         * Customer's currency code
+         */
+        display_currency?: string;
+        /**
+         * Currency symbol for display
+         */
+        currency_symbol?: string;
+        /**
+         * Exchange rate applied
+         */
+        exchange_rate?: number;
+        /**
+         * Global context used for pricing
          */
         pricing_context?: {
-            currency?: string;
+            location?: string | null;
             region?: string | null;
             customer_segment?: string | null;
             customer_tier?: string | null;
             quantity?: number;
+            currency?: string;
+            exchange_rate?: number;
         };
     }> {
         return this.httpRequest.request({
             method: 'GET',
-            url: '/v1/prices/products/{id}',
+            url: '/v1/prices/products/by-slug/{slug}',
             path: {
-                'id': id,
+                'slug': slug,
             },
             query: {
                 'fields': fields,

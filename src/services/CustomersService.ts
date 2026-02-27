@@ -119,47 +119,4 @@ export class CustomersService {
             },
         });
     }
-    /**
-     * Get customer gift cards
-     * Retrieve gift cards belonging to a customer
-     * @returns any Success
-     * @throws ApiError
-     */
-    public getCustomerGiftCards({
-        id,
-        fields,
-    }: {
-        id: string,
-        /**
-         * Comma-separated list of fields to include in the response.
-         *
-         * **Allowed Fields:**
-         * - `id`, `code`, `balance`, `initial_balance`, `currency`, `status`
-         * - `expiry_date`, `customer_id`, `issued_date`, `last_used_date`
-         * - `created_at`, `updated_at`
-         *
-         */
-        fields?: string,
-    }): CancelablePromise<{
-        gift_cards?: Array<Record<string, any>>;
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/v1/customers/{id}/gift-cards',
-            path: {
-                'id': id,
-            },
-            query: {
-                'fields': fields,
-            },
-            errors: {
-                400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
-                429: `Rate limit exceeded`,
-                500: `Internal server error`,
-            },
-        });
-    }
 }

@@ -2,7 +2,6 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { Address } from '../models/Address';
 import type { Order } from '../models/Order';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
@@ -10,42 +9,127 @@ export class OrdersService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * Create order
-     * Create a new order with idempotency protection and optional HMAC signing for enhanced security.
+     * Create a new order with HMAC signature verification and idempotency protection.
      *
-     * **Idempotency**: Include `Idempotency-Key` header to prevent duplicate orders on retry.
-     * If the same key is used within 24 hours, the original order is returned.
+     * **🔐 HMAC Signing (REQUIRED)**
      *
-     * **HMAC Signing** (Optional): For enhanced security, sign requests with HMAC-SHA256:
-     * 1. Include `X-Timestamp` header with current Unix timestamp
-     * 2. Create signature: `HMAC-SHA256(secret, timestamp + request_body)`
-     * 3. Include signature in `X-Signature` header
+     * All order creation requests MUST include HMAC-SHA256 signature for security:
+     *
+     * 1. **Generate Timestamp**: Get current Unix timestamp in seconds
+     * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
+     * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
+     * 4. **Include Headers**:
+     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
+     * - `X-Signature`: Base64-encoded HMAC signature
+     *
+     * **Example (Node.js):**
+     * ```javascript
+     * const crypto = require('crypto');
+     * const timestamp = Math.floor(Date.now() / 1000);
+     * const body = JSON.stringify(orderData);
+     * const payload = `${timestamp}.${body}`;
+     * const signature = crypto.createHmac('sha256', hmacSecret)
+     * .update(payload).digest('base64');
+     *
+     * // Include in headers:
+     * // X-Timestamp: 1771523993
+     * // X-Signature: IqdgKXgloLzL5akDgFEwPaK6wviozf...
+     * ```
+     *
+     * **🔄 Idempotency Protection**
+     *
+     * Include `Idempotency-Key` header to prevent duplicate orders on retry.
+     * If the same key is used, the original order is returned (not counted against rate limit).
+     *
+     * **⚠️ Security Notes:**
+     * - HMAC secret is displayed in Settings → Integration Settings
+     * - Never expose HMAC secret in client-side code
+     * - Regenerate secret immediately if compromised
+     * - Requests with invalid/missing signatures return 401 Unauthorized
+     * - Timestamps older than 5 minutes are rejected to prevent replay attacks
      *
      * @returns Order Order created successfully (or existing order returned if idempotency key matches)
      * @throws ApiError
      */
     public createOrder({
         idempotencyKey,
-        requestBody,
         xTimestamp,
         xSignature,
+        requestBody,
     }: {
         /**
-         * Unique key to prevent duplicate orders (e.g., order-{date}-{random})
+         * Unique key to prevent duplicate orders (e.g., order-{timestamp}-{random})
          */
         idempotencyKey: string,
+        /**
+         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Used to prevent replay attacks.
+         *
+         */
+        xTimestamp: number,
+        /**
+         * HMAC-SHA256 signature of the payload (timestamp + "." + request_body), base64-encoded.
+         * Sign using your HMAC secret from Settings → Integration Settings.
+         *
+         */
+        xSignature: string,
         requestBody: {
             /**
              * Customer UUID
              */
             customer_id: string;
             /**
+             * Customer email address
+             */
+            customer_email?: string;
+            /**
+             * Customer full name
+             */
+            customer_name?: string;
+            /**
+             * Customer phone number
+             */
+            customer_phone?: string;
+            /**
+             * Billing address (required)
+             */
+            billing_address?: {
+                street: string;
+                city: string;
+                state?: string;
+                zip?: string;
+                country: string;
+            };
+            /**
+             * Shipping address (required)
+             */
+            shipping_address?: {
+                street: string;
+                city: string;
+                state?: string;
+                zip?: string;
+                country: string;
+            };
+            /**
              * Order line items
              */
             items: Array<{
                 /**
-                 * Product UUID
+                 * Product UUID (required)
                  */
-                online_product_id: string;
+                product_id: string;
+                /**
+                 * Variant UUID (optional - uses default variant if not provided)
+                 */
+                variant_id?: string;
+                /**
+                 * Product name at time of order
+                 */
+                product_name: string;
+                /**
+                 * Product SKU
+                 */
+                product_sku: string;
                 /**
                  * Quantity to order
                  */
@@ -54,13 +138,43 @@ export class OrdersService {
                  * Price per unit at time of order
                  */
                 unit_price: number;
+                /**
+                 * Total price for this line item (quantity × unit_price)
+                 */
+                total_price: number;
+                /**
+                 * Product variant options (e.g., color, size)
+                 */
+                product_options?: Record<string, any> | null;
             }>;
-            shipping_address?: Address;
-            billing_address?: Address;
             /**
              * Payment method identifier
              */
-            payment_method?: 'stripe' | 'paystack' | 'mpesa' | 'airtel_money' | 'cash';
+            payment_method?: 'card' | 'stripe' | 'paystack' | 'mpesa' | 'airtel_money' | 'cash';
+            /**
+             * Payment status (defaults to pending)
+             */
+            payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
+            /**
+             * Subtotal before tax and shipping
+             */
+            subtotal?: number;
+            /**
+             * Tax amount
+             */
+            tax_amount?: number;
+            /**
+             * Shipping cost
+             */
+            shipping_amount?: number;
+            /**
+             * Discount amount
+             */
+            discount_amount?: number;
+            /**
+             * Total order amount (required)
+             */
+            total_amount?: number;
             /**
              * Additional order notes
              */
@@ -77,15 +191,14 @@ export class OrdersService {
                 reason?: string;
                 applied_rule?: 'zone' | 'distance' | 'default';
             } | null;
+            /**
+             * Optional gift card to redeem towards this order
+             */
+            gift_card_redemption?: {
+                code?: string;
+                amount?: number;
+            } | null;
         },
-        /**
-         * Unix timestamp in seconds (required if HMAC signing is enabled)
-         */
-        xTimestamp?: number,
-        /**
-         * HMAC-SHA256 signature of timestamp + request body (required if HMAC enabled)
-         */
-        xSignature?: string,
     }): CancelablePromise<Order> {
         return this.httpRequest.request({
             method: 'POST',
@@ -99,7 +212,7 @@ export class OrdersService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request (missing required fields, invalid data)`,
-                401: `Authentication failed - invalid or missing API key`,
+                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
@@ -179,7 +292,34 @@ export class OrdersService {
     }
     /**
      * Update order
-     * Update specific fields of an existing order. Only the provided fields will be updated.
+     * Update specific fields of an existing order with HMAC signature verification and idempotency protection.
+     *
+     * **🔐 HMAC Signing (REQUIRED)**
+     *
+     * All order update requests MUST include HMAC-SHA256 signature:
+     *
+     * 1. **Generate Timestamp**: Get current Unix timestamp in seconds
+     * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
+     * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
+     * 4. **Include Headers**:
+     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
+     * - `X-Signature`: Base64-encoded HMAC signature
+     *
+     * **🔄 Idempotency Protection**
+     *
+     * Include `Idempotency-Key` header to prevent duplicate updates on retry.
+     * Each PATCH operation is tracked separately - if you retry with the same key,
+     * the original order state is returned without re-processing side effects.
+     *
+     * **Important:** Use a unique idempotency key for each distinct update operation.
+     * - ✅ Good: `update-shipping-{order_id}-{timestamp}`, `mark-paid-{order_id}-{timestamp}`
+     * - ❌ Bad: Reusing the same key for different updates to the same order
+     *
+     * This prevents duplicate processing of critical operations like:
+     * - Double-triggering accounting entries when marking as paid
+     * - Re-reducing inventory stock
+     * - Duplicate gift card redemptions
+     * - Multiple promotion usage recordings
      *
      * **Updatable Fields:**
      * - `payment_status`: Payment status (pending, paid, failed, refunded)
@@ -198,11 +338,6 @@ export class OrdersService {
      * - Processes gift card redemptions (if applicable)
      * - Records promotion usage (if applicable)
      *
-     * **HMAC Signing** (Optional): For enhanced security, sign requests with HMAC-SHA256:
-     * 1. Include `X-Timestamp` header with current Unix timestamp
-     * 2. Create signature: `HMAC-SHA256(secret, timestamp + request_body)`
-     * 3. Include signature in `X-Signature` header
-     *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
      * - ❌ Publishable keys (forbidden - returns 403)
@@ -212,14 +347,31 @@ export class OrdersService {
      */
     public updateOrder({
         id,
-        requestBody,
+        idempotencyKey,
         xTimestamp,
         xSignature,
+        requestBody,
     }: {
         /**
          * Order UUID
          */
         id: string,
+        /**
+         * Unique key to prevent duplicate updates (e.g., update-{operation}-{order_id}-{timestamp})
+         */
+        idempotencyKey: string,
+        /**
+         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Used to prevent replay attacks.
+         *
+         */
+        xTimestamp: number,
+        /**
+         * HMAC-SHA256 signature of the payload (timestamp + "." + request_body), base64-encoded.
+         * Sign using your HMAC secret from Settings → Integration Settings.
+         *
+         */
+        xSignature: string,
         requestBody: {
             /**
              * Payment status
@@ -250,14 +402,6 @@ export class OrdersService {
              */
             delivered_at?: string;
         },
-        /**
-         * Unix timestamp in seconds (required if HMAC signing is enabled)
-         */
-        xTimestamp?: number,
-        /**
-         * HMAC-SHA256 signature of timestamp + request body (required if HMAC enabled)
-         */
-        xSignature?: string,
     }): CancelablePromise<Order> {
         return this.httpRequest.request({
             method: 'PATCH',
@@ -266,6 +410,7 @@ export class OrdersService {
                 'id': id,
             },
             headers: {
+                'Idempotency-Key': idempotencyKey,
                 'X-Timestamp': xTimestamp,
                 'X-Signature': xSignature,
             },
@@ -273,7 +418,7 @@ export class OrdersService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request (no updatable fields provided, invalid field values)`,
-                401: `Authentication failed - invalid or missing API key`,
+                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Rate limit exceeded`,

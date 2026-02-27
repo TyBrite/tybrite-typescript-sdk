@@ -17,6 +17,8 @@ export class TaxonomyService {
     public listCategories({
         search,
         active,
+        limit = 50,
+        cursor,
         fields,
     }: {
         search?: string,
@@ -24,12 +26,22 @@ export class TaxonomyService {
          * Filter by active status
          */
         active?: boolean,
+        limit?: number,
+        /**
+         * Cursor for pagination (base64-encoded)
+         */
+        cursor?: string,
         /**
          * Comma-separated list of fields to include in the response.
          */
         fields?: string,
     }): CancelablePromise<{
         categories?: Array<Category>;
+        pagination?: {
+            limit?: number;
+            next_cursor?: string | null;
+            has_more?: boolean;
+        };
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -37,6 +49,8 @@ export class TaxonomyService {
             query: {
                 'search': search,
                 'active': active,
+                'limit': limit,
+                'cursor': cursor,
                 'fields': fields,
             },
             errors: {
@@ -90,7 +104,7 @@ export class TaxonomyService {
         search,
         active,
         limit = 100,
-        offset,
+        cursor,
         fields,
     }: {
         categoryId?: string,
@@ -100,13 +114,21 @@ export class TaxonomyService {
          */
         active?: boolean,
         limit?: number,
-        offset?: number,
+        /**
+         * Cursor for pagination (base64-encoded)
+         */
+        cursor?: string,
         /**
          * Comma-separated list of fields to include in the response.
          */
         fields?: string,
     }): CancelablePromise<{
         subcategories?: Array<Subcategory>;
+        pagination?: {
+            limit?: number;
+            next_cursor?: string | null;
+            has_more?: boolean;
+        };
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -116,7 +138,7 @@ export class TaxonomyService {
                 'search': search,
                 'active': active,
                 'limit': limit,
-                'offset': offset,
+                'cursor': cursor,
                 'fields': fields,
             },
             errors: {

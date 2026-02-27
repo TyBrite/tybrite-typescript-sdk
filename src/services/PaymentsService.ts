@@ -59,8 +59,29 @@ export class PaymentsService {
     }
     /**
      * Initialize payment
-     * Initialize a payment transaction with the specified provider. Returns provider-specific
-     * data needed to complete the payment flow.
+     * Initialize a payment transaction with HMAC signature verification and idempotency protection.
+     *
+     * **🔐 HMAC Signing (REQUIRED)**
+     *
+     * All payment initialization requests MUST include HMAC-SHA256 signature:
+     *
+     * 1. **Generate Timestamp**: Get current Unix timestamp in seconds
+     * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
+     * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
+     * 4. **Include Headers**:
+     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
+     * - `X-Signature`: Base64-encoded HMAC signature
+     * - `Idempotency-Key`: Unique key to prevent duplicate payments
+     *
+     * **🔄 Idempotency Protection (REQUIRED)**
+     *
+     * Include `Idempotency-Key` header to prevent duplicate payment initialization.
+     * If the same key is used, the original payment initialization is returned.
+     *
+     * - Recommended format: `payment-{timestamp}-{random}`
+     * - Must be unique per payment attempt
+     * - Prevents duplicate charges on network retries
+     * - Returns existing payment if key already used
      *
      * **Provider-Specific Flows:**
      *
@@ -89,6 +110,13 @@ export class PaymentsService {
      * 3. Customer authorizes payment
      * 4. Verify payment status with `/v1/payments/verify`
      *
+     * **Security Notes:**
+     * - HMAC secret is displayed in Settings → Integration Settings
+     * - Never expose HMAC secret in client-side code
+     * - Regenerate secret immediately if compromised
+     * - Requests with invalid/missing signatures return 401 Unauthorized
+     * - Timestamps older than 5 minutes are rejected (prevents replay attacks)
+     *
      * **Rate Limiting:**
      * - Additional 100 requests/hour limit for payment initialization
      * - Separate from global API rate limits
@@ -101,8 +129,29 @@ export class PaymentsService {
      * @throws ApiError
      */
     public initializePayment({
+        idempotencyKey,
+        xTimestamp,
+        xSignature,
         requestBody,
     }: {
+        /**
+         * Unique key to prevent duplicate payment initialization (e.g., payment-{timestamp}-{random}).
+         * If you retry a request with the same key, the original payment initialization is returned.
+         *
+         */
+        idempotencyKey: string,
+        /**
+         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Used to prevent replay attacks.
+         *
+         */
+        xTimestamp: number,
+        /**
+         * HMAC-SHA256 signature of the payload (timestamp + "." + request_body), base64-encoded.
+         * Sign using your HMAC secret from Settings → Integration Settings.
+         *
+         */
+        xSignature: string,
         requestBody: {
             /**
              * Payment provider to use
@@ -189,11 +238,16 @@ export class PaymentsService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/payments/initialize',
+            headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Timestamp': xTimestamp,
+                'X-Signature': xSignature,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request (missing required fields, invalid provider, unsupported currency, etc.)`,
-                401: `Authentication failed - invalid or missing API key`,
+                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
