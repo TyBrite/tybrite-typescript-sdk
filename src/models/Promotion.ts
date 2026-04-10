@@ -8,6 +8,10 @@ export type Promotion = {
     type?: Promotion.type;
     display_type?: string;
     description?: string;
+    /**
+     * URL of the promotion image
+     */
+    image?: string | null;
     discount_value?: number;
     discount_type?: Promotion.discount_type;
     min_purchase?: number;

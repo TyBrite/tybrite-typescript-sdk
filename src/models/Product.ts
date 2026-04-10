@@ -55,9 +55,20 @@ export type Product = {
      */
     brand?: string | null;
     /**
-     * Array of product image URLs (mapped from online_images or image)
+     * Primary image URL for list views
      */
-    images?: Array<string>;
+    thumbnail_url?: string | null;
+    /**
+     * Array of product media objects including images and videos
+     */
+    media?: Array<{
+        id?: string;
+        url?: string;
+        type?: string;
+        position?: number;
+        alt_text?: string | null;
+        is_primary?: boolean;
+    }>;
     /**
      * SEO-friendly URL slug
      */

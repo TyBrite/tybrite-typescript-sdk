@@ -56,5 +56,16 @@ export type ProductVariant = {
      * Whether this is the default variant
      */
     is_default?: boolean;
+    /**
+     * Array of media objects specific to this variant
+     */
+    media?: Array<{
+        id?: string;
+        url?: string;
+        type?: string;
+        position?: number;
+        alt_text?: string | null;
+        is_primary?: boolean;
+    }>;
 };
 

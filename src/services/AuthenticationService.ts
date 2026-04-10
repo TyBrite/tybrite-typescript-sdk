@@ -14,6 +14,12 @@ export class AuthenticationService {
      * Create a new customer account with email and password.
      * Returns user details and authentication tokens upon successful registration.
      *
+     * **Multi-Store Support:**
+     * - If the email is already registered at another store, a new customer record
+     * is created for this store (linked to the existing auth.users record)
+     * - Response includes `is_multi_store_customer: true` when linking to existing account
+     * - Customers can have accounts at multiple stores with the same email/password
+     *
      * **⚠️ SECRET KEY REQUIRED**
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
@@ -46,9 +52,21 @@ export class AuthenticationService {
             phone?: string;
         },
     }): CancelablePromise<{
+        /**
+         * Success message
+         */
+        message?: string;
         user?: User;
         customer?: Customer;
         session?: Session;
+        /**
+         * Indicates if this customer already had an account at another store.
+         * When true, the customer's auth.users record already existed, and a new
+         * customers record was created for this store. When false or omitted,
+         * this is the customer's first store registration.
+         *
+         */
+        is_multi_store_customer?: boolean;
     }> {
         return this.httpRequest.request({
             method: 'POST',
@@ -56,7 +74,7 @@ export class AuthenticationService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request (email already exists, weak password, etc.)`,
+                400: `Invalid request (email already exists at this store, weak password, etc.)`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Rate limit exceeded`,

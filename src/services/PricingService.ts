@@ -196,6 +196,21 @@ export class PricingService {
              */
             currency_symbol?: string;
             /**
+             * Primary image URL for list views
+             */
+            thumbnail_url?: string | null;
+            /**
+             * Array of product media objects
+             */
+            media?: Array<{
+                id?: string;
+                url?: string;
+                type?: string;
+                position?: number;
+                alt_text?: string | null;
+                is_primary?: boolean;
+            }>;
+            /**
              * Exchange rate applied (1.0 if same currency)
              */
             exchange_rate?: number;
@@ -431,6 +446,21 @@ export class PricingService {
         images?: Array<string>;
         product_slug?: string | null;
         /**
+         * Primary image URL for list views
+         */
+        thumbnail_url?: string | null;
+        /**
+         * Array of product media objects
+         */
+        media?: Array<{
+            id?: string;
+            url?: string;
+            type?: string;
+            position?: number;
+            alt_text?: string | null;
+            is_primary?: boolean;
+        }>;
+        /**
          * Only present for simple products
          */
         variant_id?: string | null;
@@ -509,6 +539,17 @@ export class PricingService {
             variant_attributes?: Record<string, any>;
             variant_name?: string | null;
             is_default?: boolean;
+            /**
+             * Array of variant-specific media objects
+             */
+            media?: Array<{
+                id?: string;
+                url?: string;
+                type?: string;
+                position?: number;
+                alt_text?: string | null;
+                is_primary?: boolean;
+            }>;
             /**
              * Price in store's base currency
              */
@@ -736,6 +777,21 @@ export class PricingService {
         images?: Array<string>;
         product_slug?: string | null;
         /**
+         * Primary image URL for list views
+         */
+        thumbnail_url?: string | null;
+        /**
+         * Array of product media objects
+         */
+        media?: Array<{
+            id?: string;
+            url?: string;
+            type?: string;
+            position?: number;
+            alt_text?: string | null;
+            is_primary?: boolean;
+        }>;
+        /**
          * Only present for simple products
          */
         variant_id?: string | null;
@@ -814,6 +870,17 @@ export class PricingService {
             variant_attributes?: Record<string, any>;
             variant_name?: string | null;
             is_default?: boolean;
+            /**
+             * Array of variant-specific media objects
+             */
+            media?: Array<{
+                id?: string;
+                url?: string;
+                type?: string;
+                position?: number;
+                alt_text?: string | null;
+                is_primary?: boolean;
+            }>;
             /**
              * Price in store's base currency
              */

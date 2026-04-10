@@ -8,6 +8,10 @@ export type Subcategory = {
     name?: string;
     description?: string;
     /**
+     * URL of the subcategory image
+     */
+    image?: string | null;
+    /**
      * Whether the subcategory is active
      */
     active?: boolean;

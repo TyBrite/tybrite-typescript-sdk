@@ -13,6 +13,7 @@ Galactic Core is the programmable interface layer that transforms GalacticOS int
 - **🧠 AI-Powered**: Built-in semantic search and product recommendations.
 - **📦 Complete Lifecycle**: interconnected Inventory, Orders, Customers, and Accounting.
 - **🔒 Enterprise Security**: Role-based access, double-entry accounting, and audit trails.
+- **🖼️ Rich Media**: Native support for multiple images, videos, and thumbnails.
 - **⚡ Developer First**: Fully typed SDK, automatic retries using idempotency, and field filtering.
 
 ## Installation
@@ -34,7 +35,7 @@ const client = new Tybrite({
 // fetch products
 const { products } = await client.products.listProducts({
   limit: 10,
-  fields: 'id,name,price,images' // Field filtering for performance
+  fields: 'id,name,price,media' // Field filtering for performance
 });
 
 console.log(products);
@@ -55,6 +56,7 @@ The API uses **Bearer Authentication**. Your API key determines your environment
 
 The SDK is organized into services matching the API resources. Access them via the client instance (e.g., `client.products`).
 
+- **`taxonomy`**: Manage categories and subcategories.
 - **`products`**: Manage catalog, collections and specifications.
 - **`orders`**: Create, track, and manage orders with automatic inventory sync.
 - **`customers`**: Customer profiles, RFM analytics, and account management.
@@ -67,9 +69,8 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`promotions`**: Manage marketing campaigns, coupons, and discounts.
 - **`giftCards`**: Gift card redemption, and balance tracking.
 - **`shipping`**: Shipping zone management and delivery cost calculation.
-- **`taxonomy`**: Manage categories and subcategories.
 - **`cms`**: Shoppable content management (Blog posts, Lookbooks).
-- **`messaging`**: Real-time customer support messaging.
+- **`messaging`**: Real-time customer support messaging with thread management (pin/mute/archive).
 - **`system`**: Platform health checks and configuration.
 
 ## Advanced Usage
@@ -80,7 +81,48 @@ Reduce payload size by requesting only specific fields.
 ```typescript
 const product = await client.products.getProduct({
   id: 'prod_123',
-  fields: 'id,name,sku,images,price,attributes.color'
+  fields: 'id,name,sku,media,price,attributes.color'
+});
+```
+
+### AI-Driven Development (Store Context)
+For AI agents and agentic workflows, use `getStoreInfo` to retrieve the entire store configuration, catalog overview, and active features in a single call.
+
+```typescript
+// Perfect for seeding AI context or agentic workflows
+const storeContext = await client.system.getStoreInfo({
+  sections: 'catalog,features,pricing,promotions' 
+});
+
+console.log(`Store: ${storeContext.store.name}`);
+console.log(`Active Features:`, storeContext.features);
+```
+
+### Taxonomy & Discovery
+Retrieve the hierarchical structure of your store and curated product collections.
+
+```typescript
+// Fetch categories with images
+const { categories } = await client.taxonomy.listCategories({
+  fields: 'id,name,image'
+});
+
+// Fetch curated collections (e.g., Summer Essentials)
+const { collections } = await client.products.listProductCollections({
+  showOnHomepage: 'true'
+});
+```
+
+### AI Product Recommendations
+Boost conversion by showing personalized suggestions or "similar products".
+
+```typescript
+const { products } = await client.recommendations.getRecommendations({
+  requestBody: {
+    type: 'similar',
+    productId: 'prod_123',
+    limit: 4
+  }
 });
 ```
 

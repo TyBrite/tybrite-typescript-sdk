@@ -7,6 +7,10 @@ export type Category = {
     name?: string;
     description?: string;
     /**
+     * URL of the category image
+     */
+    image?: string | null;
+    /**
      * Whether the category is active
      */
     active?: boolean;
