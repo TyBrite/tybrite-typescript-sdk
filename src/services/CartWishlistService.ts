@@ -102,6 +102,11 @@ export class CartWishlistService {
      * Add to cart
      * Add item to cart with automatic stock checking.
      *
+     * **Variant Selection:**
+     * - `variant_id` is required to specify which variant to add (e.g., Black vs Blue color)
+     * - For simple products (no variants), use the default variant's ID
+     * - Stock validation is performed against the specific variant
+     *
      * **Cart Association:**
      * - Provide `X-Session-Id` header for anonymous carts (before customer login)
      * - Provide `customer_id` in request body for authenticated customer carts
@@ -116,7 +121,7 @@ export class CartWishlistService {
      * Content-Type: application/json
      *
      * {
-         * "product_id": "550e8400-e29b-41d4-a716-446655440000",
+         * "variant_id": "83b6a47e-4f5c-4090-b8d3-4b606b78f1b4",
          * "quantity": 2
          * }
          * ```
@@ -128,7 +133,7 @@ export class CartWishlistService {
          * Content-Type: application/json
          *
          * {
-             * "product_id": "550e8400-e29b-41d4-a716-446655440000",
+             * "variant_id": "83b6a47e-4f5c-4090-b8d3-4b606b78f1b4",
              * "quantity": 2,
              * "customer_id": "650e8400-e29b-41d4-a716-446655440000"
              * }
@@ -142,8 +147,17 @@ export class CartWishlistService {
                 xSessionId,
             }: {
                 requestBody: {
-                    product_id: string;
+                    /**
+                     * Specific product variant UUID (required for multi-variant products)
+                     */
+                    variant_id: string;
+                    /**
+                     * Quantity to add
+                     */
                     quantity: number;
+                    /**
+                     * Customer UUID for authenticated carts (optional if using X-Session-Id)
+                     */
                     customer_id?: string;
                 },
                 /**
@@ -308,7 +322,13 @@ export class CartWishlistService {
                 requestBody,
             }: {
                 requestBody: {
-                    product_id: string;
+                    /**
+                     * Specific product variant UUID
+                     */
+                    variant_id: string;
+                    /**
+                     * Customer UUID
+                     */
                     customer_id: string;
                 },
             }): CancelablePromise<any> {
