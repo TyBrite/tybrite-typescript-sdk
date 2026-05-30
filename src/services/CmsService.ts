@@ -14,13 +14,14 @@ export class CmsService {
      * @throws ApiError
      */
     public listPosts({
-        status,
         category,
         limit = 20,
         cursor,
         fields,
     }: {
-        status?: 'published' | 'draft',
+        /**
+         * Filter posts by category slug
+         */
         category?: string,
         limit?: number,
         /**
@@ -40,12 +41,11 @@ export class CmsService {
          */
         fields?: string,
     }): CancelablePromise<{
-        posts?: Array<Record<string, any>>;
+        posts?: Array<Post>;
         pagination?: {
             limit?: number;
             next_cursor?: string | null;
             has_more?: boolean;
-            $ref?: any;
         };
         total?: number;
     }> {
@@ -53,7 +53,6 @@ export class CmsService {
             method: 'GET',
             url: '/v1/posts',
             query: {
-                'status': status,
                 'category': category,
                 'limit': limit,
                 'cursor': cursor,
@@ -114,12 +113,10 @@ export class CmsService {
      * @throws ApiError
      */
     public listLookbooks({
-        status,
         limit = 20,
         cursor,
         fields,
     }: {
-        status?: 'published' | 'draft',
         limit?: number,
         /**
          * Cursor for pagination (base64-encoded)
@@ -141,12 +138,12 @@ export class CmsService {
             next_cursor?: string | null;
             has_more?: boolean;
         };
+        total?: number;
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/lookbooks',
             query: {
-                'status': status,
                 'limit': limit,
                 'cursor': cursor,
                 'fields': fields,

@@ -33,11 +33,11 @@ export class RecommendationsService {
         requestBody: {
             type: 'similar' | 'also-bought' | 'trending' | 'personalized' | 'bundle';
             /**
-             * Required for similar
+             * Required when type is `similar`, `also-bought`, or `bundle`. Must reference an existing product in the store; otherwise 404 is returned.
              */
             productId?: string;
             /**
-             * Required for personalized
+             * Optional for `personalized`. When omitted, the worker falls back to trending recommendations.
              */
             customerId?: string;
             limit?: number;
@@ -52,6 +52,7 @@ export class RecommendationsService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },

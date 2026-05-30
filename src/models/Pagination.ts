@@ -2,7 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-/**
- * Filter by category ID
- */
-export type CategoryIdParam = string;
+export type Pagination = {
+    limit?: number;
+    has_more?: boolean;
+    next_cursor?: string | null;
+};
+

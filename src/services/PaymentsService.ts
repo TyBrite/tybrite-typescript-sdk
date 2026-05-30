@@ -51,6 +51,7 @@ export class PaymentsService {
                 'fields': fields,
             },
             errors: {
+                400: `Invalid request (invalid field names in \`fields\` query parameter)`,
                 401: `Authentication failed - invalid or missing API key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
@@ -212,29 +213,7 @@ export class PaymentsService {
              */
             callback_url?: string;
         },
-    }): CancelablePromise<(PaymentInitializeResponse | {
-        success?: boolean;
-        provider?: string;
-        type?: string;
-        reference?: string;
-        public_key?: string;
-        email?: string;
-        /**
-         * Amount in kobo (smallest currency unit)
-         */
-        amount?: number;
-        currency?: string;
-        environment?: string;
-    } | {
-        success?: boolean;
-        provider?: string;
-        type?: string;
-        reference?: string;
-        checkout_request_id?: string;
-        merchant_request_id?: string;
-        customer_message?: string;
-        environment?: string;
-    })> {
+    }): CancelablePromise<(PaymentInitializeResponse | Record<string, any>)> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/payments/initialize',
@@ -249,6 +228,7 @@ export class PaymentsService {
                 400: `Invalid request (missing required fields, invalid provider, unsupported currency, etc.)`,
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },
@@ -292,6 +272,10 @@ export class PaymentsService {
      * **Note:** Despite using POST method (for request body), this is a read operation that
      * queries external payment provider APIs.
      *
+     * **Key Type Support:**
+     * - ✅ Secret keys (full access)
+     * - ❌ Publishable keys (forbidden - returns 403)
+     *
      * @returns any Payment verification successful
      * @throws ApiError
      */
@@ -308,32 +292,16 @@ export class PaymentsService {
              */
             reference: string;
         },
-    }): CancelablePromise<{
-        success?: boolean;
-        provider?: string;
-        reference?: string;
-        status?: 'pending' | 'paid' | 'failed' | 'cancelled';
-        amount?: number;
-        currency?: string;
-        payment_method?: string;
-        /**
-         * Provider-specific transaction ID
-         */
-        provider_reference?: string;
-        paid_at?: string | null;
-        /**
-         * Provider-specific metadata
-         */
-        metadata?: Record<string, any>;
-    }> {
+    }): CancelablePromise<Record<string, any>> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/payments/verify',
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request (missing required fields, invalid provider)`,
+                400: `Invalid request (missing required fields, invalid provider, provider misconfigured, or upstream provider rejected verification)`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Forbidden - Publishable keys cannot verify payments. Use a secret key (tybrite_sk_*).`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },

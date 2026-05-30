@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Product } from '../models/Product';
+import type { ProductCollection } from '../models/ProductCollection';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class ProductsService {
@@ -23,6 +24,7 @@ export class ProductsService {
      * - Default variant data included at root level (price, stock, sku)
      * - No variants array (50-70% smaller than detail endpoints)
      * - Perfect for product listing pages and search results
+     *
      *
      * @returns any Successfully retrieved products with pagination metadata.
      *
@@ -214,10 +216,10 @@ export class ProductsService {
                                                      * - **Core:** `product_id`, `variant_id`, `name`, `sku`, `description`
                                                      * - **Pricing:** `price`, `selling_price`, `sale_price`, `display_currency`, `currency_symbol`
                                                      * - **Inventory:** `stock`, `threshold`, `last_restocked`
-                                                     * - **Media:** `images`
+                                                     * - **Media:** `media`, `thumbnail_url`
                                                      * - **SEO:** `product_slug`, `seo_title`, `seo_description`, `seo_keywords`
                                                      * - **Taxonomy:** `category_id`, `category_name`, `subcategory_id`, `subcategory_name`
-                                                     * - **Metadata:** `brand`, `featured`, `featured_order`, `tags`, `is_active`, `online_category`
+                                                     * - **Metadata:** `brand`, `featured`, `featured_order`, `tags`, `is_active`
                                                      * - **Nested:** `attributes.*`, `shipping_info.*`, `variant_attributes.*`
                                                      * - **Timestamps:** `created_at`, `updated_at`
                                                      * - **Flags:** `has_variants`, `is_default`
@@ -230,7 +232,7 @@ export class ProductsService {
                                                      * **Examples:**
                                                      * - `fields=name,price,stock` - Minimal product card
                                                      * - `fields=product_id,name,sku,price,category_name` - Product grid
-                                                     * - `fields=name,description,price,images,attributes.*` - Product detail page
+                                                     * - `fields=name,description,price,media,attributes.*` - Product detail page
                                                      *
                                                      * **Nested Fields:**
                                                      * ```typescript
@@ -295,7 +297,7 @@ export class ProductsService {
                                                      * **Response Structure:**
                                                      * - **Simple products (no variants):** Flat structure with all data at root level
                                                      * - **Multi-variant products:** Hierarchical structure with:
-                                                     * - Product-level data at root (name, description, brand, images, etc.)
+                                                     * - Product-level data at root (name, description, brand, media, etc.)
                                                      * - Aggregate data (total_stock, price_range using selling_price)
                                                      * - Clean variants array with only variant-specific fields (no redundancy)
                                                      *
@@ -308,19 +310,20 @@ export class ProductsService {
                                                      * **Currency:** Prices returned in store's default currency. For multi-currency support with
                                                      * geographic detection, use the `/v1/prices/products/{id}` endpoint instead.
                                                      *
+                                                     *
                                                      * @returns Product Successfully retrieved product with complete details.
                                                      *
                                                      * **Response Structure:**
                                                      *
                                                      * **For Simple Products (has_variants=false):**
                                                      * Returns flat structure with all data at root level:
-                                                     * - All product fields (name, description, brand, images, etc.)
+                                                     * - All product fields (name, description, brand, media, etc.)
                                                      * - All variant fields (variant_id, sku, price, stock, etc.)
                                                      * - No variants array
                                                      *
                                                      * **For Multi-Variant Products (has_variants=true):**
                                                      * Returns hierarchical structure:
-                                                     * - Product-level fields at root (name, description, brand, images, etc.)
+                                                     * - Product-level fields at root (name, description, brand, media, etc.)
                                                      * - Aggregate data: total_stock, price_range (using selling_price)
                                                      * - Flags: has_variants=true, variant_count
                                                      * - Clean variants array with only variant-specific fields:
@@ -393,7 +396,7 @@ export class ProductsService {
                                                                          * - **Core:** `product_id`, `variant_id`, `name`, `sku`, `description`
                                                                          * - **Pricing:** `price`, `selling_price`, `sale_price`, `price_range`, `display_currency`, `currency_symbol`
                                                                          * - **Inventory:** `stock`, `total_stock`, `threshold`, `last_restocked`
-                                                                         * - **Media:** `images`
+                                                                         * - **Media:** `media`, `thumbnail_url`
                                                                          * - **Metadata:** `brand`, `category_name`, `subcategory_name`, `attributes.*`
                                                                          * - **Flags:** `has_variants`, `variant_count`, `is_default`
                                                                          * - **Variants:** `variants` (includes all variant fields)
@@ -467,10 +470,12 @@ export class ProductsService {
                                                                                         400: `Invalid request - malformed data or missing required fields`,
                                                                                         401: `Authentication failed - invalid or missing API key`,
                                                                                         404: `Product or variant not found for the given ID.
+
                                                                                          **Common Causes:**
                                                                                         - Invalid product/variant ID
                                                                                         - Product belongs to a different store
                                                                                         - Product has been deleted
+
                                                                                          **SDK Error Handling:**
                                                                                         \`\`\`typescript
                                                                                         try {
@@ -502,6 +507,7 @@ export class ProductsService {
                                                                              *
                                                                              * **Currency:** Prices returned in store's default currency. For multi-currency support with
                                                                              * geographic detection, use the `/v1/prices/products/{id}` endpoint instead.
+                                                                             *
                                                                              *
                                                                              * @returns Product Successfully retrieved product by slug with complete details including SEO metadata.
                                                                              *
@@ -590,7 +596,7 @@ export class ProductsService {
                                                                                      * - SEO: `seo_title`, `seo_description`, `seo_keywords`, `product_slug`
                                                                                      * - Core: `product_id`, `name`, `description`
                                                                                      * - Pricing: `price`, `selling_price`, `price_range` (for multi-variant)
-                                                                                     * - Media: `images`
+                                                                                     * - Media: `media`, `thumbnail_url`
                                                                                      * - Metadata: `brand`, `category_name`, `attributes`, `tags`
                                                                                      * - Inventory: `stock`, `total_stock` (for multi-variant)
                                                                                      * - Variants: `variants` or nested filtering (e.g., `variants.sku,variants.selling_price`)
@@ -606,7 +612,7 @@ export class ProductsService {
                                                                                      * **Example:**
                                                                                      * ```typescript
                                                                                      * const product = await client.products.getProductBySlug(slug, {
-                                                                                         * fields: 'product_id,name,description,price_range,images,seo_title,seo_description,variants.sku,variants.selling_price,variants.stock'
+                                                                                         * fields: 'product_id,name,description,price_range,media,seo_title,seo_description,variants.sku,variants.selling_price,variants.stock'
                                                                                          * });
                                                                                          * ```
                                                                                          *
@@ -626,11 +632,13 @@ export class ProductsService {
                                                                                                 400: `Invalid request - malformed data or missing required fields`,
                                                                                                 401: `Authentication failed - invalid or missing API key`,
                                                                                                 404: `Product not found for the given slug.
+
                                                                                                  **Common Causes:**
                                                                                                 - Invalid or non-existent slug
                                                                                                 - Product belongs to a different store
                                                                                                 - Product has been deleted or deactivated
                                                                                                 - Slug format is incorrect (check for typos)
+
                                                                                                  **SDK Error Handling:**
                                                                                                 \`\`\`typescript
                                                                                                 try {
@@ -643,6 +651,7 @@ export class ProductsService {
                                                                                                     }
                                                                                                 }
                                                                                                 \`\`\`
+
                                                                                                  **Debugging Tips:**
                                                                                                 - Verify slug format matches \`{name}-{short-id}\` pattern
                                                                                                 - Check that slug is lowercase
@@ -694,6 +703,9 @@ export class ProductsService {
                                                                                     }
                                                                                     /**
                                                                                      * List product specifications
+                                                                                     * Returns a paginated list of product specifications for the authenticated store,
+                                                                                     * ordered by most recently updated. Supports filtering by `product_id` and `status`.
+                                                                                     *
                                                                                      * @returns any Success
                                                                                      * @throws ApiError
                                                                                      */
@@ -703,15 +715,33 @@ export class ProductsService {
                                                                                         limit = 50,
                                                                                         cursor,
                                                                                     }: {
+                                                                                        /**
+                                                                                         * Filter specifications by product UUID
+                                                                                         */
                                                                                         productId?: string,
+                                                                                        /**
+                                                                                         * Filter by specification status (e.g. `draft`, `published`)
+                                                                                         */
                                                                                         status?: string,
+                                                                                        /**
+                                                                                         * Maximum number of specifications per page
+                                                                                         */
                                                                                         limit?: number,
                                                                                         /**
                                                                                          * Cursor for pagination (base64-encoded)
                                                                                          */
                                                                                         cursor?: string,
                                                                                     }): CancelablePromise<{
-                                                                                        specifications?: Array<Record<string, any>>;
+                                                                                        specifications?: Array<{
+                                                                                            id?: string;
+                                                                                            product_id?: string;
+                                                                                            template_id?: string | null;
+                                                                                            specification_data?: Record<string, any>;
+                                                                                            status?: string;
+                                                                                            version?: number;
+                                                                                            created_at?: string;
+                                                                                            updated_at?: string;
+                                                                                        }>;
                                                                                         pagination?: {
                                                                                             limit?: number;
                                                                                             next_cursor?: string | null;
@@ -757,12 +787,7 @@ export class ProductsService {
                                                                                          */
                                                                                         cursor?: string,
                                                                                     }): CancelablePromise<{
-                                                                                        collections?: Array<{
-                                                                                            id?: string;
-                                                                                            name?: string;
-                                                                                            slug?: string;
-                                                                                            description?: string;
-                                                                                        }>;
+                                                                                        collections?: Array<ProductCollection>;
                                                                                         pagination?: {
                                                                                             limit?: number;
                                                                                             next_cursor?: string | null;
@@ -794,13 +819,16 @@ export class ProductsService {
                                                                                     public getProductCollection({
                                                                                         id,
                                                                                     }: {
+                                                                                        /**
+                                                                                         * Product collection UUID
+                                                                                         */
                                                                                         id: string,
-                                                                                    }): CancelablePromise<{
-                                                                                        id?: string;
-                                                                                        name?: string;
-                                                                                        slug?: string;
-                                                                                        description?: string;
-                                                                                    }> {
+                                                                                    }): CancelablePromise<(ProductCollection & {
+                                                                                        /**
+                                                                                         * Smart/automated collection rules (when collection_type is automated or smart)
+                                                                                         */
+                                                                                        rules?: any | null;
+                                                                                    })> {
                                                                                         return this.httpRequest.request({
                                                                                             method: 'GET',
                                                                                             url: '/v1/product-collections/{id}',
@@ -818,19 +846,32 @@ export class ProductsService {
                                                                                     }
                                                                                     /**
                                                                                      * Get items in a product collection
+                                                                                     * Returns all items belonging to a product collection, ordered by `sort_order`.
+                                                                                     * Each item contains the linked online product row along with its sort position.
+                                                                                     * If the collection has no items (or does not exist), an empty array is returned.
+                                                                                     *
                                                                                      * @returns any Success
                                                                                      * @throws ApiError
                                                                                      */
                                                                                     public getProductCollectionItems({
                                                                                         id,
-                                                                                        limit = 50,
-                                                                                        offset,
                                                                                     }: {
+                                                                                        /**
+                                                                                         * Product collection UUID
+                                                                                         */
                                                                                         id: string,
-                                                                                        limit?: number,
-                                                                                        offset?: number,
                                                                                     }): CancelablePromise<{
-                                                                                        items?: Array<Product>;
+                                                                                        items?: Array<{
+                                                                                            /**
+                                                                                             * Product UUID
+                                                                                             */
+                                                                                            product_id?: string | null;
+                                                                                            sort_order?: number | null;
+                                                                                            /**
+                                                                                             * Core product fields for the collection member.
+                                                                                             */
+                                                                                            product?: any | null;
+                                                                                        }>;
                                                                                     }> {
                                                                                         return this.httpRequest.request({
                                                                                             method: 'GET',
@@ -838,14 +879,9 @@ export class ProductsService {
                                                                                             path: {
                                                                                                 'id': id,
                                                                                             },
-                                                                                            query: {
-                                                                                                'limit': limit,
-                                                                                                'offset': offset,
-                                                                                            },
                                                                                             errors: {
                                                                                                 400: `Invalid request - malformed data or missing required fields`,
                                                                                                 401: `Authentication failed - invalid or missing API key`,
-                                                                                                404: `Resource not found`,
                                                                                                 429: `Rate limit exceeded`,
                                                                                                 500: `Internal server error`,
                                                                                             },

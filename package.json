@@ -1,6 +1,6 @@
 {
   "name": "@tybrite-labs/sdk",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Official TypeScript SDK for Galactic Core - The Programmable Commerce Layer",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

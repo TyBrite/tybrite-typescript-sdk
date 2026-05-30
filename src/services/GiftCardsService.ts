@@ -9,12 +9,19 @@ export class GiftCardsService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * List gift cards
-     * Retrieve gift cards, filtered by customer ID.
+     * Retrieve gift cards belonging to a specific customer, scoped to the authenticated store.
+     *
+     * Only **active**, non-zero balance, non-expired gift cards are returned (sorted by balance descending).
+     * Accessible with both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
+     *
+     * Responses are cached at the edge for ~60s and support ETag revalidation via `If-None-Match`.
+     *
      * @returns any Success
      * @throws ApiError
      */
     public listGiftCards({
         customerId,
+        xAuthToken,
         fields,
     }: {
         /**
@@ -22,21 +29,31 @@ export class GiftCardsService {
          */
         customerId: string,
         /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required when customer_id is supplied so the gateway can prove the caller owns that customer record.
+         */
+        xAuthToken?: string,
+        /**
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
          * - `id`, `code`, `balance`, `initial_balance`, `currency`, `status`
          * - `expiry_date`, `customer_id`, `issued_date`, `last_used_date`
+         * - `maximum_usage_percentage`, `redemption_count`
          * - `created_at`, `updated_at`
+         *
+         * Unknown field names will return a `400` error.
          *
          */
         fields?: string,
     }): CancelablePromise<{
-        gift_cards?: Array<Record<string, any>>;
+        gift_cards?: Array<GiftCard>;
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/gift-cards',
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
             query: {
                 'customer_id': customerId,
                 'fields': fields,
@@ -45,7 +62,6 @@ export class GiftCardsService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },
@@ -53,6 +69,16 @@ export class GiftCardsService {
     }
     /**
      * Check gift card balance
+     * Look up a gift card by code and check its validity, balance, expiry and
+     * maximum-usage rules. Accessible with both publishable (`tybrite_pk_*`) and
+     * secret (`tybrite_sk_*`) API keys.
+     *
+     * The `valid` flag is `true` only when the gift card is active, has a
+     * positive balance, and has not expired.
+     *
+     * Responses are cached at the edge for ~30s and support ETag revalidation
+     * via `If-None-Match`.
+     *
      * @returns any Success
      * @throws ApiError
      */
@@ -60,23 +86,32 @@ export class GiftCardsService {
         code,
         fields,
     }: {
+        /**
+         * The unique gift card code to look up (e.g. `V5G6-4N7H-9P2R-8W1S`).
+         */
         code: string,
         /**
-         * Comma-separated list of fields to include in the response.
+         * Comma-separated list of fields to include in the embedded `gift_card` object.
          *
          * **Allowed Fields:**
          * - `id`, `code`, `balance`, `initial_balance`, `currency`, `status`
          * - `expiry_date`, `customer_id`, `issued_date`, `last_used_date`
+         * - `maximum_usage_percentage`, `redemption_count`
          * - `created_at`, `updated_at`
+         *
+         * Unknown field names will return a `400` error.
          *
          */
         fields?: string,
     }): CancelablePromise<{
+        /**
+         * True when the gift card is active, has balance > 0, and is not expired.
+         */
         valid?: boolean;
         balance?: number;
-        status?: string;
-        expiry_date?: string;
-        maximum_usage_percentage?: number;
+        status?: 'active' | 'full_redeemed' | 'inactive';
+        expiry_date?: string | null;
+        maximum_usage_percentage?: number | null;
         gift_card?: GiftCard;
     }> {
         return this.httpRequest.request({

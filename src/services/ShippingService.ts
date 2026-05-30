@@ -5,6 +5,7 @@
 import type { DeliveryFeeCalculation } from '../models/DeliveryFeeCalculation';
 import type { DeliveryPricingTier } from '../models/DeliveryPricingTier';
 import type { DeliveryZone } from '../models/DeliveryZone';
+import type { ShippingCalculationRequest } from '../models/ShippingCalculationRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class ShippingService {
@@ -74,20 +75,7 @@ export class ShippingService {
     public calculateShipping({
         requestBody,
     }: {
-        requestBody: {
-            /**
-             * Customer latitude (WGS84)
-             */
-            latitude?: number;
-            /**
-             * Customer longitude (WGS84)
-             */
-            longitude?: number;
-            /**
-             * Total order amount (used for free delivery threshold check)
-             */
-            order_total?: number;
-        },
+        requestBody: ShippingCalculationRequest,
     }): CancelablePromise<DeliveryFeeCalculation> {
         return this.httpRequest.request({
             method: 'POST',

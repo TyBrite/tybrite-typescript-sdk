@@ -81,6 +81,7 @@ export class SystemService {
      * Use the `sections` parameter to request only specific data sections, reducing payload size
      * by 50-80% when you don't need all information.
      *
+     *
      * @returns StoreInfoResponse Store information retrieved successfully
      * @throws ApiError
      */
@@ -177,6 +178,7 @@ export class SystemService {
                             400: `Invalid request - malformed data or missing required fields`,
                             401: `Authentication failed - invalid or missing API key`,
                             403: `Insufficient permissions - operation requires secret key`,
+                            429: `Rate limit exceeded`,
                             500: `Internal server error`,
                         },
                     });

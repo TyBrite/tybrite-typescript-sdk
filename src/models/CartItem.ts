@@ -8,7 +8,7 @@ export type CartItem = {
      */
     id?: string;
     /**
-     * Online product UUID (parent product)
+     * Product UUID
      */
     product_id?: string;
     /**
@@ -69,5 +69,18 @@ export type CartItem = {
     has_variants?: boolean;
     created_at?: string;
     updated_at?: string;
+    /**
+     * Whether this cart item belongs to the live or test environment.
+     */
+    environment?: CartItem.environment;
 };
+export namespace CartItem {
+    /**
+     * Whether this cart item belongs to the live or test environment.
+     */
+    export enum environment {
+        PRODUCTION = 'production',
+        SANDBOX = 'sandbox',
+    }
+}
 

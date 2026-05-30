@@ -17,6 +17,8 @@ export type OpenAPIConfig = {
     PASSWORD?: string | Resolver<string> | undefined;
     HEADERS?: Headers | Resolver<Headers> | undefined;
     ENCODE_PATH?: ((path: string) => string) | undefined;
+    MAX_RETRIES?: number | undefined;
+    RETRY_DELAY_MS?: number | undefined;
 };
 
 export const OpenAPI: OpenAPIConfig = {
@@ -29,4 +31,6 @@ export const OpenAPI: OpenAPIConfig = {
     PASSWORD: undefined,
     HEADERS: undefined,
     ENCODE_PATH: undefined,
+    MAX_RETRIES: 2,
+    RETRY_DELAY_MS: 500,
 };

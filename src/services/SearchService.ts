@@ -88,7 +88,6 @@ export class SearchService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },

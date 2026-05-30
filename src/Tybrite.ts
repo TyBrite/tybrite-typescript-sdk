@@ -9,6 +9,7 @@ import { AuthenticationService } from './services/AuthenticationService';
 import { CartWishlistService } from './services/CartWishlistService';
 import { CmsService } from './services/CmsService';
 import { CustomersService } from './services/CustomersService';
+import { GcConnectService } from './services/GcConnectService';
 import { GiftCardsService } from './services/GiftCardsService';
 import { MessagingService } from './services/MessagingService';
 import { OrdersService } from './services/OrdersService';
@@ -17,16 +18,19 @@ import { PricingService } from './services/PricingService';
 import { ProductsService } from './services/ProductsService';
 import { PromotionsService } from './services/PromotionsService';
 import { RecommendationsService } from './services/RecommendationsService';
+import { ReviewsService } from './services/ReviewsService';
 import { SearchService } from './services/SearchService';
 import { ShippingService } from './services/ShippingService';
 import { SystemService } from './services/SystemService';
 import { TaxonomyService } from './services/TaxonomyService';
+import { WebhooksService } from './services/WebhooksService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class Tybrite {
     public readonly authentication: AuthenticationService;
     public readonly cartWishlist: CartWishlistService;
     public readonly cms: CmsService;
     public readonly customers: CustomersService;
+    public readonly gcConnect: GcConnectService;
     public readonly giftCards: GiftCardsService;
     public readonly messaging: MessagingService;
     public readonly orders: OrdersService;
@@ -35,10 +39,12 @@ export class Tybrite {
     public readonly products: ProductsService;
     public readonly promotions: PromotionsService;
     public readonly recommendations: RecommendationsService;
+    public readonly reviews: ReviewsService;
     public readonly search: SearchService;
     public readonly shipping: ShippingService;
     public readonly system: SystemService;
     public readonly taxonomy: TaxonomyService;
+    public readonly webhooks: WebhooksService;
     public readonly request: BaseHttpRequest;
     constructor(config?: Partial<OpenAPIConfig>, HttpRequest: HttpRequestConstructor = FetchHttpRequest) {
         this.request = new HttpRequest({
@@ -56,6 +62,7 @@ export class Tybrite {
         this.cartWishlist = new CartWishlistService(this.request);
         this.cms = new CmsService(this.request);
         this.customers = new CustomersService(this.request);
+        this.gcConnect = new GcConnectService(this.request);
         this.giftCards = new GiftCardsService(this.request);
         this.messaging = new MessagingService(this.request);
         this.orders = new OrdersService(this.request);
@@ -64,10 +71,12 @@ export class Tybrite {
         this.products = new ProductsService(this.request);
         this.promotions = new PromotionsService(this.request);
         this.recommendations = new RecommendationsService(this.request);
+        this.reviews = new ReviewsService(this.request);
         this.search = new SearchService(this.request);
         this.shipping = new ShippingService(this.request);
         this.system = new SystemService(this.request);
         this.taxonomy = new TaxonomyService(this.request);
+        this.webhooks = new WebhooksService(this.request);
     }
 }
 

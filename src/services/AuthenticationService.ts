@@ -74,9 +74,15 @@ export class AuthenticationService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request (email already exists at this store, weak password, etc.)`,
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },
@@ -108,6 +114,10 @@ export class AuthenticationService {
             password: string;
         },
     }): CancelablePromise<{
+        /**
+         * Success message
+         */
+        message?: string;
         user?: User;
         customer?: Customer;
         session?: Session;
@@ -174,7 +184,18 @@ export class AuthenticationService {
             email: string;
         },
     }): CancelablePromise<{
+        /**
+         * Success message
+         */
         message?: string;
+        /**
+         * Email address the magic link/OTP was sent to
+         */
+        email?: string;
+        /**
+         * Helpful guidance for the user
+         */
+        hint?: string;
     }> {
         return this.httpRequest.request({
             method: 'POST',
@@ -215,6 +236,10 @@ export class AuthenticationService {
             token: string;
         },
     }): CancelablePromise<{
+        /**
+         * Success message
+         */
+        message?: string;
         user?: User;
         customer?: Customer;
         session?: Session;
@@ -248,9 +273,25 @@ export class AuthenticationService {
         requestBody,
     }: {
         requestBody: {
+            /**
+             * Customer email address
+             */
             email: string;
+            /**
+             * URL to redirect the user to after clicking the reset link
+             */
+            redirect_to?: string;
         },
-    }): CancelablePromise<any> {
+    }): CancelablePromise<{
+        /**
+         * Success message
+         */
+        message?: string;
+        /**
+         * Email address the reset link was sent to
+         */
+        email?: string;
+    }> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/auth/reset-password',
@@ -302,7 +343,19 @@ export class AuthenticationService {
             requestBody: {
                 password: string;
             },
-        }): CancelablePromise<any> {
+        }): CancelablePromise<{
+            /**
+             * Success message
+             */
+            message?: string;
+            /**
+             * Updated user details
+             */
+            user?: {
+                id?: string;
+                email?: string;
+            };
+        }> {
             return this.httpRequest.request({
                 method: 'POST',
                 url: '/v1/auth/update-password',
@@ -338,10 +391,11 @@ export class AuthenticationService {
                 refresh_token: string;
             },
         }): CancelablePromise<{
-            access_token?: string;
-            refresh_token?: string;
-            expires_in?: number;
-            expires_at?: number;
+            /**
+             * Success message
+             */
+            message?: string;
+            session?: Session;
         }> {
             return this.httpRequest.request({
                 method: 'POST',
@@ -398,6 +452,7 @@ export class AuthenticationService {
                 errors: {
                     400: `Invalid request - malformed data or missing required fields`,
                     401: `Authentication failed - invalid or missing API key`,
+                    403: `Insufficient permissions - operation requires secret key`,
                     429: `Rate limit exceeded`,
                     500: `Internal server error`,
                 },

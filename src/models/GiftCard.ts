@@ -12,8 +12,8 @@ export type GiftCard = {
     expiry_date?: string;
     customer_id?: string;
     issued_date?: string;
-    last_used_date?: string;
-    maximum_usage_percentage?: number;
+    last_used_date?: string | null;
+    maximum_usage_percentage?: number | null;
     redemption_count?: number;
     created_at?: string;
     updated_at?: string;

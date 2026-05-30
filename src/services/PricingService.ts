@@ -59,8 +59,6 @@ export class PricingService {
         location,
         region,
         customerId,
-        customerSegment,
-        customerTier,
         quantity,
     }: {
         /**
@@ -145,23 +143,14 @@ export class PricingService {
          */
         region?: string,
         /**
-         * Customer UUID for personalized pricing (segment/tier-based)
+         * Customer UUID for personalized pricing.
+         *
+         * When provided, the worker resolves the customer's RFM segment and tier
+         * server-side (from the customers + customer_stores tables) and feeds them
+         * into pricing rule evaluation. There is no need to pass segment/tier directly.
+         *
          */
         customerId?: string,
-        /**
-         * RFM customer segment for segment-based pricing.
-         *
-         * **Segments:** Champions, Loyal, Potential, New, At Risk, Hibernating, Lost
-         *
-         */
-        customerSegment?: string,
-        /**
-         * Customer tier for tier-based pricing.
-         *
-         * **Tiers:** Gold, Silver, Bronze, VIP
-         *
-         */
-        customerTier?: string,
         /**
          * Quantity for volume-based pricing discounts
          */
@@ -243,12 +232,7 @@ export class PricingService {
                 /**
                  * Currency conversion details (null if no conversion)
                  */
-                currency_conversion?: {
-                    from_currency?: string;
-                    to_currency?: string;
-                    rate?: number;
-                    converted_amount?: number;
-                } | null;
+                currency_conversion?: any | null;
             };
         }>;
         /**
@@ -264,7 +248,10 @@ export class PricingService {
          */
         offset?: number;
         /**
-         * Global pricing context for the request
+         * Global pricing context for the request. `customer_segment` and
+         * `customer_tier` are resolved server-side from `customer_id`
+         * (they are not request parameters).
+         *
          */
         pricing_context?: {
             location?: string | null;
@@ -272,7 +259,13 @@ export class PricingService {
              * Detected or specified region
              */
             region?: string | null;
+            /**
+             * Resolved RFM segment for the supplied customer_id
+             */
             customer_segment?: string | null;
+            /**
+             * Resolved customer tier for the supplied customer_id
+             */
             customer_tier?: string | null;
             quantity?: number | null;
             /**
@@ -301,8 +294,6 @@ export class PricingService {
                 'location': location,
                 'region': region,
                 'customer_id': customerId,
-                'customer_segment': customerSegment,
-                'customer_tier': customerTier,
                 'quantity': quantity,
             },
             errors: {
@@ -363,9 +354,7 @@ export class PricingService {
         location,
         region,
         customerId,
-        customerSegment,
-        customerTier,
-        quantity = 1,
+        quantity,
     }: {
         /**
          * Product UUID or variant UUID
@@ -422,17 +411,14 @@ export class PricingService {
          */
         region?: string,
         /**
-         * Customer UUID for personalized pricing
+         * Customer UUID for personalized pricing.
+         *
+         * When provided, the worker resolves the customer's RFM segment and tier
+         * server-side (from the customers + customer_stores tables) and feeds them
+         * into pricing rule evaluation. There is no need to pass segment/tier directly.
+         *
          */
         customerId?: string,
-        /**
-         * RFM customer segment (Champions, Loyal, etc.)
-         */
-        customerSegment?: string,
-        /**
-         * Customer tier (Gold, Silver, Bronze, VIP)
-         */
-        customerTier?: string,
         /**
          * Quantity for volume-based pricing
          */
@@ -487,23 +473,7 @@ export class PricingService {
         /**
          * Detailed price calculation (only for simple products)
          */
-        price_breakdown?: {
-            base_price?: number;
-            discounts?: Array<{
-                rule_id?: string;
-                rule_name?: string;
-                type?: string;
-                value?: number;
-                amount?: number;
-            }>;
-            final_price?: number;
-            currency_conversion?: {
-                from_currency?: string;
-                to_currency?: string;
-                rate?: number;
-                converted_amount?: number;
-            } | null;
-        } | null;
+        price_breakdown?: any | null;
         /**
          * Sum of stock across all variants (only for multi-variant)
          */
@@ -511,16 +481,7 @@ export class PricingService {
         /**
          * Price range calculated from variant display_prices (only for multi-variant)
          */
-        price_range?: {
-            /**
-             * Minimum display price across variants
-             */
-            min?: number;
-            /**
-             * Maximum display price across variants
-             */
-            max?: number;
-        } | null;
+        price_range?: any | null;
         /**
          * Whether product has multiple variants
          */
@@ -532,57 +493,7 @@ export class PricingService {
         /**
          * Array of variants with pricing (only for multi-variant)
          */
-        variants?: Array<{
-            variant_id?: string;
-            sku?: string;
-            stock?: number;
-            variant_attributes?: Record<string, any>;
-            variant_name?: string | null;
-            is_default?: boolean;
-            /**
-             * Array of variant-specific media objects
-             */
-            media?: Array<{
-                id?: string;
-                url?: string;
-                type?: string;
-                position?: number;
-                alt_text?: string | null;
-                is_primary?: boolean;
-            }>;
-            /**
-             * Price in store's base currency
-             */
-            base_price?: number;
-            /**
-             * Price after discounts before conversion
-             */
-            resolved_price?: number;
-            /**
-             * Final price in customer's currency
-             */
-            display_price?: number;
-            /**
-             * Detailed price calculation for this variant
-             */
-            price_breakdown?: {
-                base_price?: number;
-                discounts?: Array<{
-                    rule_id?: string;
-                    rule_name?: string;
-                    type?: string;
-                    value?: number;
-                    amount?: number;
-                }>;
-                final_price?: number;
-                currency_conversion?: {
-                    from_currency?: string;
-                    to_currency?: string;
-                    rate?: number;
-                    converted_amount?: number;
-                } | null;
-            };
-        }> | null;
+        variants?: any[] | null;
         /**
          * Store's base currency code
          */
@@ -600,14 +511,26 @@ export class PricingService {
          */
         exchange_rate?: number;
         /**
-         * Global context used for pricing
+         * Global context used for pricing rule evaluation. `customer_segment`
+         * and `customer_tier` are resolved server-side from `customer_id`
+         * (they are not request parameters).
+         *
          */
         pricing_context?: {
             location?: string | null;
             region?: string | null;
+            /**
+             * Resolved RFM segment for the supplied customer_id
+             */
             customer_segment?: string | null;
+            /**
+             * Resolved customer tier for the supplied customer_id
+             */
             customer_tier?: string | null;
-            quantity?: number;
+            quantity?: number | null;
+            /**
+             * Detected display currency code
+             */
             currency?: string;
             exchange_rate?: number;
         };
@@ -626,8 +549,6 @@ export class PricingService {
                 'location': location,
                 'region': region,
                 'customer_id': customerId,
-                'customer_segment': customerSegment,
-                'customer_tier': customerTier,
                 'quantity': quantity,
             },
             errors: {
@@ -694,9 +615,7 @@ export class PricingService {
         location,
         region,
         customerId,
-        customerSegment,
-        customerTier,
-        quantity = 1,
+        quantity,
     }: {
         /**
          * Product slug (SEO-friendly URL identifier)
@@ -753,17 +672,14 @@ export class PricingService {
          */
         region?: string,
         /**
-         * Customer UUID for personalized pricing
+         * Customer UUID for personalized pricing.
+         *
+         * When provided, the worker resolves the customer's RFM segment and tier
+         * server-side (from the customers + customer_stores tables) and feeds them
+         * into pricing rule evaluation. There is no need to pass segment/tier directly.
+         *
          */
         customerId?: string,
-        /**
-         * RFM customer segment (Champions, Loyal, etc.)
-         */
-        customerSegment?: string,
-        /**
-         * Customer tier (Gold, Silver, Bronze, VIP)
-         */
-        customerTier?: string,
         /**
          * Quantity for volume-based pricing
          */
@@ -818,23 +734,7 @@ export class PricingService {
         /**
          * Detailed price calculation (only for simple products)
          */
-        price_breakdown?: {
-            base_price?: number;
-            discounts?: Array<{
-                rule_id?: string;
-                rule_name?: string;
-                type?: string;
-                value?: number;
-                amount?: number;
-            }>;
-            final_price?: number;
-            currency_conversion?: {
-                from_currency?: string;
-                to_currency?: string;
-                rate?: number;
-                converted_amount?: number;
-            } | null;
-        } | null;
+        price_breakdown?: any | null;
         /**
          * Sum of stock across all variants (only for multi-variant)
          */
@@ -842,16 +742,7 @@ export class PricingService {
         /**
          * Price range calculated from variant display_prices (only for multi-variant)
          */
-        price_range?: {
-            /**
-             * Minimum display price across variants
-             */
-            min?: number;
-            /**
-             * Maximum display price across variants
-             */
-            max?: number;
-        } | null;
+        price_range?: any | null;
         /**
          * Whether product has multiple variants
          */
@@ -863,57 +754,7 @@ export class PricingService {
         /**
          * Array of variants with pricing (only for multi-variant)
          */
-        variants?: Array<{
-            variant_id?: string;
-            sku?: string;
-            stock?: number;
-            variant_attributes?: Record<string, any>;
-            variant_name?: string | null;
-            is_default?: boolean;
-            /**
-             * Array of variant-specific media objects
-             */
-            media?: Array<{
-                id?: string;
-                url?: string;
-                type?: string;
-                position?: number;
-                alt_text?: string | null;
-                is_primary?: boolean;
-            }>;
-            /**
-             * Price in store's base currency
-             */
-            base_price?: number;
-            /**
-             * Price after discounts before conversion
-             */
-            resolved_price?: number;
-            /**
-             * Final price in customer's currency
-             */
-            display_price?: number;
-            /**
-             * Detailed price calculation for this variant
-             */
-            price_breakdown?: {
-                base_price?: number;
-                discounts?: Array<{
-                    rule_id?: string;
-                    rule_name?: string;
-                    type?: string;
-                    value?: number;
-                    amount?: number;
-                }>;
-                final_price?: number;
-                currency_conversion?: {
-                    from_currency?: string;
-                    to_currency?: string;
-                    rate?: number;
-                    converted_amount?: number;
-                } | null;
-            };
-        }> | null;
+        variants?: any[] | null;
         /**
          * Store's base currency code
          */
@@ -931,14 +772,26 @@ export class PricingService {
          */
         exchange_rate?: number;
         /**
-         * Global context used for pricing
+         * Global context used for pricing rule evaluation. `customer_segment`
+         * and `customer_tier` are resolved server-side from `customer_id`
+         * (they are not request parameters).
+         *
          */
         pricing_context?: {
             location?: string | null;
             region?: string | null;
+            /**
+             * Resolved RFM segment for the supplied customer_id
+             */
             customer_segment?: string | null;
+            /**
+             * Resolved customer tier for the supplied customer_id
+             */
             customer_tier?: string | null;
-            quantity?: number;
+            quantity?: number | null;
+            /**
+             * Detected display currency code
+             */
             currency?: string;
             exchange_rate?: number;
         };
@@ -957,8 +810,6 @@ export class PricingService {
                 'location': location,
                 'region': region,
                 'customer_id': customerId,
-                'customer_segment': customerSegment,
-                'customer_tier': customerTier,
                 'quantity': quantity,
             },
             errors: {

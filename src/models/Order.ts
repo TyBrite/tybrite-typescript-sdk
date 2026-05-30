@@ -34,38 +34,13 @@ export type Order = {
     created_at?: string;
     updated_at?: string;
     /**
+     * Whether this order was created in the live or test environment. Sandbox orders are isolated from production data.
+     */
+    environment?: Order.environment;
+    /**
      * Complete shipping calculation details for audit trail
      */
-    shipping_metadata?: {
-        /**
-         * Calculated shipping fee
-         */
-        fee?: number;
-        /**
-         * Delivery zone name (if zone-based pricing)
-         */
-        zone_name?: string | null;
-        /**
-         * Pricing tier name (if distance-based pricing)
-         */
-        tier_name?: string | null;
-        /**
-         * Calculated distance from store (if distance-based)
-         */
-        distance_meters?: number | null;
-        /**
-         * Whether free delivery was applied
-         */
-        is_free?: boolean;
-        /**
-         * Human-readable explanation of fee
-         */
-        reason?: string;
-        /**
-         * Which pricing system was applied
-         */
-        applied_rule?: Order.applied_rule;
-    } | null;
+    shipping_metadata?: any | null;
 };
 export namespace Order {
     export enum order_status {
@@ -93,12 +68,11 @@ export namespace Order {
         BANK_TRANSFER = 'bank_transfer',
     }
     /**
-     * Which pricing system was applied
+     * Whether this order was created in the live or test environment. Sandbox orders are isolated from production data.
      */
-    export enum applied_rule {
-        ZONE = 'zone',
-        DISTANCE = 'distance',
-        DEFAULT = 'default',
+    export enum environment {
+        PRODUCTION = 'production',
+        SANDBOX = 'sandbox',
     }
 }
 

@@ -18,6 +18,7 @@ export class MessagingService {
      * @throws ApiError
      */
     public listThreads({
+        xAuthToken,
         customerId,
         status,
         priority,
@@ -28,6 +29,10 @@ export class MessagingService {
         cursor,
         fields,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         /**
          * Customer UUID to filter threads by
          */
@@ -81,6 +86,9 @@ export class MessagingService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/messaging/threads',
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
             query: {
                 'customer_id': customerId,
                 'status': status,
@@ -95,6 +103,7 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },
@@ -106,9 +115,14 @@ export class MessagingService {
      * @throws ApiError
      */
     public getThread({
+        xAuthToken,
         id,
         fields,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         id: string,
         /**
          * Comma-separated list of fields to include in the response.
@@ -130,12 +144,16 @@ export class MessagingService {
             path: {
                 'id': id,
             },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
             query: {
                 'fields': fields,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
@@ -151,9 +169,14 @@ export class MessagingService {
      * @throws ApiError
      */
     public updateThread({
+        xAuthToken,
         id,
         requestBody,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         id: string,
         requestBody: {
             status?: 'active' | 'resolved' | 'closed' | 'escalated' | 'pending';
@@ -188,6 +211,9 @@ export class MessagingService {
             path: {
                 'id': id,
             },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -209,12 +235,17 @@ export class MessagingService {
      * @throws ApiError
      */
     public getThreadMessages({
+        xAuthToken,
         id,
         limit = 50,
         cursor,
         order = 'asc',
         fields,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         id: string,
         limit?: number,
         /**
@@ -250,6 +281,9 @@ export class MessagingService {
             path: {
                 'id': id,
             },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
             query: {
                 'limit': limit,
                 'cursor': cursor,
@@ -259,6 +293,7 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
@@ -272,23 +307,32 @@ export class MessagingService {
      * @throws ApiError
      */
     public sendMessage({
+        xAuthToken,
         id,
         requestBody,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         id: string,
         requestBody: {
             message: string;
         },
     }): CancelablePromise<{
-        id?: string;
-        message?: string;
-        created_at?: string;
+        message?: {
+            id?: string;
+            created_at?: string;
+        };
     }> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/messaging/threads/{id}/messages',
             path: {
                 'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -310,6 +354,7 @@ export class MessagingService {
      */
     public createConversation({
         requestBody,
+        xAuthToken,
     }: {
         requestBody: {
             /**
@@ -326,6 +371,10 @@ export class MessagingService {
             priority?: 'urgent' | 'high' | 'normal' | 'low';
             thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical';
         },
+        /**
+         * Customer session access_token. Required when body.customer_id is supplied so the gateway can prove the caller owns that customer record.
+         */
+        xAuthToken?: string,
     }): CancelablePromise<{
         thread?: {
             id?: string;
@@ -341,6 +390,9 @@ export class MessagingService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/messaging/conversations',
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -361,8 +413,13 @@ export class MessagingService {
      * @throws ApiError
      */
     public markThreadRead({
+        xAuthToken,
         id,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         id: string,
     }): CancelablePromise<{
         success?: boolean;
@@ -374,32 +431,14 @@ export class MessagingService {
             path: {
                 'id': id,
             },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                429: `Rate limit exceeded`,
-                500: `Internal server error`,
-            },
-        });
-    }
-    /**
-     * Get total unread count
-     * Returns the aggregate unread message count across all non-archived threads for the authenticated store.
-     * @returns any Success
-     * @throws ApiError
-     */
-    public getThreadUnreadCount(): CancelablePromise<{
-        /**
-         * Total number of unread messages across all non-archived threads
-         */
-        unread_count?: number;
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/v1/messaging/threads/unread-count',
-            errors: {
-                401: `Authentication failed - invalid or missing API key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },
@@ -414,9 +453,14 @@ export class MessagingService {
      * @throws ApiError
      */
     public editMessage({
+        xAuthToken,
         id,
         requestBody,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         id: string,
         requestBody: {
             message_content: string;
@@ -435,6 +479,9 @@ export class MessagingService {
             url: '/v1/messaging/messages/{id}',
             path: {
                 'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -456,8 +503,13 @@ export class MessagingService {
      * @throws ApiError
      */
     public deleteMessage({
+        xAuthToken,
         id,
     }: {
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken: string,
         id: string,
     }): CancelablePromise<{
         success?: boolean;
@@ -469,6 +521,9 @@ export class MessagingService {
             url: '/v1/messaging/messages/{id}',
             path: {
                 'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,

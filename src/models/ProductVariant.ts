@@ -47,7 +47,7 @@ export type ProductVariant = {
     /**
      * Variant-specific attributes (e.g., color, size, material)
      */
-    variant_attributes?: Record<string, any> | null;
+    variant_attributes?: any | null;
     /**
      * Display name for this variant
      */
