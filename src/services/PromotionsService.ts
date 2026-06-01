@@ -34,12 +34,10 @@ export class PromotionsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `name`, `type`, `display_type`, `description`
-         * - `discount_value`, `discount_type`, `min_purchase`, `max_discount`
-         * - `start_date`, `end_date`, `status`
-         * - `usage_limit`, `usage_per_customer`
+         * - `id`, `name`, `type`, `display_type`, `value`, `min_purchase`
+         * - `start_date`, `end_date`, `status`, `conditions`, `image`
          * - `bundle_products`, `bogo_required_products`, `bogo_free_products`, `free_products`
-         * - `applicable_categories`, `applicable_products`
+         * - `has_time_restrictions`, `start_time`, `end_time`, `time_zone`, `apply_to_days`
          * - `created_at`, `updated_at`
          *
          */
@@ -84,12 +82,10 @@ export class PromotionsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `name`, `type`, `display_type`, `description`
-         * - `discount_value`, `discount_type`, `min_purchase`, `max_discount`
-         * - `start_date`, `end_date`, `status`
-         * - `usage_limit`, `usage_per_customer`
+         * - `id`, `name`, `type`, `display_type`, `value`, `min_purchase`
+         * - `start_date`, `end_date`, `status`, `conditions`, `image`
          * - `bundle_products`, `bogo_required_products`, `bogo_free_products`, `free_products`
-         * - `applicable_categories`, `applicable_products`
+         * - `has_time_restrictions`, `start_time`, `end_time`, `time_zone`, `apply_to_days`
          * - `created_at`, `updated_at`
          *
          */

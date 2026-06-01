@@ -218,68 +218,15 @@ export class ReviewsService {
         });
     }
     /**
-     * Approve or reject a review
-     * Updates the moderation status of a review. Used by store owners to approve
-     * or reject customer-submitted reviews before they appear publicly.
+     * Delete your own review
+     * Permanently deletes a review submitted by the authenticated customer.
      *
-     * Approving clears any previous `rejection_reason`. Rejecting accepts an
-     * optional reason that may be shown to the customer.
+     * A customer may only delete the review they themselves wrote — attempting to
+     * delete another customer's review returns `403`.
      *
-     * **Authentication:** Secret key required. Publishable keys return `403`.
-     *
-     * **Rate limit:** 300 requests/hour per API key.
-     *
-     * @returns any Review status updated
-     * @throws ApiError
-     */
-    public moderateReview({
-        id,
-        requestBody,
-    }: {
-        /**
-         * Review UUID.
-         */
-        id: string,
-        requestBody: {
-            /**
-             * New moderation status for the review.
-             */
-            status: 'approved' | 'rejected';
-            /**
-             * Optional reason for rejection. Only relevant when `status` is `rejected`.
-             * Ignored when approving.
-             *
-             */
-            rejection_reason?: string;
-        },
-    }): CancelablePromise<{
-        review: Review;
-    }> {
-        return this.httpRequest.request({
-            method: 'PATCH',
-            url: '/v1/reviews/{id}',
-            path: {
-                'id': id,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
-                429: `Rate limit exceeded`,
-                500: `Internal server error`,
-            },
-        });
-    }
-    /**
-     * Delete a review
-     * Deletes a review permanently.
-     *
-     * - **Secret key:** Can delete any review belonging to the store.
-     * - **Publishable key + customer token:** Can delete only the authenticated
-     * customer's own review. Requires `x-auth-token` header.
+     * **Authentication:** API key in `Authorization: Bearer` header **and** the
+     * review author's customer JWT in the `x-auth-token` header (obtained from
+     * `POST /v1/auth/login`).
      *
      * **Rate limit:** 300 requests/hour per API key.
      *
@@ -295,11 +242,11 @@ export class ReviewsService {
          */
         id: string,
         /**
-         * Customer JWT — required when using a publishable key to delete the
-         * authenticated customer's own review.
+         * Customer JWT for the review's author, from `POST /v1/auth/login` or
+         * `POST /v1/auth/verify-otp`.
          *
          */
-        xAuthToken?: string,
+        xAuthToken: string,
     }): CancelablePromise<{
         success?: boolean;
         message?: string;

@@ -36,10 +36,10 @@ export class GiftCardsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `code`, `balance`, `initial_balance`, `currency`, `status`
-         * - `expiry_date`, `customer_id`, `issued_date`, `last_used_date`
-         * - `maximum_usage_percentage`, `redemption_count`
-         * - `created_at`, `updated_at`
+         * - `id`, `code`, `value`, `balance`, `status`, `type`
+         * - `expiry_date`, `customer_id`, `issued_to`, `issued_date`, `last_used`
+         * - `minimum_purchase_amount`, `maximum_usage_percentage`, `usage_restrictions`
+         * - `redemption_count`, `max_redemptions`, `created_at`, `updated_at`
          *
          * Unknown field names will return a `400` error.
          *
@@ -94,10 +94,10 @@ export class GiftCardsService {
          * Comma-separated list of fields to include in the embedded `gift_card` object.
          *
          * **Allowed Fields:**
-         * - `id`, `code`, `balance`, `initial_balance`, `currency`, `status`
-         * - `expiry_date`, `customer_id`, `issued_date`, `last_used_date`
-         * - `maximum_usage_percentage`, `redemption_count`
-         * - `created_at`, `updated_at`
+         * - `id`, `code`, `value`, `balance`, `status`, `type`
+         * - `expiry_date`, `customer_id`, `issued_to`, `issued_date`, `last_used`
+         * - `minimum_purchase_amount`, `maximum_usage_percentage`, `usage_restrictions`
+         * - `redemption_count`, `max_redemptions`, `created_at`, `updated_at`
          *
          * Unknown field names will return a `400` error.
          *
@@ -109,7 +109,10 @@ export class GiftCardsService {
          */
         valid?: boolean;
         balance?: number;
-        status?: 'active' | 'full_redeemed' | 'inactive';
+        /**
+         * Lifecycle status. A gift card is only redeemable while `active`.
+         */
+        status?: string;
         expiry_date?: string | null;
         maximum_usage_percentage?: number | null;
         gift_card?: GiftCard;

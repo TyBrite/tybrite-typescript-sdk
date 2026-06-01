@@ -158,21 +158,21 @@ export class OrdersService {
              */
             customer_id?: string;
             /**
-             * Customer email address
+             * Customer email address. Required.
              */
-            customer_email?: string;
+            customer_email: string;
             /**
-             * Customer full name
+             * Customer full name. Required.
              */
-            customer_name?: string;
+            customer_name: string;
             /**
-             * Customer phone number
+             * Customer phone number (optional)
              */
             customer_phone?: string;
             /**
-             * Billing address (optional)
+             * Billing address. Required.
              */
-            billing_address?: {
+            billing_address: {
                 street?: string;
                 city?: string;
                 state?: string;
@@ -180,9 +180,9 @@ export class OrdersService {
                 country?: string;
             };
             /**
-             * Shipping address (optional)
+             * Shipping address. Required.
              */
-            shipping_address?: {
+            shipping_address: {
                 street?: string;
                 city?: string;
                 state?: string;
@@ -202,7 +202,7 @@ export class OrdersService {
                  */
                 variant_id?: string;
                 /**
-                 * Product name at time of order
+                 * Product name captured on the line item. Optional — if omitted, it is resolved from the product automatically.
                  */
                 product_name?: string;
                 /**
@@ -239,9 +239,9 @@ export class OrdersService {
              */
             order_status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
             /**
-             * Subtotal before tax and shipping
+             * Subtotal before tax and shipping. Required.
              */
-            subtotal?: number;
+            subtotal: number;
             /**
              * Tax amount
              */
@@ -537,6 +537,97 @@ export class OrdersService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                429: `Rate limit exceeded`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Reserve stock for checkout
+     * **Optional.** Holds stock for the items a customer is checking out so the
+     * units can't be sold to someone else while they complete payment.
+     *
+     * Use this when there is a gap between "customer commits to buy" and "payment
+     * confirms" — card redirects, 3‑D Secure, or mobile‑money push prompts — so
+     * the stock is claimed *before* the customer pays and a second shopper racing
+     * for the last unit is turned away up front. For instant‑capture or fully
+     * synchronous flows you can skip it and call `POST /v1/orders` directly;
+     * Galactic Core still prevents stock from going negative at order time. In
+     * other words, reserving is a stronger guarantee for async payments, not a
+     * mandatory step before every order.
+     *
+     * Reservations are all‑or‑nothing: if any item lacks available stock, nothing
+     * is reserved and the response is `409`. Each hold expires automatically after
+     * a window (15 minutes by default). Pass the returned `reservation_ids` to
+     * `POST /v1/orders` (or when you `PATCH` an order to `paid`) and Galactic Core
+     * converts the hold into the actual stock deduction. If the customer abandons
+     * checkout, the hold simply expires and the stock returns to availability —
+     * you don't need to release it explicitly.
+     *
+     * Works with both publishable and secret keys (checkout originates in the
+     * browser).
+     *
+     * **Rate limit:** 300 requests/hour per API key.
+     *
+     * @returns any Stock reserved
+     * @throws ApiError
+     */
+    public reserveStock({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The variants and quantities to hold.
+             */
+            items: Array<{
+                /**
+                 * The product variant to reserve.
+                 */
+                variant_id: string;
+                /**
+                 * How many units to hold.
+                 */
+                quantity: number;
+            }>;
+            /**
+             * Optional hold duration in seconds. Defaults to 900 (15 minutes);
+             * values below 60 are raised to 60.
+             *
+             */
+            ttl_seconds?: number;
+            /**
+             * Optional - associate the hold with a customer (used for checkout recovery).
+             */
+            customer_id?: string;
+            /**
+             * Optional - associate the hold with an anonymous browser session.
+             */
+            session_id?: string;
+        },
+    }): CancelablePromise<{
+        reservations: Array<{
+            reservation_id?: string;
+            variant_id?: string;
+            quantity?: number;
+        }>;
+        /**
+         * Pass these to order creation to convert the hold into a sale.
+         */
+        reservation_ids: Array<string>;
+        /**
+         * Seconds until the hold expires if not converted.
+         */
+        expires_in_seconds: number;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/checkout/reserve',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                409: `Insufficient stock - nothing was reserved`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },

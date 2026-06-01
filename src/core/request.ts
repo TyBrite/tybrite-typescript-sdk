@@ -290,7 +290,7 @@ export const catchErrorCodes = (options: ApiRequestOptions, result: ApiResult): 
  * @returns CancelablePromise<T>
  * @throws ApiError
  */
-// ===== TYBRITE-RETRY-BLOCK-START (spliced into request.ts by post-generate.js) =====
+// ===== TYBRITE-RETRY-BLOCK-START =====
 
 const RETRYABLE_STATUS = new Set([429, 500, 502, 503, 504]);
 const IDEMPOTENT_METHODS = new Set(['GET', 'HEAD', 'OPTIONS', 'PUT', 'DELETE']);
