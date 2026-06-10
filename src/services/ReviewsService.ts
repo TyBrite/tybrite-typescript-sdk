@@ -18,6 +18,10 @@ export class ReviewsService {
      * rating and star distribution across all approved reviews for the product,
      * regardless of the `status` filter applied to the `reviews` array.
      *
+     * **Marketplace:** A marketplace operator key may read approved reviews for a
+     * product belonging to one of its merchants. When using an operator key,
+     * `store_id` (the merchant who owns the product) is **required**.
+     *
      * **Rate limit:** 300 requests/hour per API key.
      *
      * @returns any Reviews retrieved successfully
@@ -25,6 +29,7 @@ export class ReviewsService {
      */
     public listReviews({
         productId,
+        storeId,
         variantId,
         status = 'approved',
         rating,
@@ -36,6 +41,13 @@ export class ReviewsService {
          * Filter reviews for this product. Required.
          */
         productId: string,
+        /**
+         * Marketplace operator key only — and **required** for operator keys. The
+         * merchant that owns the product whose reviews you are reading. Ignored when
+         * using a single-store key.
+         *
+         */
+        storeId?: string,
         /**
          * Further filter to reviews that mention a specific variant.
          */
@@ -75,6 +87,7 @@ export class ReviewsService {
             url: '/v1/reviews',
             query: {
                 'product_id': productId,
+                'store_id': storeId,
                 'variant_id': variantId,
                 'status': status,
                 'rating': rating,
@@ -85,6 +98,7 @@ export class ReviewsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
             },
@@ -187,6 +201,10 @@ export class ReviewsService {
      * Returns a single review by ID. Publishable keys see only approved reviews —
      * pending or rejected reviews return `404`. Secret keys see all statuses.
      *
+     * **Marketplace:** A marketplace operator key may read an approved review that
+     * belongs to one of its merchants. When using an operator key, `store_id` (the
+     * merchant who owns the reviewed product) is **required**.
+     *
      * **Rate limit:** 600 requests/hour per API key.
      *
      * @returns any Review found
@@ -194,11 +212,18 @@ export class ReviewsService {
      */
     public getReview({
         id,
+        storeId,
     }: {
         /**
          * Review UUID.
          */
         id: string,
+        /**
+         * Marketplace operator key only — and **required** for operator keys. The
+         * merchant that owns the reviewed product. Ignored when using a single-store key.
+         *
+         */
+        storeId?: string,
     }): CancelablePromise<{
         review: Review;
     }> {
@@ -208,9 +233,13 @@ export class ReviewsService {
             path: {
                 'id': id,
             },
+            query: {
+                'store_id': storeId,
+            },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,

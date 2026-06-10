@@ -10,17 +10,22 @@ export class TaxonomyService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * List categories
-     * Retrieve all product categories for the authenticated store. Accepts both publishable and secret API keys.
+     * Retrieve all product categories for the authenticated store. Accepts both publishable and secret API keys. When called with a marketplace operator key, returns categories aggregated across all merchants in the marketplace. With a marketplace operator key, pass `?store_id=<merchant>` to narrow results to a single merchant.
      * @returns any Success
      * @throws ApiError
      */
     public listCategories({
+        storeId,
         search,
         active = true,
         limit = 50,
         cursor,
         fields,
     }: {
+        /**
+         * Marketplace operator key only. Narrow the aggregated marketplace categories to a single merchant. Ignored when using a single-store key.
+         */
+        storeId?: string,
         /**
          * Case-insensitive substring match on category name
          */
@@ -53,6 +58,7 @@ export class TaxonomyService {
             method: 'GET',
             url: '/v1/categories',
             query: {
+                'store_id': storeId,
                 'search': search,
                 'active': active,
                 'limit': limit,
@@ -103,11 +109,12 @@ export class TaxonomyService {
     }
     /**
      * List subcategories
-     * Retrieve product subcategories. Subcategories can be nested to arbitrary depth via their parent_id. By default a flat list is returned; use tree=true to receive them as a nested hierarchy, or parent_id / root_only to fetch a specific level. Accepts both publishable and secret API keys.
+     * Retrieve product subcategories. Subcategories can be nested to arbitrary depth via their parent_id. By default a flat list is returned; use tree=true to receive them as a nested hierarchy, or parent_id / root_only to fetch a specific level. Accepts both publishable and secret API keys. When called with a marketplace operator key, returns subcategories aggregated across all merchants in the marketplace. With a marketplace operator key, pass `?store_id=<merchant>` to narrow results to a single merchant.
      * @returns any Success
      * @throws ApiError
      */
     public listSubcategories({
+        storeId,
         categoryId,
         parentId,
         rootOnly = false,
@@ -118,6 +125,10 @@ export class TaxonomyService {
         cursor,
         fields,
     }: {
+        /**
+         * Marketplace operator key only. Narrow the aggregated marketplace subcategories to a single merchant. Ignored when using a single-store key.
+         */
+        storeId?: string,
         /**
          * Filter subcategories by parent category ID
          */
@@ -166,6 +177,7 @@ export class TaxonomyService {
             method: 'GET',
             url: '/v1/subcategories',
             query: {
+                'store_id': storeId,
                 'category_id': categoryId,
                 'parent_id': parentId,
                 'root_only': rootOnly,

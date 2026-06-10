@@ -19,6 +19,12 @@ export class WebhooksService {
      * immediately. It cannot be retrieved again; rotate it via a DELETE +
      * re-create if lost.
      *
+     * Failed deliveries are retried automatically with exponential backoff. If an
+     * endpoint fails 20 deliveries in a row (each after exhausting its retries),
+     * it is automatically disabled (`enabled: false`) and stamped with a
+     * `disabled_reason`. Re-enable it with a `PATCH` once the endpoint is healthy
+     * again; re-enabling resets the failure counter.
+     *
      * @returns any Endpoint created
      * @throws ApiError
      */
@@ -221,9 +227,16 @@ export class WebhooksService {
     /**
      * Send a test event
      * Sends a synthetic test payload to the endpoint immediately. Useful for verifying
-     * signature verification and endpoint connectivity during integration.
+     * signature verification and endpoint connectivity during integration. The
+     * `data.object` contains placeholder values, not real store data.
      *
-     * The payload includes `"test": true` so your handler can distinguish test from live events.
+     * The envelope carries two flags your handler can branch on:
+     * - **`test: true`** — marks this as a synthetic payload with fake data; skip
+     * any side effects (don't fulfil, charge, or persist). Only events from this
+     * endpoint carry it.
+     * - **`livemode`** — `false` when this request is authenticated with a test
+     * key, `true` with a live key. Independent of `test`: it reflects the key's
+     * environment, not whether the payload is synthetic.
      *
      * @returns any Test delivery attempted
      * @throws ApiError
@@ -275,6 +288,7 @@ export class WebhooksService {
      */
     public listWebhookEvents({
         type,
+        environment,
         limit = 50,
         cursor,
     }: {
@@ -282,6 +296,10 @@ export class WebhooksService {
          * Filter by event type (e.g. `order.paid`)
          */
         type?: string,
+        /**
+         * Filter by the environment the event was emitted in.
+         */
+        environment?: 'production' | 'sandbox',
         limit?: number,
         /**
          * Cursor for pagination (base64-encoded `created_at`)
@@ -296,6 +314,7 @@ export class WebhooksService {
             url: '/v1/webhook_events',
             query: {
                 'type': type,
+                'environment': environment,
                 'limit': limit,
                 'cursor': cursor,
             },

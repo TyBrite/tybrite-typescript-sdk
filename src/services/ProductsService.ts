@@ -20,6 +20,10 @@ export class ProductsService {
      * **Currency:** All prices returned in store's default currency. For multi-currency support with
      * geographic detection, use the `/v1/prices/products` endpoint instead.
      *
+     * **Marketplace:** When called with a marketplace operator key, this returns products aggregated
+     * across all merchants in the marketplace rather than a single store's catalog. With a marketplace
+     * operator key, pass `?store_id=<merchant>` to narrow results to a single merchant.
+     *
      * **Performance:**
      * - Default variant data included at root level (price, stock, sku)
      * - No variants array (50-70% smaller than detail endpoints)
@@ -60,6 +64,7 @@ export class ProductsService {
                 limit = 50,
                 cursor,
                 fields,
+                storeId,
             }: {
                 /**
                  * Search products by name or SKU using case-insensitive partial matching.
@@ -254,6 +259,12 @@ export class ProductsService {
                                                          *
                                                          */
                                                         fields?: string,
+                                                        /**
+                                                         * Marketplace operator key only. Narrow the aggregated marketplace catalog to a single
+                                                         * merchant's products — the "shop page" for one merchant. Ignored when using a single-store key.
+                                                         *
+                                                         */
+                                                        storeId?: string,
                                                     }): CancelablePromise<{
                                                         products?: Array<Product>;
                                                         pagination?: {
@@ -281,6 +292,7 @@ export class ProductsService {
                                                                 'limit': limit,
                                                                 'cursor': cursor,
                                                                 'fields': fields,
+                                                                'store_id': storeId,
                                                             },
                                                             errors: {
                                                                 400: `Invalid request - malformed data or missing required fields`,

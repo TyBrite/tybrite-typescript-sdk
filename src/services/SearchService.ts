@@ -9,15 +9,20 @@ export class SearchService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * Simple text search
-     * Fast text-based search using
+     * Fast text-based product search. Accepts both publishable and secret API keys. When called with a marketplace operator key, searches products across all merchants in the marketplace. With a marketplace operator key, pass `?store_id=<merchant>` to narrow results to a single merchant.
      * @returns SearchResponse Success
      * @throws ApiError
      */
     public searchProducts({
+        storeId,
         q,
         query,
         limit = 20,
     }: {
+        /**
+         * Marketplace operator key only. Narrow the marketplace search to a single merchant's products. Ignored when using a single-store key.
+         */
+        storeId?: string,
         /**
          * Search query (alternative to 'query' parameter)
          */
@@ -35,6 +40,7 @@ export class SearchService {
             method: 'GET',
             url: '/v1/search',
             query: {
+                'store_id': storeId,
                 'q': q,
                 'query': query,
                 'limit': limit,
@@ -58,6 +64,9 @@ export class SearchService {
      *
      * **Note:** Despite using POST method (to support complex request bodies with parameters),
      * this is a read-only operation. Publishable keys are allowed for client-side search functionality.
+     *
+     * **Marketplace:** When called with a marketplace operator key, searches products across all
+     * merchants in the marketplace.
      *
      * @returns SearchResponse Success
      * @throws ApiError

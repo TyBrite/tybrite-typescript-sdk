@@ -81,6 +81,9 @@ export class SystemService {
      * Use the `sections` parameter to request only specific data sections, reducing payload size
      * by 50-80% when you don't need all information.
      *
+     * **Single-store only.** This endpoint describes one store. A marketplace operator key has no
+     * single store here and receives `403` — use `GET /v1/marketplace/info` for the marketplace's own
+     * information, or `GET /v1/marketplace/info?store_id=<merchant>` for one merchant within it.
      *
      * @returns StoreInfoResponse Store information retrieved successfully
      * @throws ApiError

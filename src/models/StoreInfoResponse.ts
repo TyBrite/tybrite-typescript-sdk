@@ -16,6 +16,30 @@ export type StoreInfoResponse = {
          */
         name: string;
         /**
+         * URL of the store's logo, or null if not set.
+         */
+        logo_url?: string | null;
+        /**
+         * Short description of the store, or null if not set.
+         */
+        description?: string | null;
+        /**
+         * Store's public website URL, or null if not set.
+         */
+        website?: string | null;
+        /**
+         * Store contact phone number, or null if not set.
+         */
+        phone?: string | null;
+        /**
+         * Store contact email, or null if not set.
+         */
+        email?: string | null;
+        /**
+         * Store physical or business address, or null if not set.
+         */
+        address?: string | null;
+        /**
          * Store's default currency code (ISO 4217)
          */
         default_currency: string;
@@ -45,6 +69,17 @@ export type StoreInfoResponse = {
             featured?: number;
             with_images?: number;
             low_stock?: number;
+            /**
+             * A small sample of products (at most 10) for context — useful for AI agents and overview screens. This is NOT the full catalog; use the products endpoint to browse all products.
+             */
+            sample?: Array<{
+                id?: string;
+                name?: string;
+                category?: string | null;
+                price?: number | null;
+                image?: string | null;
+                featured?: boolean;
+            }>;
         };
         collections?: {
             total?: number;
@@ -164,5 +199,27 @@ export type StoreInfoResponse = {
         specifications?: boolean;
         collections?: boolean;
     };
+    /**
+     * Indicates whether this store is part of a marketplace, so a storefront can adapt its experience accordingly.
+     */
+    marketplace?: {
+        /**
+         * Whether the store runs on its own or inside a marketplace.
+         */
+        mode?: StoreInfoResponse.mode;
+        /**
+         * Whether marketplace features are available.
+         */
+        marketplace_enabled?: boolean;
+    };
 };
+export namespace StoreInfoResponse {
+    /**
+     * Whether the store runs on its own or inside a marketplace.
+     */
+    export enum mode {
+        STANDARD = 'standard',
+        MARKETPLACE = 'marketplace',
+    }
+}
 

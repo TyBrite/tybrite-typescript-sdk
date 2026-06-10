@@ -70,6 +70,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`taxonomy`**: Manage categories and subcategories.
 - **`cms`**: Shoppable content management (Blog posts, Lookbooks).
 - **`messaging`**: Real-time customer support messaging.
+- **`marketplace`**: Multi-merchant marketplaces — marketplace identity and branding, aggregated catalog reads, single-merchant shop pages, unified multi-merchant checkout with automatic payment splitting, and the unified cross-merchant customer profile.
 - **`system`**: Platform health checks and configuration.
 
 ## Advanced Usage
@@ -188,6 +189,35 @@ await client.cartWishlist.addToCart({
   },
   xSessionId: 'session_uuid_generated_on_client'
 });
+```
+
+### Multi-Merchant Marketplaces
+On a marketplace deployment, authenticate the storefront with a **marketplace operator key** (a publishable key). Catalog reads (`products`, `taxonomy`, `search`) then return the combined catalog across every active merchant. Pass `storeId` to narrow any of those reads to a single merchant's shop page. Read the marketplace's own identity and branding (or one merchant's full store information) with `marketplace.getMarketplaceInfo`, and check out a single cart spanning multiple merchants — one payment is split to each merchant automatically.
+
+```typescript
+const marketplace = new Tybrite({ apiKey: 'tybrite_pk_live_operator_...' });
+
+// Marketplace identity & branding (name, logo, colors, contact)
+const info = await marketplace.marketplace.getMarketplaceInfo({});
+
+// Aggregated catalog across all merchants (each product carries its merchant_store_id)
+const { products } = await marketplace.products.listProducts({ limit: 20 });
+
+// Narrow to a single merchant's shop page
+const merchantProducts = await marketplace.products.listProducts({ storeId: 'merchant-a' });
+
+// One cart, many merchants → one payment, auto-split
+const order = await marketplace.marketplace.marketplaceCheckout({
+  requestBody: {
+    items: [
+      { variant_id: 'v1', merchant_store_id: 'merchant-a', quantity: 1 },
+      { variant_id: 'v2', merchant_store_id: 'merchant-b', quantity: 2 },
+    ],
+    customer_email: 'shopper@example.com',
+    currency: 'USD',
+  },
+});
+// Complete the payment on the storefront with order.client_secret (Stripe.js).
 ```
 
 ## License
