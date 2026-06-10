@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ResolvedPromotionProduct } from './ResolvedPromotionProduct';
 export type Promotion = {
     id?: string;
     name?: string;
@@ -48,9 +49,26 @@ export type Promotion = {
      */
     bogo_free_products?: Array<Record<string, any>>;
     /**
-     * Products given free under the promotion.
+     * Present only when the promotion is fetched with `expand=products`. The same
+     * entries as `bundle_products`, each enriched with an embedded `product` object
+     * so you can render the bundle without a second lookup.
+     *
      */
-    free_products?: Array<Record<string, any>>;
+    bundle_products_resolved?: Array<ResolvedPromotionProduct>;
+    /**
+     * Present only when the promotion is fetched with `expand=products`. The same
+     * entries as `bogo_required_products`, each enriched with an embedded `product`
+     * object.
+     *
+     */
+    bogo_required_products_resolved?: Array<ResolvedPromotionProduct>;
+    /**
+     * Present only when the promotion is fetched with `expand=products`. The same
+     * entries as `bogo_free_products`, each enriched with an embedded `product`
+     * object.
+     *
+     */
+    bogo_free_products_resolved?: Array<ResolvedPromotionProduct>;
     /**
      * Whether the promotion only applies during specific times/days.
      */
