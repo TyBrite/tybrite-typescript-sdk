@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AdEventResponse } from '../models/AdEventResponse';
+import type { AdSlotResponse } from '../models/AdSlotResponse';
 import type { MarketplaceCheckoutResponse } from '../models/MarketplaceCheckoutResponse';
 import type { MarketplaceInfoResponse } from '../models/MarketplaceInfoResponse';
 import type { StoreInfoResponse } from '../models/StoreInfoResponse';
@@ -21,6 +23,13 @@ export class MarketplaceService {
      * storefront and a per-merchant breakdown of gross, commission, and net amounts.
      * Once payment succeeds, the order finalizes automatically — no further call is
      * required.
+     *
+     * Stock is reserved at checkout: the items are held against each merchant's
+     * inventory immediately so concurrent shoppers cannot oversell the last units,
+     * and the hold becomes a real stock reduction when payment succeeds. If an item
+     * cannot be held, the call returns `400 insufficient_stock` and no order or
+     * payment is created. Holds expire automatically if payment is never completed,
+     * returning the stock to availability.
      *
      * Requires the marketplace operator key.
      *
@@ -162,6 +171,109 @@ export class MarketplaceService {
                 404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get sponsored placements for a slot
+     * Returns the active sponsored placements to render in a named slot on a marketplace
+     * storefront (for example a hero banner, a category strip, or search results). **Requires a
+     * marketplace operator key.**
+     *
+     * Each placement is paid advertising and **must be rendered with its `disclosure_label`** (for
+     * example "Sponsored") so shoppers can tell it apart from organic results. Blend placements
+     * with your organic listings or recommendations as appropriate for the slot.
+     *
+     * Use the optional `context` parameter to request placements scoped to a category or a search
+     * term, and `limit` to cap how many placements come back.
+     *
+     * After rendering, log a beacon with `POST /v1/marketplace/ad-events`: one `impression` per
+     * placement when it becomes visible, and a `click` when the shopper clicks it.
+     *
+     * @returns AdSlotResponse The active sponsored placements for the slot.
+     * @throws ApiError
+     */
+    public getAdSlot({
+        slotKey,
+        context,
+        limit,
+    }: {
+        /**
+         * The slot to fill, for example `home_hero` or `category_top`.
+         */
+        slotKey: string,
+        /**
+         * Optional context for context-scoped slots — a category identifier or a search term — used to pick placements relevant to what the shopper is viewing.
+         */
+        context?: string,
+        /**
+         * Maximum number of placements to return.
+         */
+        limit?: number,
+    }): CancelablePromise<AdSlotResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/marketplace/ad-slots/{slot_key}',
+            path: {
+                'slot_key': slotKey,
+            },
+            query: {
+                'context': context,
+                'limit': limit,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+            },
+        });
+    }
+    /**
+     * Log an ad impression or click
+     * Records an impression or click beacon for a sponsored placement. **Requires a marketplace
+     * operator key.**
+     *
+     * This is fire-and-forget: fire one `impression` per placement when it becomes visible, and a
+     * `click` when the shopper clicks it. Pass the `booking_id` from the placement you rendered.
+     *
+     * The response returns `202 Accepted` with `billable` indicating whether the event counted
+     * toward billing after de-duplication and invalid-traffic filtering. This is informational —
+     * the storefront does not need to act on it.
+     *
+     * @returns AdEventResponse The beacon was accepted.
+     * @throws ApiError
+     */
+    public logAdEvent({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The placement's identifier, taken from the slot response.
+             */
+            booking_id: string;
+            /**
+             * Whether the placement was shown (`impression`) or clicked (`click`).
+             */
+            event_type: 'impression' | 'click';
+            /**
+             * Optional — the specific product within the placement the event relates to.
+             */
+            product_id?: string;
+            /**
+             * Optional — an opaque storefront session identifier used to de-duplicate events.
+             */
+            session_id?: string;
+        },
+    }): CancelablePromise<AdEventResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/marketplace/ad-events',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
             },
         });
     }

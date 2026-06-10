@@ -6,5 +6,9 @@ export type Recommendation = {
     productId?: string;
     score?: number;
     reason?: string;
+    /**
+     * Present only for marketplace recommendations — the merchant that the recommended product belongs to.
+     */
+    merchant_store_id?: string;
 };
 

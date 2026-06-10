@@ -11,6 +11,9 @@ export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
 export type { Address } from './models/Address';
+export type { AdEventResponse } from './models/AdEventResponse';
+export { AdPlacement } from './models/AdPlacement';
+export type { AdSlotResponse } from './models/AdSlotResponse';
 export { CartItem } from './models/CartItem';
 export type { Category } from './models/Category';
 export { ConnectAuthorizeResponse } from './models/ConnectAuthorizeResponse';

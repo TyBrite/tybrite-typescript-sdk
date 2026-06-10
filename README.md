@@ -70,7 +70,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`taxonomy`**: Manage categories and subcategories.
 - **`cms`**: Shoppable content management (Blog posts, Lookbooks).
 - **`messaging`**: Real-time customer support messaging.
-- **`marketplace`**: Multi-merchant marketplaces — marketplace identity and branding, aggregated catalog reads, single-merchant shop pages, unified multi-merchant checkout with automatic payment splitting, and the unified cross-merchant customer profile.
+- **`marketplace`**: Multi-merchant marketplaces — marketplace identity and branding, aggregated catalog reads, single-merchant shop pages, unified multi-merchant checkout with automatic payment splitting, and the unified cross-merchant customer profile. Also serves **sponsored ad placements** for marketplace storefronts (rendered with a required "Sponsored" disclosure label) and logs impression/click beacons. Marketplace recommendations are computed deployment-wide across all merchants, each item stamped with its source `merchant_store_id`.
 - **`system`**: Platform health checks and configuration.
 
 ## Advanced Usage
