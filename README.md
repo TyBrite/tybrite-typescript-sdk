@@ -64,7 +64,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`recommendations`**: AI-driven "You might also like" and personalized suggestions.
 - **`payments`**: Payment processing (Stripe, Mobile Money) and verification.
 - **`pricing`**: Dynamic pricing engine and discount rule resolution.
-- **`promotions`**: Manage marketing campaigns, coupons, and discounts.
+- **`promotions`**: Read marketing campaigns and discounts. `bundle`/`bogo` promotions expose their product sets as id arrays (`bundle_products`, `bogo_required_products`, `bogo_free_products`) — resolve them with `products.getProduct`. Marketplace storefronts read a featured promotion with `getPromotion({ id, storeId })` (the `merchant_store_id` from the placement/collection).
 - **`giftCards`**: Gift card redemption, and balance tracking.
 - **`shipping`**: Shipping zone management and delivery cost calculation.
 - **`taxonomy`**: Manage categories and subcategories.

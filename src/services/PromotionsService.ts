@@ -70,14 +70,41 @@ export class PromotionsService {
     }
     /**
      * Get promotion details
+     * Get a single promotion's details, including the products it applies to.
+     *
+     * The `type` field tells you how the promotion works and which product fields
+     * to read:
+     * - `discount` (percentage) / `fixed` — a cart-level discount. There are no
+     * promotion products; render `value` and any `min_purchase`.
+     * - `bundle` — read `bundle_products`: a list of `{ productId, quantity, discountedPrice }`.
+     * - `bogo` — read `bogo_required_products` (buy these) and `bogo_free_products`
+     * (get these free): lists of `{ productId, quantity }`.
+     *
+     * These fields contain product **ids** — fetch each product's full detail with
+     * the Products API to render it.
+     *
+     * **Marketplace storefronts:** when a sponsored ad placement or a curated
+     * collection gives you a `promotion_id`, fetch its detail here by passing
+     * `store_id` (the `merchant_store_id` you received alongside the promotion).
+     * A marketplace key may read a single promotion this way; it cannot list
+     * promotions.
+     *
      * @returns Promotion Success
      * @throws ApiError
      */
     public getPromotion({
         id,
+        storeId,
         fields,
     }: {
         id: string,
+        /**
+         * The merchant whose promotion to read. Required for marketplace
+         * storefronts — pass the `merchant_store_id` you received with the
+         * promotion. Ignored for single-store keys.
+         *
+         */
+        storeId?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -98,11 +125,13 @@ export class PromotionsService {
                 'id': id,
             },
             query: {
+                'store_id': storeId,
                 'fields': fields,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
