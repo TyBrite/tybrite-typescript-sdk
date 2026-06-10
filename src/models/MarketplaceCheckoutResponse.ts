@@ -30,7 +30,33 @@ export type MarketplaceCheckoutResponse = {
     subtotal?: number;
     total_amount?: number;
     /**
-     * Per-merchant gross, commission, and net amounts for this order.
+     * Total discount applied across the whole basket — the sum of every merchant's own promotion and gift card discounts plus any marketplace-wide promotion run by the operator.
+     */
+    discount_total?: number;
+    /**
+     * The portion of `discount_total` funded by the marketplace operator (for example a marketplace-wide promotion). The remainder is funded by individual merchants.
+     */
+    operator_funded_discount?: number;
+    /**
+     * Per-merchant breakdown of how discounts were applied.
+     */
+    discount_breakdown?: Array<{
+        merchant_store_id?: string;
+        /**
+         * Discount funded by this merchant's own promotion.
+         */
+        merchant_discount?: number;
+        /**
+         * Amount redeemed from a gift card against this merchant's portion.
+         */
+        gift_card_amount?: number;
+        /**
+         * Discount applied to this merchant's portion that the marketplace operator funded (for example a marketplace-wide promotion).
+         */
+        operator_funded_discount?: number;
+    }>;
+    /**
+     * Per-merchant gross, discount, commission, and net amounts for this order.
      */
     merchant_breakdown?: Array<MerchantBreakdownItem>;
 };

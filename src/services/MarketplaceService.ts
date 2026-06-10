@@ -5,6 +5,8 @@
 import type { AdEventResponse } from '../models/AdEventResponse';
 import type { AdSlotResponse } from '../models/AdSlotResponse';
 import type { MarketplaceCheckoutResponse } from '../models/MarketplaceCheckoutResponse';
+import type { MarketplaceCollectionDetail } from '../models/MarketplaceCollectionDetail';
+import type { MarketplaceCollectionListResponse } from '../models/MarketplaceCollectionListResponse';
 import type { MarketplaceInfoResponse } from '../models/MarketplaceInfoResponse';
 import type { StoreInfoResponse } from '../models/StoreInfoResponse';
 import type { UnifiedCustomerProfile } from '../models/UnifiedCustomerProfile';
@@ -20,9 +22,19 @@ export class MarketplaceService {
      * commission is resolved per merchant, and one payment covers the entire order.
      *
      * The response includes a `client_secret` to complete the payment on the
-     * storefront and a per-merchant breakdown of gross, commission, and net amounts.
-     * Once payment succeeds, the order finalizes automatically — no further call is
-     * required.
+     * storefront and a per-merchant breakdown of gross, discount, commission, and net
+     * amounts. Once payment succeeds, the order finalizes automatically — no further
+     * call is required.
+     *
+     * **Discounts.** Pass the optional `discounts` array to apply a merchant's own
+     * promotion or gift card to that merchant's portion of the basket — each entry
+     * names the `merchant_store_id` and an optional `promotion_id` and/or
+     * `gift_card_code`, and the discount reduces only that merchant's subtotal.
+     * Marketplace-wide promotions run by the operator apply automatically; you do not
+     * pass them. The response reports `discount_total`, the
+     * `operator_funded_discount` (the share the operator funded), a per-merchant
+     * `discount_breakdown`, and `discount_amount` plus `merchant_gross` on each
+     * `merchant_breakdown` entry.
      *
      * Stock is reserved at checkout: the items are held against each merchant's
      * inventory immediately so concurrent shoppers cannot oversell the last units,
@@ -61,6 +73,23 @@ export class MarketplaceService {
             currency?: string;
             shipping_address?: Record<string, any>;
             billing_address?: Record<string, any>;
+            /**
+             * Optional per-merchant discounts. Each entry applies a merchant's own promotion and/or gift card to that merchant's portion of the basket, reducing only that merchant's subtotal. Marketplace-wide promotions run by the operator apply automatically and are not passed here.
+             */
+            discounts?: Array<{
+                /**
+                 * The merchant whose portion of the basket this discount applies to.
+                 */
+                merchant_store_id: string;
+                /**
+                 * The merchant's own promotion to apply.
+                 */
+                promotion_id?: string;
+                /**
+                 * A gift card code to redeem against this merchant's portion.
+                 */
+                gift_card_code?: string;
+            }>;
         },
     }): CancelablePromise<MarketplaceCheckoutResponse> {
         return this.httpRequest.request({
@@ -175,14 +204,19 @@ export class MarketplaceService {
         });
     }
     /**
-     * Get sponsored placements for a slot
-     * Returns the active sponsored placements to render in a named slot on a marketplace
-     * storefront (for example a hero banner, a category strip, or search results). **Requires a
-     * marketplace operator key.**
+     * Get placements for a slot
+     * Returns the active placements to render in a named slot on a marketplace storefront (for
+     * example a hero banner, a category strip, or search results). **Requires a marketplace
+     * operator key.**
      *
-     * Each placement is paid advertising and **must be rendered with its `disclosure_label`** (for
-     * example "Sponsored") so shoppers can tell it apart from organic results. Blend placements
-     * with your organic listings or recommendations as appropriate for the slot.
+     * A slot can return two kinds of placement. **Sponsored** placements (`sponsored: true`) are
+     * paid advertising and **must be rendered with their `disclosure_label`** (for example
+     * "Sponsored") so shoppers can tell them apart from organic results. **Curated fallback**
+     * placements (`curated: true, sponsored: false`) are hand-picked by the marketplace operator
+     * to fill the slot when no paid placement is available; they are **not** labelled as sponsored.
+     * Only sponsored placements require the disclosure label.
+     *
+     * Blend placements with your organic listings or recommendations as appropriate for the slot.
      *
      * Use the optional `context` parameter to request placements scoped to a category or a search
      * term, and `limit` to cap how many placements come back.
@@ -190,7 +224,7 @@ export class MarketplaceService {
      * After rendering, log a beacon with `POST /v1/marketplace/ad-events`: one `impression` per
      * placement when it becomes visible, and a `click` when the shopper clicks it.
      *
-     * @returns AdSlotResponse The active sponsored placements for the slot.
+     * @returns AdSlotResponse The active placements for the slot.
      * @throws ApiError
      */
     public getAdSlot({
@@ -274,6 +308,86 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+            },
+        });
+    }
+    /**
+     * List operator-curated merchandising sections
+     * Returns the merchandising sections the marketplace operator has curated for the storefront —
+     * for example "Trending now", "Featured shops", or a seasonal promotion rail. Each section
+     * groups products, merchants, or promotions the operator hand-picked (or auto-curated) to
+     * merchandise the storefront. **Requires a marketplace operator key.**
+     *
+     * Use these to render homepage sections, and blend them with sponsored placements and organic
+     * recommendations as appropriate. Fetch a section's resolved members with
+     * `GET /v1/marketplace/collections/{slug}`.
+     *
+     * Use the optional `placement_kind` parameter to return only sections of a given kind.
+     *
+     * @returns MarketplaceCollectionListResponse The operator-curated merchandising sections.
+     * @throws ApiError
+     */
+    public listMarketplaceCollections({
+        placementKind,
+    }: {
+        /**
+         * Return only sections of this kind.
+         */
+        placementKind?: 'product' | 'merchant' | 'promotion',
+    }): CancelablePromise<MarketplaceCollectionListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/marketplace/collections',
+            query: {
+                'placement_kind': placementKind,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+            },
+        });
+    }
+    /**
+     * Get one curated section with its members
+     * Returns a single curated merchandising section together with its resolved members. The
+     * members are products, merchants, or promotions hand-picked (or auto-curated) by the
+     * marketplace operator to merchandise the storefront. **Requires a marketplace operator key.**
+     *
+     * Render the section as a homepage rail and blend it with sponsored placements and organic
+     * recommendations as appropriate.
+     *
+     * Use the optional `limit` parameter to cap how many members come back.
+     *
+     * @returns MarketplaceCollectionDetail The curated section and its members.
+     * @throws ApiError
+     */
+    public getMarketplaceCollection({
+        slug,
+        limit,
+    }: {
+        /**
+         * The section's slug, taken from the section list.
+         */
+        slug: string,
+        /**
+         * Maximum number of members to return.
+         */
+        limit?: number,
+    }): CancelablePromise<MarketplaceCollectionDetail> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/marketplace/collections/{slug}',
+            path: {
+                'slug': slug,
+            },
+            query: {
+                'limit': limit,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
             },
         });
     }

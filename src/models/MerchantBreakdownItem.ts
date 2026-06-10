@@ -8,7 +8,15 @@
 export type MerchantBreakdownItem = {
     merchant_store_id?: string;
     /**
-     * Total of this merchant's items before commission.
+     * Total of this merchant's items before any discount is applied.
+     */
+    merchant_gross?: number;
+    /**
+     * Total discount applied to this merchant's portion of the basket (the merchant's own promotion and/or gift card). Reduces this merchant's subtotal.
+     */
+    discount_amount?: number;
+    /**
+     * Total of this merchant's items after discount and before commission.
      */
     gross_amount?: number;
     /**
