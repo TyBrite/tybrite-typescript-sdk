@@ -17,6 +17,7 @@ export { ConnectAuthorizeResponse } from './models/ConnectAuthorizeResponse';
 export { ConnectSession } from './models/ConnectSession';
 export { ConnectTokenResponse } from './models/ConnectTokenResponse';
 export { Customer } from './models/Customer';
+export { CustomerAddress } from './models/CustomerAddress';
 export { DeliveryFeeCalculation } from './models/DeliveryFeeCalculation';
 export type { DeliveryPricingTier } from './models/DeliveryPricingTier';
 export type { DeliveryZone } from './models/DeliveryZone';

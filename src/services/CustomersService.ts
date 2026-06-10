@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Customer } from '../models/Customer';
+import type { CustomerAddress } from '../models/CustomerAddress';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class CustomersService {
@@ -199,6 +200,244 @@ export class CustomersService {
                 404: `Resource not found`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List a shopper's saved addresses
+     * Return the saved addresses in the signed-in shopper's address book.
+     * Defaults are returned first.
+     *
+     * **Customer-self access.** Works with a publishable key (safe from the
+     * browser). Provide the shopper's session token in the `x-auth-token`
+     * header; it must resolve to the customer in the `{id}` path parameter,
+     * otherwise the request returns `403`.
+     *
+     * @returns any The shopper's saved addresses.
+     * @throws ApiError
+     */
+    public listAddresses({
+        id,
+        xAuthToken,
+    }: {
+        /**
+         * The shopper's customer id.
+         */
+        id: string,
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken: string,
+    }): CancelablePromise<{
+        addresses: Array<CustomerAddress>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/customers/{id}/addresses',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+            },
+        });
+    }
+    /**
+     * Save a new address
+     * Add an address to the signed-in shopper's address book. Setting an
+     * address as the default for shipping or billing automatically clears any
+     * previous default of the same kind, so there is always at most one default
+     * per kind.
+     *
+     * **Customer-self access.** Works with a publishable key (safe from the
+     * browser). Provide the shopper's session token in the `x-auth-token`
+     * header; it must resolve to the customer in the `{id}` path parameter,
+     * otherwise the request returns `403`.
+     *
+     * @returns any The saved address.
+     * @throws ApiError
+     */
+    public createAddress({
+        id,
+        xAuthToken,
+        requestBody,
+    }: {
+        /**
+         * The shopper's customer id.
+         */
+        id: string,
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken: string,
+        requestBody: {
+            full_name: string;
+            line1: string;
+            city: string;
+            country: string;
+            /**
+             * Whether this address is usable for shipping, billing, or both.
+             */
+            address_type?: 'shipping' | 'billing' | 'both';
+            /**
+             * An optional friendly name, e.g. "Home" or "Office".
+             */
+            label?: string;
+            phone?: string;
+            line2?: string;
+            state?: string;
+            postal_code?: string;
+            /**
+             * Set as the default address pre-selected for shipping at checkout.
+             */
+            is_default_shipping?: boolean;
+            /**
+             * Set as the default address pre-selected for billing at checkout.
+             */
+            is_default_billing?: boolean;
+        },
+    }): CancelablePromise<{
+        address: CustomerAddress;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/customers/{id}/addresses',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+            },
+        });
+    }
+    /**
+     * Update a saved address
+     * Update one of the signed-in shopper's saved addresses. Only the fields
+     * provided in the request body are changed. Setting an address as the
+     * default for shipping or billing automatically clears any previous default
+     * of the same kind.
+     *
+     * **Customer-self access.** Works with a publishable key (safe from the
+     * browser). Provide the shopper's session token in the `x-auth-token`
+     * header; it must resolve to the customer in the `{id}` path parameter,
+     * otherwise the request returns `403`.
+     *
+     * @returns any The updated address.
+     * @throws ApiError
+     */
+    public updateAddress({
+        id,
+        addressId,
+        xAuthToken,
+        requestBody,
+    }: {
+        /**
+         * The shopper's customer id.
+         */
+        id: string,
+        /**
+         * The id of the saved address to update.
+         */
+        addressId: string,
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken: string,
+        requestBody: {
+            full_name?: string;
+            line1?: string;
+            city?: string;
+            country?: string;
+            address_type?: 'shipping' | 'billing' | 'both';
+            label?: string;
+            phone?: string;
+            line2?: string;
+            state?: string;
+            postal_code?: string;
+            is_default_shipping?: boolean;
+            is_default_billing?: boolean;
+        },
+    }): CancelablePromise<{
+        address: CustomerAddress;
+    }> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/v1/customers/{id}/addresses/{addressId}',
+            path: {
+                'id': id,
+                'addressId': addressId,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+            },
+        });
+    }
+    /**
+     * Delete a saved address
+     * Remove an address from the signed-in shopper's address book.
+     *
+     * **Customer-self access.** Works with a publishable key (safe from the
+     * browser). Provide the shopper's session token in the `x-auth-token`
+     * header; it must resolve to the customer in the `{id}` path parameter,
+     * otherwise the request returns `403`.
+     *
+     * @returns any The address was deleted.
+     * @throws ApiError
+     */
+    public deleteAddress({
+        id,
+        addressId,
+        xAuthToken,
+    }: {
+        /**
+         * The shopper's customer id.
+         */
+        id: string,
+        /**
+         * The id of the saved address to delete.
+         */
+        addressId: string,
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken: string,
+    }): CancelablePromise<{
+        success: boolean;
+        message: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/customers/{id}/addresses/{addressId}',
+            path: {
+                'id': id,
+                'addressId': addressId,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
             },
         });
     }

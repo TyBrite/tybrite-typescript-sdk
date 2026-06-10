@@ -57,7 +57,7 @@ The SDK is organized into services matching the API resources. Access them via t
 
 - **`products`**: Manage catalog, collections and specifications.
 - **`orders`**: Create, track, and manage orders with automatic inventory sync.
-- **`customers`**: Customer profiles, RFM analytics, and account management.
+- **`customers`**: Customer profiles, RFM analytics, account management, and saved billing/shipping addresses for reuse at checkout.
 - **`authentication`**: Customer login, registration, and session management.
 - **`cartWishlist`**: Unified interface for shopping carts and wishlists.
 - **`search`**: Semantic (vector-based) and keyword search functionality.

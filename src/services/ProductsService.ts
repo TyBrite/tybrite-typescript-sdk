@@ -22,7 +22,8 @@ export class ProductsService {
      *
      * **Marketplace:** When called with a marketplace operator key, this returns products aggregated
      * across all merchants in the marketplace rather than a single store's catalog. With a marketplace
-     * operator key, pass `?store_id=<merchant>` to narrow results to a single merchant.
+     * operator key, pass `?store_id=<merchant>` to narrow results to a single merchant. Responses are
+     * cursor-paginated; pass the returned `next_cursor` as `?cursor=` for the next page.
      *
      * **Performance:**
      * - Default variant data included at root level (price, stock, sku)
