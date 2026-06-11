@@ -17,6 +17,10 @@ export type Message = {
     is_deleted?: boolean;
     edited_at?: string | null;
     deleted_at?: string | null;
+    /**
+     * Whether this message belongs to live or test data. Test API keys only see `sandbox`; live keys only see `production`.
+     */
+    environment?: Message.environment;
     created_at?: string;
     updated_at?: string;
 };
@@ -39,6 +43,13 @@ export namespace Message {
         DELIVERED = 'delivered',
         READ = 'read',
         FAILED = 'failed',
+    }
+    /**
+     * Whether this message belongs to live or test data. Test API keys only see `sandbox`; live keys only see `production`.
+     */
+    export enum environment {
+        PRODUCTION = 'production',
+        SANDBOX = 'sandbox',
     }
 }
 

@@ -36,6 +36,8 @@ export type { MarketplaceCollectionListResponse } from './models/MarketplaceColl
 export { MarketplaceInfoResponse } from './models/MarketplaceInfoResponse';
 export type { MerchantBreakdownItem } from './models/MerchantBreakdownItem';
 export { Message } from './models/Message';
+export { MessagingRealtimeToken } from './models/MessagingRealtimeToken';
+export { OperatorThread } from './models/OperatorThread';
 export { Order } from './models/Order';
 export type { OrderItem } from './models/OrderItem';
 export type { Pagination } from './models/Pagination';
@@ -92,3 +94,7 @@ export { ShippingService } from './services/ShippingService';
 export { SystemService } from './services/SystemService';
 export { TaxonomyService } from './services/TaxonomyService';
 export { WebhooksService } from './services/WebhooksService';
+
+// Realtime messaging helper (hand-written — re-added by scripts/post-generate.js)
+export { subscribeToThread } from './realtime';
+export type { SubscribeMode, SubscribeToThreadOptions } from './realtime';

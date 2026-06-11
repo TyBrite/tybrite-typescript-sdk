@@ -69,7 +69,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`shipping`**: Shipping zone management and delivery cost calculation.
 - **`taxonomy`**: Manage categories and subcategories.
 - **`cms`**: Shoppable content management (Blog posts, Lookbooks).
-- **`messaging`**: Real-time customer support messaging.
+- **`messaging`**: Real-time customer support messaging. Receive a thread's new messages live (no polling) via `getMessagingRealtimeToken` + the `subscribeToThread` helper exported from the package root. Marketplace operators also get read-only cross-merchant oversight (`listOperatorMessagingThreads`, `getOperatorMessagingThreadMessages`).
 - **`marketplace`**: Multi-merchant marketplaces — marketplace identity and branding, aggregated catalog reads, single-merchant shop pages, unified multi-merchant checkout with automatic payment splitting, and the unified cross-merchant customer profile. Checkout supports **per-merchant discounts** (apply a merchant's own promotion or gift card to that merchant's portion of the basket; marketplace-wide operator promotions apply automatically). Serves **operator-curated collections** (homepage merchandising sections of products, merchants, or promotions) alongside **sponsored ad placements** (rendered with a required "Sponsored" disclosure label) and operator-curated fallback placements; logs impression/click beacons. Marketplace recommendations are computed deployment-wide across all merchants, each item stamped with its source `merchant_store_id`.
 - **`system`**: Platform health checks and configuration.
 

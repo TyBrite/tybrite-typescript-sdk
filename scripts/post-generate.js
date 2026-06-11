@@ -131,6 +131,36 @@ function injectRetryLogic() {
 injectRetryLogic();
 console.log('');
 
+// ---------------------------------------------------------------------------
+// Realtime helper export.
+// The code generator overwrites src/index.ts on every run, which drops the
+// hand-written realtime helper export. Re-add it here (idempotent) so
+// `subscribeToThread` is always exported from the package entry point.
+// Source: src/realtime.ts (hand-written, not generated).
+// ---------------------------------------------------------------------------
+function injectRealtimeExport() {
+  const indexPath = path.join(__dirname, '..', 'src/index.ts');
+  const realtimePath = path.join(__dirname, '..', 'src/realtime.ts');
+  if (!fs.existsSync(indexPath) || !fs.existsSync(realtimePath)) {
+    console.log('⚠️  src/index.ts or src/realtime.ts missing — skipping realtime export injection');
+    return;
+  }
+  let idx = fs.readFileSync(indexPath, 'utf-8');
+  if (idx.includes("from './realtime'")) {
+    console.log('⏭️  index.ts already exports the realtime helper');
+    return;
+  }
+  const exportLine =
+    "\n// Realtime messaging helper (hand-written — re-added by scripts/post-generate.js)\n" +
+    "export { subscribeToThread } from './realtime';\n" +
+    "export type { SubscribeMode, SubscribeToThreadOptions } from './realtime';\n";
+  fs.writeFileSync(indexPath, idx + exportLine, 'utf-8');
+  console.log('✅ Re-added realtime helper export to index.ts');
+}
+
+injectRealtimeExport();
+console.log('');
+
 // Version management
 async function promptVersionUpdate() {
   const packageJsonPath = path.join(__dirname, '..', 'package.json');

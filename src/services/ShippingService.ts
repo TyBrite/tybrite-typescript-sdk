@@ -50,7 +50,7 @@ export class ShippingService {
      *
      * **Location Input Options:**
      * - **Option 1:** Provide `latitude` and `longitude` (GPS coordinates)
-     * - **Option 2:** Provide `place_name` (e.g., "Westlands, Nairobi, Kenya") - automatically geocoded using Nominatim
+     * - **Option 2:** Provide `place_name` (e.g., "Westlands, Nairobi, Kenya") - automatically geocoded
      *
      * **Calculation Logic:**
      * 1. If `place_name` provided, geocode to coordinates internally

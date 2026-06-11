@@ -2,35 +2,34 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type Thread = {
+/**
+ * A customer↔merchant conversation as seen by a marketplace operator, stamped with the merchant it belongs to.
+ */
+export type OperatorThread = {
     id?: string;
+    /**
+     * The merchant this conversation belongs to.
+     */
+    merchant_store_id?: string;
+    /**
+     * Display name of the merchant.
+     */
+    merchant_store_name?: string | null;
     customer_id?: string | null;
-    customer_name?: string;
-    customer_email?: string;
-    customer_phone?: string | null;
-    store_name?: string;
-    store_avatar?: string | null;
-    order_id?: string | null;
-    product_id?: string | null;
+    customer_name?: string | null;
     subject?: string;
-    thread_type?: Thread.thread_type;
-    status?: Thread.status;
-    priority?: Thread.priority;
+    thread_type?: OperatorThread.thread_type;
+    status?: OperatorThread.status;
+    priority?: OperatorThread.priority;
     last_message_at?: string;
-    last_message_by?: Thread.last_message_by;
+    last_message_by?: OperatorThread.last_message_by;
     unread_count_customer?: number;
     unread_count_store?: number;
     is_archived?: boolean;
-    is_muted?: boolean;
-    is_pinned?: boolean;
-    /**
-     * Whether this conversation belongs to live or test data. Test API keys only see `sandbox`; live keys only see `production`.
-     */
-    environment?: Thread.environment;
     created_at?: string;
     updated_at?: string;
 };
-export namespace Thread {
+export namespace OperatorThread {
     export enum thread_type {
         GENERAL = 'general',
         ORDER_INQUIRY = 'order_inquiry',
@@ -59,13 +58,6 @@ export namespace Thread {
         CUSTOMER = 'customer',
         STORE = 'store',
         SYSTEM = 'system',
-    }
-    /**
-     * Whether this conversation belongs to live or test data. Test API keys only see `sandbox`; live keys only see `production`.
-     */
-    export enum environment {
-        PRODUCTION = 'production',
-        SANDBOX = 'sandbox',
     }
 }
 

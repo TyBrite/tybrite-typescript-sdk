@@ -113,7 +113,7 @@ export class PricingService {
          *
          * **Priority:** Coordinates take priority over place_name if both provided.
          *
-         * **Accuracy:** Uses PostGIS boundary matching for accurate region detection.
+         * **Accuracy:** Uses geographic boundary matching for accurate region detection.
          *
          * **Works with variants:** Currency detection applies to all product variants.
          *
