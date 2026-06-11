@@ -11,6 +11,7 @@ import { CmsService } from './services/CmsService';
 import { CustomersService } from './services/CustomersService';
 import { GcConnectService } from './services/GcConnectService';
 import { GiftCardsService } from './services/GiftCardsService';
+import { IngestionService } from './services/IngestionService';
 import { MarketplaceService } from './services/MarketplaceService';
 import { MessagingService } from './services/MessagingService';
 import { OrdersService } from './services/OrdersService';
@@ -33,6 +34,7 @@ export class Tybrite {
     public readonly customers: CustomersService;
     public readonly gcConnect: GcConnectService;
     public readonly giftCards: GiftCardsService;
+    public readonly ingestion: IngestionService;
     public readonly marketplace: MarketplaceService;
     public readonly messaging: MessagingService;
     public readonly orders: OrdersService;
@@ -66,6 +68,7 @@ export class Tybrite {
         this.customers = new CustomersService(this.request);
         this.gcConnect = new GcConnectService(this.request);
         this.giftCards = new GiftCardsService(this.request);
+        this.ingestion = new IngestionService(this.request);
         this.marketplace = new MarketplaceService(this.request);
         this.messaging = new MessagingService(this.request);
         this.orders = new OrdersService(this.request);
