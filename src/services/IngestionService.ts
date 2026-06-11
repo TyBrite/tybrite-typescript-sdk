@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { FeedProduct } from '../models/FeedProduct';
 import type { IngestProduct } from '../models/IngestProduct';
 import type { IngestResult } from '../models/IngestResult';
 import type { IngestRowError } from '../models/IngestRowError';
@@ -160,6 +161,81 @@ export class IngestionService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                429: `Rate limit exceeded`,
+            },
+        });
+    }
+    /**
+     * Public catalog feed (JSON)
+     * Returns a store's catalog as a public JSON feed — **no API key required**. This is the
+     * outbound counterpart to ingestion: a store opts in (admin → Catalog Sync → "Publish my
+     * catalog") and its products become readable at a stable URL, so any system can pull them
+     * (another store's scheduled sync, a partner, a script). Only storefront-safe fields are
+     * exposed — never cost or margins.
+     *
+     * `{store}` is the store's id or its short store code. If the store set a private token,
+     * append `?token=…`. The feed shape matches what the ingestion endpoints accept, so a
+     * store-to-store sync is a direct pull-and-ingest with no field mapping.
+     *
+     * @returns any The store's catalog.
+     * @throws ApiError
+     */
+    public getStoreCatalogFeedJson({
+        store,
+        token,
+    }: {
+        /**
+         * The store's id or short store code.
+         */
+        store: string,
+        /**
+         * Required only if the store protected its feed with a token.
+         */
+        token?: string,
+    }): CancelablePromise<{
+        products?: Array<FeedProduct>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/feeds/{store}/products.json',
+            path: {
+                'store': store,
+            },
+            query: {
+                'token': token,
+            },
+            errors: {
+                404: `The store has no public feed (not opted in, or wrong/missing token).`,
+                429: `Rate limit exceeded`,
+            },
+        });
+    }
+    /**
+     * Public catalog feed (XML)
+     * XML form of the public catalog feed. See the JSON variant for the opt-in and token rules.
+     * No API key required.
+     *
+     * @returns string The store's catalog as XML.
+     * @throws ApiError
+     */
+    public getStoreCatalogFeedXml({
+        store,
+        token,
+    }: {
+        store: string,
+        token?: string,
+    }): CancelablePromise<string> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/feeds/{store}/products.xml',
+            path: {
+                'store': store,
+            },
+            query: {
+                'token': token,
+            },
+            errors: {
+                404: `The store has no public feed.`,
                 429: `Rate limit exceeded`,
             },
         });

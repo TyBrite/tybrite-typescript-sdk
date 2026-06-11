@@ -27,6 +27,7 @@ export { DeliveryFeeCalculation } from './models/DeliveryFeeCalculation';
 export type { DeliveryPricingTier } from './models/DeliveryPricingTier';
 export type { DeliveryZone } from './models/DeliveryZone';
 export type { Error } from './models/Error';
+export type { FeedProduct } from './models/FeedProduct';
 export type { GiftCard } from './models/GiftCard';
 export type { IngestProduct } from './models/IngestProduct';
 export { IngestResult } from './models/IngestResult';
