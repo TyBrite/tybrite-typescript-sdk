@@ -194,7 +194,14 @@ export type StoreInfoResponse = {
         dynamic_pricing?: boolean;
         gift_cards?: boolean;
         promotions?: boolean;
+        /**
+         * The store publishes blog/CMS posts.
+         */
         cms?: boolean;
+        /**
+         * The store publishes shoppable lookbooks.
+         */
+        lookbooks?: boolean;
         messaging?: boolean;
         specifications?: boolean;
         collections?: boolean;
