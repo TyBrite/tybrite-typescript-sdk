@@ -55,7 +55,7 @@ The API uses **Bearer Authentication**. Your API key determines your environment
 
 The SDK is organized into services matching the API resources. Access them via the client instance (e.g., `client.products`).
 
-- **`products`**: Manage catalog, collections and specifications.
+- **`products`**: Browse the catalog, collections and specifications. Product responses include **SEO metadata** (`seo_title`, `seo_description`, `seo_keywords`) for rendering search-engine-friendly product pages, alongside the full media gallery and published specifications. A store's public catalog feed carries the same fields, so a catalog mirrored into another store keeps its SEO.
 - **`orders`**: Create, track, and manage orders with automatic inventory sync.
 - **`customers`**: Customer profiles, RFM analytics, account management, and saved billing/shipping addresses for reuse at checkout.
 - **`authentication`**: Customer login, registration, and session management.
@@ -82,8 +82,12 @@ Reduce payload size by requesting only specific fields.
 ```typescript
 const product = await client.products.getProduct({
   id: 'prod_123',
-  fields: 'id,name,sku,images,price,attributes.color'
+  fields: 'id,name,sku,images,price,attributes.color,seo_title,seo_description,seo_keywords'
 });
+
+// Render a search-engine-friendly product page:
+document.title = product.seo_title ?? product.name;
+// <meta name="description" content={product.seo_description ?? product.description} />
 ```
 
 ### Cursor-Based Pagination

@@ -42,6 +42,18 @@ export type FeedProduct = {
      */
     product_group?: string;
     /**
+     * SEO title, when present (omitted to keep the feed lean when null).
+     */
+    seo_title?: string | null;
+    /**
+     * SEO meta description, when present.
+     */
+    seo_description?: string | null;
+    /**
+     * SEO keywords, when present.
+     */
+    seo_keywords?: any[] | null;
+    /**
      * Published product specifications as a flat key/value object, when present.
      */
     specifications?: Record<string, any>;

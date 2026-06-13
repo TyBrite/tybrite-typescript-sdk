@@ -17,9 +17,9 @@ export class PaymentsService {
      * - **Cash**: Manual payment method
      * - **Bank Transfer**: Manual payment method
      * - **Stripe**: Card payments with redirect to Stripe Checkout
+     * - **PayPal**: Popup checkout — the buyer approves the payment in a PayPal window
      * - **Paystack**: Card payments with popup integration (Africa-focused)
      * - **M-Pesa**: Mobile money STK Push (Kenya)
-     * - **Airtel Money**: Mobile money collection (Kenya, Uganda, Tanzania, Rwanda)
      *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
@@ -36,7 +36,6 @@ export class PaymentsService {
          *
          * **Allowed Fields:**
          * - `provider`, `display_name`, `type`
-         * - `supported_currencies`
          * - `environment`, `is_configured`
          *
          */
@@ -93,6 +92,12 @@ export class PaymentsService {
      * 4. Stripe redirects to success/cancel URL
      * 5. Verify payment status with `/v1/payments/verify`
      *
+     * **PayPal (popup):**
+     * 1. Initialize payment with amount and currency
+     * 2. Use the returned `client_id` and `paypal_order_id` to render the PayPal Buttons popup in your frontend
+     * 3. Customer approves the payment in the PayPal window
+     * 4. Verify payment status with `/v1/payments/verify` — this captures the approved order
+     *
      * **Paystack (popup):**
      * 1. Initialize payment with amount, currency, email
      * 2. Use returned `public_key` and `reference` to open Paystack popup
@@ -103,12 +108,6 @@ export class PaymentsService {
      * 1. Initialize payment with amount and phone (254XXXXXXXXX format)
      * 2. Customer receives STK Push prompt on their phone
      * 3. Customer enters M-Pesa PIN
-     * 4. Verify payment status with `/v1/payments/verify`
-     *
-     * **Airtel Money (Collection):**
-     * 1. Initialize payment with amount, phone, and country code
-     * 2. Customer receives payment prompt
-     * 3. Customer authorizes payment
      * 4. Verify payment status with `/v1/payments/verify`
      *
      * **Security Notes:**
@@ -157,7 +156,7 @@ export class PaymentsService {
             /**
              * Payment provider to use
              */
-            provider: 'stripe' | 'paystack' | 'mpesa' | 'airtel';
+            provider: 'stripe' | 'paypal' | 'paystack' | 'mpesa';
             /**
              * Payment amount (must be greater than 0)
              */
@@ -165,9 +164,9 @@ export class PaymentsService {
             /**
              * Currency code (ISO 4217). Required for Stripe and Paystack.
              * - Stripe: Defaults to store's default currency
+             * - PayPal: Defaults to store's default currency
              * - Paystack: Must be one of NGN, GHS, ZAR, KES, USD
              * - M-Pesa: Always KES (ignored)
-             * - Airtel: Determined by country code
              *
              */
             currency?: string;
@@ -176,18 +175,11 @@ export class PaymentsService {
              */
             email?: string;
             /**
-             * Customer phone number (required for M-Pesa and Airtel Money)
+             * Customer phone number (required for M-Pesa)
              * - M-Pesa: Format 254XXXXXXXXX (Kenya)
-             * - Airtel: Format {country_prefix}XXXXXXXXX (e.g., 254XXXXXXXXX for Kenya)
              *
              */
             phone?: string;
-            /**
-             * Country code for Airtel Money (required for Airtel)
-             * Supported: KE (Kenya), UG (Uganda), TZ (Tanzania), RW (Rwanda)
-             *
-             */
-            country?: string;
             /**
              * Optional order ID to link payment to an order
              */
@@ -254,6 +246,11 @@ export class PaymentsService {
      * - Returns payment status: `pending`, `paid`, `failed`, `cancelled`
      * - Includes payment intent details
      *
+     * **PayPal:**
+     * - Pass the PayPal order id as the `reference`
+     * - Captures the buyer-approved order
+     * - Returns status `success` once the capture completes
+     *
      * **Paystack:**
      * - Queries Paystack Transaction Verification API
      * - Returns payment status and transaction details
@@ -264,13 +261,8 @@ export class PaymentsService {
      * - Returns transaction status from Safaricom
      * - Includes M-Pesa receipt number if successful
      *
-     * **Airtel Money:**
-     * - Queries Airtel Money Transaction Status API
-     * - Returns transaction status and details
-     * - Includes Airtel transaction ID if successful
-     *
-     * **Note:** Despite using POST method (for request body), this is a read operation that
-     * queries external payment provider APIs.
+     * **Note:** Despite using POST method (for request body), this is a read operation for most
+     * providers; for PayPal it captures the approved order.
      *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
@@ -286,7 +278,7 @@ export class PaymentsService {
             /**
              * Payment provider used for initialization
              */
-            provider: 'stripe' | 'paystack' | 'mpesa' | 'airtel';
+            provider: 'stripe' | 'paypal' | 'paystack' | 'mpesa';
             /**
              * Payment reference returned from initialization
              */

@@ -77,17 +77,17 @@ export type Product = {
      */
     product_slug?: string | null;
     /**
-     * SEO optimized title
+     * SEO title for the product detail page
      */
     seo_title?: string | null;
     /**
-     * SEO optimized description
+     * SEO meta description for the product detail page
      */
     seo_description?: string | null;
     /**
-     * SEO keywords
+     * SEO keywords for the product
      */
-    seo_keywords?: string | null;
+    seo_keywords?: any[] | null;
     /**
      * Whether product is featured
      */

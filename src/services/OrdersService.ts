@@ -229,7 +229,7 @@ export class OrdersService {
             /**
              * Payment method identifier (required)
              */
-            payment_method: 'card' | 'stripe' | 'paystack' | 'mpesa' | 'airtel_money' | 'cash';
+            payment_method: 'card' | 'stripe' | 'paypal' | 'paystack' | 'mpesa' | 'cash';
             /**
              * Payment status (defaults to pending)
              */

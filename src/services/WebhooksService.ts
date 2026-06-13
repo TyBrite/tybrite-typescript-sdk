@@ -55,6 +55,11 @@ export class WebhooksService {
              *
              * **Promotions:** `promotion.applied`
              *
+             * **Catalog sync & syndication:** `feed.sync.completed` (a scheduled
+             * inbound feed-pull finished — carries created/updated/failed counts),
+             * `channel.sync.completed` (a sales-channel push to Google/Meta/… finished —
+             * carries pushed/rejected counts)
+             *
              */
             events: Array<string>;
             /**
@@ -250,7 +255,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'feed.sync.completed' | 'channel.sync.completed';
         },
     }): CancelablePromise<{
         success?: boolean;

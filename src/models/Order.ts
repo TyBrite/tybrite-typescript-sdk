@@ -61,9 +61,9 @@ export namespace Order {
      */
     export enum payment_method {
         STRIPE = 'stripe',
+        PAYPAL = 'paypal',
         PAYSTACK = 'paystack',
         MPESA = 'mpesa',
-        AIRTEL = 'airtel',
         CASH = 'cash',
         BANK_TRANSFER = 'bank_transfer',
     }
