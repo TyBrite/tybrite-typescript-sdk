@@ -18,6 +18,14 @@ export type Customer = {
      *
      */
     external_id?: string | null;
+    /**
+     * Whether the customer has opted in to marketing communications. Defaults to false
+     * (opt-in). Set this from your storefront's marketing opt-in checkbox at sign-up,
+     * checkout, or in the customer's account preferences. When true, the customer is
+     * eligible to be subscribed to the store's connected marketing tools.
+     *
+     */
+    marketing_consent?: boolean;
     total_purchases?: number;
     last_purchase?: string;
     created_at?: string;

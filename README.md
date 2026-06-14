@@ -28,7 +28,7 @@ import { Tybrite } from '@tybrite-labs/sdk';
 
 // Initialize the client
 const client = new Tybrite({
-  apiKey: 'tybrite_sk_live_YOUR_API_KEY', 
+  apiKey: 'tybrite_pk_live_YOUR_API_KEY', // publishable key — safe for client-side / storefront reads
 });
 
 // fetch products
@@ -57,7 +57,7 @@ The SDK is organized into services matching the API resources. Access them via t
 
 - **`products`**: Browse the catalog, collections and specifications. The **single-product detail** calls (`getProduct`, `getProductBySlug`) return the full object — long-form `description`, **SEO metadata** (`seo_title`, `seo_description`, `seo_keywords`), the full media gallery and published specifications — for rendering search-engine-friendly product pages. The **product list** (`listProducts`) is lean by default (identity, price, thumbnail, taxonomy, flags) so catalog grids stay fast; request the heavy fields explicitly with `fields=` (e.g. `fields: 'name,price,description,seo_title'`) or pass `full: true` to get the complete object for every row. A store's public catalog feed carries the full fields, so a catalog mirrored into another store keeps its SEO.
 - **`orders`**: Create, track, and manage orders with automatic inventory sync.
-- **`customers`**: Customer profiles, RFM analytics, account management, and saved billing/shipping addresses for reuse at checkout.
+- **`customers`**: Customer profiles, RFM analytics, account management, and saved billing/shipping addresses for reuse at checkout. Capture a shopper's marketing opt-in with `marketing_consent` on `createCustomer` / `register` (and update it later via `updateCustomer`).
 - **`authentication`**: Customer login, registration, and session management.
 - **`cartWishlist`**: Unified interface for shopping carts and wishlists.
 - **`search`**: Semantic (vector-based) and keyword search functionality. Pass `personalize: true` together with a customer session (`x-auth-token`) to nudge results toward that shopper's preferences while keeping query relevance primary.

@@ -50,6 +50,13 @@ export class AuthenticationService {
              * Phone number with country code
              */
             phone?: string;
+            /**
+             * Whether the customer opted in to marketing communications at sign-up.
+             * Defaults to false (opt-in). Pass the state of your sign-up form's
+             * marketing opt-in checkbox.
+             *
+             */
+            marketing_consent?: boolean;
         },
     }): CancelablePromise<{
         /**

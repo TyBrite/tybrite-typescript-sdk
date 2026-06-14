@@ -35,6 +35,14 @@ export class CustomersService {
              *
              */
             external_id?: string;
+            /**
+             * Whether the customer has opted in to marketing communications. Defaults
+             * to false (opt-in). Pass the state of your storefront's marketing opt-in
+             * checkbox. When true, the customer is eligible for subscription to the
+             * store's connected marketing tools.
+             *
+             */
+            marketing_consent?: boolean;
         },
     }): CancelablePromise<{
         customer: Customer;
