@@ -83,6 +83,7 @@ export { AuthenticationService } from './services/AuthenticationService';
 export { CartWishlistService } from './services/CartWishlistService';
 export { CmsService } from './services/CmsService';
 export { CustomersService } from './services/CustomersService';
+export { EventsService } from './services/EventsService';
 export { GcConnectService } from './services/GcConnectService';
 export { GiftCardsService } from './services/GiftCardsService';
 export { IngestionService } from './services/IngestionService';

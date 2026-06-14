@@ -11,11 +11,17 @@ export class RecommendationsService {
      * Get product recommendations
      * AI-powered product recommendations. Supported types:
      * - **similar**: Products similar to a given product
-     * - **also-bought**: Frequently purchased together
+     * - **also-bought**: Frequently purchased together. Each item indicates whether it is a
+     * complement (commonly bought alongside) or an alternative.
+     * - **next**: The products a shopper is most likely to view or add next, given what they have
+     * viewed/added in the current session. Pass `sessionId` (the worker anchors on the
+     * shopper's most recent product this session) and/or an explicit `productId` anchor. Falls
+     * back to also-bought, then trending, when there is no session signal.
      * - **trending**: Currently trending products
      * - **new**: Recently added products
      * - **personalized**: Based on a customer's preferences
-     * - **bundle**: Bundle suggestions
+     * - **bundle**: Bundle suggestions. Items that complement the product are surfaced ahead of
+     * alternatives.
      *
      * **⚠️ SECRET KEY REQUIRED**
      *
@@ -27,7 +33,7 @@ export class RecommendationsService {
      *
      * **Marketplace operator keys.** With a marketplace operator key, recommendations are computed
      * across all merchants in the marketplace; supported types: trending, new, also-bought,
-     * similar, personalized, bundle. Each item is stamped with its source merchant
+     * similar, personalized, bundle, next. Each item is stamped with its source merchant
      * (`merchant_store_id`).
      *
      * @returns RecommendationResponse Success
@@ -37,13 +43,17 @@ export class RecommendationsService {
         requestBody,
     }: {
         requestBody: {
-            type: 'similar' | 'also-bought' | 'trending' | 'new' | 'personalized' | 'bundle';
+            type: 'similar' | 'also-bought' | 'next' | 'trending' | 'new' | 'personalized' | 'bundle';
             /**
-             * Required when type is `similar`, `also-bought`, or `bundle`. Must reference an existing product in the store; otherwise 404 is returned.
+             * Required when type is `similar`, `also-bought`, or `bundle`. For `next`, an optional explicit anchor. Must reference an existing product in the store; otherwise 404 is returned.
              */
             productId?: string;
             /**
-             * Optional for `personalized`. When omitted, the worker falls back to trending recommendations.
+             * Used with type `next`. The shopper's current session identifier; the most recent product viewed/added in that session is used as the anchor when `productId` is not supplied.
+             */
+            sessionId?: string;
+            /**
+             * Optional for `personalized`. When omitted, the response falls back to trending recommendations.
              */
             customerId?: string;
             limit?: number;

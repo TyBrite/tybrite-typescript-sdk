@@ -87,6 +87,15 @@ export class SearchService {
              * Minimum similarity score threshold (0.0 to 1.0)
              */
             minScore?: number;
+            /**
+             * When `true` and the request is made on behalf of a signed-in customer (pass the
+             * customer's session token as `x-auth-token`), results are nudged toward the
+             * shopper's preferences while keeping query relevance primary (relevance is
+             * blended with preference, not replaced). Without a customer session, or for a
+             * shopper with no preference signal yet, ranking is by query relevance only.
+             *
+             */
+            personalize?: boolean;
         },
     }): CancelablePromise<SearchResponse> {
         return this.httpRequest.request({

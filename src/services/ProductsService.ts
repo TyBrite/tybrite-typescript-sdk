@@ -66,6 +66,7 @@ export class ProductsService {
                 cursor,
                 fields,
                 storeId,
+                personalize,
             }: {
                 /**
                  * Search products by name or SKU using case-insensitive partial matching.
@@ -266,6 +267,15 @@ export class ProductsService {
                                                          *
                                                          */
                                                         storeId?: string,
+                                                        /**
+                                                         * When `true` and the request is made on behalf of a signed-in customer (pass the
+                                                         * customer's session token as `x-auth-token`), the returned page is ordered by how
+                                                         * closely each product matches that shopper's preferences, with the default name order
+                                                         * as the tiebreak. Without a customer session, or for a shopper with no preference
+                                                         * signal yet, the order is unchanged.
+                                                         *
+                                                         */
+                                                        personalize?: boolean,
                                                     }): CancelablePromise<{
                                                         products?: Array<Product>;
                                                         pagination?: {
@@ -294,6 +304,7 @@ export class ProductsService {
                                                                 'cursor': cursor,
                                                                 'fields': fields,
                                                                 'store_id': storeId,
+                                                                'personalize': personalize,
                                                             },
                                                             errors: {
                                                                 400: `Invalid request - malformed data or missing required fields`,
