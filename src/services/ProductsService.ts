@@ -65,6 +65,7 @@ export class ProductsService {
                 limit = 50,
                 cursor,
                 fields,
+                full,
                 storeId,
                 personalize,
             }: {
@@ -262,6 +263,20 @@ export class ProductsService {
                                                          */
                                                         fields?: string,
                                                         /**
+                                                         * By default the product **list** returns a lean payload optimized for catalog grids —
+                                                         * identity, price, thumbnail, taxonomy and flags — and omits heavy fields that a list view
+                                                         * rarely needs: the long-form `description`, the SEO block (`seo_title`/`seo_description`/`seo_keywords`),
+                                                         * raw `attributes`/`shipping_info`, and the full `media` arrays. Those are always available on the
+                                                         * single-product detail endpoints (`GET /v1/products/{id}`, `GET /v1/products/by-slug/{slug}`),
+                                                         * or you can request exactly the fields you want with `fields=` (which overrides this trimming).
+                                                         *
+                                                         * Set `full=true` to return the complete product object for every row in the list (the
+                                                         * pre-trim shape). Use it only when you genuinely need the heavy fields in a list context;
+                                                         * it materially increases the response size.
+                                                         *
+                                                         */
+                                                        full?: boolean,
+                                                        /**
                                                          * Marketplace operator key only. Narrow the aggregated marketplace catalog to a single
                                                          * merchant's products — the "shop page" for one merchant. Ignored when using a single-store key.
                                                          *
@@ -303,6 +318,7 @@ export class ProductsService {
                                                                 'limit': limit,
                                                                 'cursor': cursor,
                                                                 'fields': fields,
+                                                                'full': full,
                                                                 'store_id': storeId,
                                                                 'personalize': personalize,
                                                             },
