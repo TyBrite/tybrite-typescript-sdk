@@ -31,17 +31,22 @@ export class SystemService {
     }
     /**
      * Health check
-     * Returns the health status of the API gateway.
+     * Returns the health status of the API gateway and all individual services.
+     * The gateway probes each service in parallel (3-second timeout) and rolls up
+     * an overall status. Returns HTTP 200 when all services are healthy, 207 when
+     * one or more services are degraded.
      * This endpoint does not require authentication.
      *
-     * @returns any Service is healthy
+     * @returns any API health status with per-service breakdown
      * @throws ApiError
      */
     public healthCheck(): CancelablePromise<{
-        status?: string;
+        status?: 'ok' | 'degraded' | 'down';
+        gateway?: 'ok';
+        latency_ms?: number;
+        workers?: Record<string, { status: 'ok' | 'error'; latency_ms: number | null }>;
         timestamp?: string;
         version?: string;
-        service?: string;
     }> {
         return this.httpRequest.request({
             method: 'GET',
