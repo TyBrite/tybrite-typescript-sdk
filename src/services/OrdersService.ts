@@ -286,9 +286,30 @@ export class OrdersService {
              * Promotion usages applied to this order (tracked when payment_status is paid)
              */
             promotion_usages?: any[] | null;
+            /**
+             * Apply the customer's redeemable store credit to this order. When
+             * true (and the order has a `customer_id`), store credit is spent
+             * against the order total, capped at the total. The amount actually
+             * applied is returned as `store_credit_applied`. Requires a customer.
+             *
+             */
+            apply_store_credit?: boolean;
+            /**
+             * Optional cap on how much store credit to apply. When omitted (and
+             * `apply_store_credit` is true) up to the full order total is applied.
+             * The applied amount never exceeds the available balance or the total.
+             *
+             */
+            store_credit_amount?: number;
         },
     }): CancelablePromise<{
         order: Order;
+        /**
+         * Present only when store credit was applied to this order. The
+         * amount of the customer's store credit spent against the order.
+         *
+         */
+        store_credit_applied?: number;
         /**
          * Optional. Present only when one or more post-order processing
          * steps (gift card redemption, stock reduction, etc.) failed.

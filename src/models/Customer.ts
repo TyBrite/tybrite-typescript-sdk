@@ -28,6 +28,13 @@ export type Customer = {
     marketing_consent?: boolean;
     total_purchases?: number;
     last_purchase?: string;
+    /**
+     * The customer's total redeemable store-credit balance. Store credit is
+     * issued when a customer accepts a store-credit offer on a return, and can
+     * be applied at checkout (see `apply_store_credit` on `POST /v1/orders`).
+     *
+     */
+    store_credit_balance?: number;
     created_at?: string;
     updated_at?: string;
     store_metrics?: {

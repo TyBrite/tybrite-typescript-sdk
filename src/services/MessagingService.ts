@@ -4,7 +4,6 @@
 /* eslint-disable */
 import type { Message } from '../models/Message';
 import type { MessagingRealtimeToken } from '../models/MessagingRealtimeToken';
-import type { OperatorThread } from '../models/OperatorThread';
 import type { Thread } from '../models/Thread';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
@@ -596,126 +595,6 @@ export class MessagingService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
-                429: `Rate limit exceeded`,
-                500: `Internal server error`,
-            },
-        });
-    }
-    /**
-     * List conversations across all merchants (operator oversight)
-     * Read-only marketplace operator view of customer↔merchant conversations across every active
-     * merchant in the marketplace, for oversight. Each thread is stamped with the merchant it
-     * belongs to (`merchant_store_id` + `merchant_store_name`). Supports cursor-based pagination and
-     * filtering by status, priority, and unread state.
-     *
-     * Requires a marketplace operator key.
-     *
-     * @returns any Success
-     * @throws ApiError
-     */
-    public listOperatorMessagingThreads({
-        status,
-        priority,
-        unread,
-        limit = 25,
-        cursor,
-    }: {
-        /**
-         * Filter threads by status
-         */
-        status?: 'active' | 'resolved' | 'closed' | 'escalated' | 'pending',
-        /**
-         * Filter by priority level
-         */
-        priority?: 'urgent' | 'high' | 'normal' | 'low',
-        /**
-         * Set to true to return only conversations with messages the merchant has not read.
-         */
-        unread?: boolean,
-        limit?: number,
-        /**
-         * Cursor for pagination (returned as `next_cursor` in the previous page).
-         */
-        cursor?: string,
-    }): CancelablePromise<{
-        threads?: Array<OperatorThread>;
-        pagination?: {
-            limit?: number;
-            next_cursor?: string | null;
-            has_more?: boolean;
-        };
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/v1/messaging/operator/threads',
-            query: {
-                'status': status,
-                'priority': priority,
-                'unread': unread,
-                'limit': limit,
-                'cursor': cursor,
-            },
-            errors: {
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                429: `Rate limit exceeded`,
-                500: `Internal server error`,
-            },
-        });
-    }
-    /**
-     * Get a conversation's messages (operator oversight)
-     * Read-only marketplace operator view of the messages in a single conversation, for oversight.
-     * The conversation must belong to an active merchant in the marketplace. Supports cursor-based
-     * pagination and sort order.
-     *
-     * Requires a marketplace operator key.
-     *
-     * @returns any Success
-     * @throws ApiError
-     */
-    public getOperatorMessagingThreadMessages({
-        id,
-        limit = 50,
-        cursor,
-        order = 'asc',
-    }: {
-        /**
-         * The conversation to read messages from.
-         */
-        id: string,
-        limit?: number,
-        /**
-         * Cursor for pagination (returned as `next_cursor` in the previous page).
-         */
-        cursor?: string,
-        /**
-         * Sort order — asc (oldest first, default) or desc (newest first)
-         */
-        order?: 'asc' | 'desc',
-    }): CancelablePromise<{
-        messages?: Array<Message>;
-        pagination?: {
-            limit?: number;
-            next_cursor?: string | null;
-            has_more?: boolean;
-        };
-    }> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/v1/messaging/operator/threads/{id}/messages',
-            path: {
-                'id': id,
-            },
-            query: {
-                'limit': limit,
-                'cursor': cursor,
-                'order': order,
-            },
-            errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,

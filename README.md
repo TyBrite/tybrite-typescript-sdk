@@ -70,9 +70,10 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`shipping`**: Shipping zone management and delivery cost calculation.
 - **`taxonomy`**: Manage categories and subcategories.
 - **`cms`**: Shoppable content management (Blog posts, Lookbooks).
-- **`messaging`**: Real-time customer support messaging. Receive a thread's new messages live (no polling) via `getMessagingRealtimeToken` + the `subscribeToThread` helper exported from the package root. Marketplace operators also get read-only cross-merchant oversight (`listOperatorMessagingThreads`, `getOperatorMessagingThreadMessages`).
+- **`messaging`**: Real-time customer support messaging. Receive a thread's new messages live (no polling) via `getMessagingRealtimeToken` + the `subscribeToThread` helper exported from the package root.
 - **`ingestion`**: Sync an external product catalog into a store. `ingestProducts({ requestBody })` accepts a batch of products as JSON (or send XML/CSV with the matching `Content-Type`), matches by **SKU** (existing SKUs are updated, new ones created; pass `strategy: 'create_only'` to skip existing), and groups rows that share a `product_group` into one multi-variant product. Returns a per-row result (`summary` counts + an `errors` array naming each rejected row). Requires a **secret key and a request signature** (sign like orders/payments — see HMAC Signature Verification). Validate a feed before integrating with the no-key helpers `getIngestSample({ format })` (returns a sample feed) and `testIngest({ requestBody })` (validates without writing).
 - **`marketplace`**: Multi-merchant marketplaces — marketplace identity and branding, aggregated catalog reads, single-merchant shop pages, unified multi-merchant checkout with automatic payment splitting, and the unified cross-merchant customer profile. Checkout supports **per-merchant discounts** (apply a merchant's own promotion or gift card to that merchant's portion of the basket; marketplace-wide operator promotions apply automatically). Serves **operator-curated collections** (homepage merchandising sections of products, merchants, or promotions) alongside **sponsored ad placements** (rendered with a required "Sponsored" disclosure label) and operator-curated fallback placements; logs impression/click beacons. Marketplace recommendations are computed deployment-wide across all merchants, each item stamped with its source `merchant_store_id` — including session/`next`-item suggestions across merchants and the complement/alternative distinction on co-purchase results.
+- **`returns`**: Returns a shopper lodges against their own online orders. `listReturnReasons()` fetches the reason codes + labels for your dropdown (API key only — no customer session). `createReturn({ requestBody, xAuthToken })` lodges a return for one of the signed-in customer's orders (it starts `pending`), and `listReturns(...)` / `getReturn({ id, xAuthToken })` track the customer's own returns and per-item status. List/get/create require a customer session — pass `xAuthToken` (a session token) **or** `xExternalAuth` (a bring-your-own-auth assertion). `reason_description` is required only when `reason_code` is `other`. A customer can only see and create their own returns; approving, refunding, issuing store credit, restocking, and rejecting are merchant actions in the admin, not in this API. When a return carries a pending store-credit offer (`credit_offer.status === 'pending'`), the shopper can `acceptReturnCredit({ id, xAuthToken })` to take the credit or `requestReturnRefund({ id, xAuthToken })` to ask for a refund instead; `getStoreCredit({ xAuthToken })` returns their redeemable balance. Spend store credit at checkout by passing `apply_store_credit: true` to `orders.createOrder`.
 - **`system`**: Platform health checks and configuration.
 
 ## Advanced Usage
@@ -224,6 +225,69 @@ const order = await marketplace.marketplace.marketplaceCheckout({
   },
 });
 // Complete the payment on the storefront with order.client_secret (Stripe.js).
+```
+
+### Returns
+A return is a record a shopper raises against one of their own online orders; it starts `pending` and the **merchant** resolves it from their admin (approve/reject per line, then refund, store credit, or an even-swap exchange). This API is the **storefront half**: your code lodges returns, tracks their status (overall and per line item), and — when the merchant offers store credit — lets the shopper accept it or ask for a refund instead. There is no approve/refund method here by design; those are merchant actions.
+
+Store credit is the one resolution the shopper must agree to: an offer arrives as `credit_offer.status === 'pending'`, the shopper accepts (balance is theirs to spend) or declines (merchant arranges a refund directly). Accepted credit is a redeemable balance you read with `getStoreCredit` and spend at checkout via `orders.createOrder({ apply_store_credit: true })`.
+
+The reason list needs only an API key; lodging, listing, getting, and the store-credit actions additionally need a customer session token (`xAuthToken`, or `xExternalAuth` for bring-your-own-auth).
+
+```typescript
+const client = new Tybrite({ apiKey: 'tybrite_pk_live_YOUR_API_KEY' });
+
+// Build the reason dropdown (no customer session needed)
+const { data: reasons } = await client.returns.listReturnReasons();
+
+// Lodge a return for the signed-in customer's order
+const customerToken = 'CUSTOMER_SESSION_TOKEN'; // from client.authentication.login(...)
+const { data: lodged } = await client.returns.createReturn({
+  xAuthToken: customerToken,
+  requestBody: {
+    order_id: '770a0622-0401-63f6-c938-557766551111',
+    reason_code: 'damaged',
+    return_type: 'full_refund',
+    items: [
+      {
+        order_item_id: '9c4f1d2e-aaaa-bbbb-cccc-1234567890ab',
+        quantity: 1,
+        condition: 'damaged',
+        media: ['https://cdn.example.com/return-photo-1.jpg'],
+      },
+    ],
+  },
+});
+
+// Track the customer's returns
+const { data: myReturns } = await client.returns.listReturns({
+  xAuthToken: customerToken,
+  status: 'pending',
+});
+const detail = await client.returns.getReturn({ id: lodged.id, xAuthToken: customerToken });
+
+// If the merchant offered store credit (detail.data.credit_offer.status === 'pending'),
+// the shopper either accepts it or asks for a refund instead:
+await client.returns.acceptReturnCredit({ id: lodged.id, xAuthToken: customerToken });
+// or: await client.returns.requestReturnRefund({ id: lodged.id, xAuthToken: customerToken });
+
+// Their redeemable balance, and spending it at checkout:
+const { data: credit } = await client.returns.getStoreCredit({ xAuthToken: customerToken });
+const result = await client.orders.createOrder({
+  idempotencyKey: `order-${Date.now()}`,
+  xTimestamp: Math.floor(Date.now() / 1000),
+  xSignature: hmacSignature,
+  requestBody: {
+    customer_id: gcCustomerId,
+    customer_email: 'jane@example.com',
+    customer_name: 'Jane Doe',
+    billing_address: addr, shipping_address: addr,
+    subtotal: 5000, total_amount: 5000, payment_method: 'card',
+    items: [{ product_id: 'product-uuid', quantity: 1, unit_price: 5000, total_price: 5000 }],
+    apply_store_credit: true, // spend the customer's balance; capped at the total
+  },
+});
+console.log(result.store_credit_applied); // how much credit was applied
 ```
 
 ## License

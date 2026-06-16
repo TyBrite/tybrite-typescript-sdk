@@ -21,6 +21,7 @@ import { PricingService } from './services/PricingService';
 import { ProductsService } from './services/ProductsService';
 import { PromotionsService } from './services/PromotionsService';
 import { RecommendationsService } from './services/RecommendationsService';
+import { ReturnsService } from './services/ReturnsService';
 import { ReviewsService } from './services/ReviewsService';
 import { SearchService } from './services/SearchService';
 import { ShippingService } from './services/ShippingService';
@@ -45,6 +46,7 @@ export class Tybrite {
     public readonly products: ProductsService;
     public readonly promotions: PromotionsService;
     public readonly recommendations: RecommendationsService;
+    public readonly returns: ReturnsService;
     public readonly reviews: ReviewsService;
     public readonly search: SearchService;
     public readonly shipping: ShippingService;
@@ -80,6 +82,7 @@ export class Tybrite {
         this.products = new ProductsService(this.request);
         this.promotions = new PromotionsService(this.request);
         this.recommendations = new RecommendationsService(this.request);
+        this.returns = new ReturnsService(this.request);
         this.reviews = new ReviewsService(this.request);
         this.search = new SearchService(this.request);
         this.shipping = new ShippingService(this.request);
