@@ -75,9 +75,30 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`ingestion`**: Sync an external product catalog into a store. `ingestProducts({ requestBody })` accepts a batch of products as JSON (or send XML/CSV with the matching `Content-Type`), matches by **SKU** (existing SKUs are updated, new ones created; pass `strategy: 'create_only'` to skip existing), and groups rows that share a `product_group` into one multi-variant product. Returns a per-row result (`summary` counts + an `errors` array naming each rejected row). Requires a **secret key and a request signature** (sign like orders/payments — see HMAC Signature Verification). Validate a feed before integrating with the no-key helpers `getIngestSample({ format })` (returns a sample feed) and `testIngest({ requestBody })` (validates without writing).
 - **`marketplace`**: Multi-merchant marketplaces — marketplace identity and branding, aggregated catalog reads, single-merchant shop pages, unified multi-merchant checkout with automatic payment splitting, and the unified cross-merchant customer profile. Checkout supports **per-merchant discounts** (apply a merchant's own promotion or gift card to that merchant's portion of the basket; marketplace-wide operator promotions apply automatically). Serves **operator-curated collections** (homepage merchandising sections of products, merchants, or promotions) alongside **sponsored ad placements** (rendered with a required "Sponsored" disclosure label) and operator-curated fallback placements; logs impression/click beacons. Marketplace recommendations are computed deployment-wide across all merchants, each item stamped with its source `merchant_store_id` — including session/`next`-item suggestions across merchants and the complement/alternative distinction on co-purchase results.
 - **`returns`**: Returns a shopper lodges against their own online orders. `listReturnReasons()` fetches the reason codes + labels for your dropdown (API key only — no customer session). `createReturn({ requestBody, xAuthToken })` lodges a return for one of the signed-in customer's orders (it starts `pending`), and `listReturns(...)` / `getReturn({ id, xAuthToken })` track the customer's own returns and per-item status. List/get/create require a customer session — pass `xAuthToken` (a session token) **or** `xExternalAuth` (a bring-your-own-auth assertion). `reason_description` is required only when `reason_code` is `other`. A customer can only see and create their own returns; approving, refunding, issuing store credit, restocking, and rejecting are merchant actions in the admin, not in this API. When a return carries a pending store-credit offer (`credit_offer.status === 'pending'`), the shopper can `acceptReturnCredit({ id, xAuthToken })` to take the credit or `requestReturnRefund({ id, xAuthToken })` to ask for a refund instead; `getStoreCredit({ xAuthToken })` returns their redeemable balance. Spend store credit at checkout by passing `apply_store_credit: true` to `orders.createOrder`.
-- **`system`**: Platform health checks and configuration.
+- **`system`**: Platform health checks and store metadata, including the store's currency (see below).
 
 ## Advanced Usage
+
+### Currency
+Each store defines its own currency, returned as `store.default_currency` from
+`getStoreInfo` (with the accepted list in `store.currencies`). Catalog prices are expressed in
+that currency, so there's no separate currency call — read it once and format with it.
+
+```typescript
+const { store, features } = await client.system.getStoreInfo({ sections: 'features' });
+const currency = store.default_currency;     // e.g. 'EUR' — the currency prices are in
+const accepted = store.currencies;           // e.g. ['EUR','KES','CNY','GBP','USD']
+const fmt = (n: number) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(n);
+
+const products = await client.products.listProducts();
+products.data.forEach((p) => console.log(p.name, fmt(p.price))); // p.price is in the store currency
+```
+
+Single-currency stores (`currencies: ['EUR']`) display everything in `default_currency`.
+Multi-currency stores expose `features.multi_currency: true` and the full `currencies` list, so you
+can offer a currency switcher. On a marketplace, read currency from
+`client.marketplace.getMarketplaceInfo`.
 
 ### Field Filtering
 Reduce payload size by requesting only specific fields.
