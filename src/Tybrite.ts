@@ -5,6 +5,7 @@
 import type { BaseHttpRequest } from './core/BaseHttpRequest';
 import type { OpenAPIConfig } from './core/OpenAPI';
 import { FetchHttpRequest } from './core/FetchHttpRequest';
+import { AnalyticsService } from './services/AnalyticsService';
 import { AuthenticationService } from './services/AuthenticationService';
 import { CartWishlistService } from './services/CartWishlistService';
 import { CmsService } from './services/CmsService';
@@ -30,6 +31,7 @@ import { TaxonomyService } from './services/TaxonomyService';
 import { WebhooksService } from './services/WebhooksService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class Tybrite {
+    public readonly analytics: AnalyticsService;
     public readonly authentication: AuthenticationService;
     public readonly cartWishlist: CartWishlistService;
     public readonly cms: CmsService;
@@ -66,6 +68,7 @@ export class Tybrite {
             HEADERS: config?.HEADERS,
             ENCODE_PATH: config?.ENCODE_PATH,
         });
+        this.analytics = new AnalyticsService(this.request);
         this.authentication = new AuthenticationService(this.request);
         this.cartWishlist = new CartWishlistService(this.request);
         this.cms = new CmsService(this.request);

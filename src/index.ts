@@ -82,6 +82,7 @@ export { WebhookEvent } from './models/WebhookEvent';
 export type { WebhookEventWithDeliveries } from './models/WebhookEventWithDeliveries';
 export { WishlistItem } from './models/WishlistItem';
 
+export { AnalyticsService } from './services/AnalyticsService';
 export { AuthenticationService } from './services/AuthenticationService';
 export { CartWishlistService } from './services/CartWishlistService';
 export { CmsService } from './services/CmsService';
