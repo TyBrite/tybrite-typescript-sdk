@@ -51,7 +51,7 @@ export class PricingService {
         categoryId,
         subcategoryId,
         limit = 50,
-        offset,
+        cursor,
         fields,
         placeName,
         latitude,
@@ -78,9 +78,9 @@ export class PricingService {
          */
         limit?: number,
         /**
-         * Number of products to skip for pagination
+         * Opaque pagination cursor. Pass the `pagination.next_cursor` value from the previous response to fetch the next page.
          */
-        offset?: number,
+        cursor?: string,
         /**
          * Comma-separated list of fields to return (reduces bandwidth by 50-90%).
          *
@@ -236,17 +236,22 @@ export class PricingService {
             };
         }>;
         /**
-         * Total number of products matching filters
+         * Cursor pagination metadata.
          */
-        total?: number;
-        /**
-         * Number of products per page
-         */
-        limit?: number;
-        /**
-         * Number of products skipped
-         */
-        offset?: number;
+        pagination?: {
+            /**
+             * Page size used for this response.
+             */
+            limit?: number;
+            /**
+             * Whether more results are available after this page.
+             */
+            has_more?: boolean;
+            /**
+             * Opaque cursor for the next page; pass as `?cursor=`. Null when there are no more pages.
+             */
+            next_cursor?: string | null;
+        };
         /**
          * Global pricing context for the request. `customer_segment` and
          * `customer_tier` are resolved server-side from `customer_id`
@@ -286,7 +291,7 @@ export class PricingService {
                 'category_id': categoryId,
                 'subcategory_id': subcategoryId,
                 'limit': limit,
-                'offset': offset,
+                'cursor': cursor,
                 'fields': fields,
                 'place_name': placeName,
                 'latitude': latitude,

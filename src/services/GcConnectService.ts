@@ -256,6 +256,10 @@ export class GcConnectService {
         },
     }): CancelablePromise<{
         success?: boolean;
+        /**
+         * Present only when the connection was already revoked.
+         */
+        message?: string;
     }> {
         return this.httpRequest.request({
             method: 'POST',

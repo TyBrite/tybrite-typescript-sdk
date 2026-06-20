@@ -10,6 +10,18 @@ export class CmsService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * List blog posts
+     * List the store's published blog posts, newest first, with cursor-based pagination. Posts may
+     * be commerce-aware (shoppable) and link to products in the catalog (`product_count` on each
+     * item).
+     *
+     * **Auth:** read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API
+     * keys, so it can be called directly from the storefront. No customer session required.
+     *
+     * **When to use:** render a blog index or editorial feed. Filter by category with `?category=`
+     * (a category **slug**), cap page size with `limit` (default 20, max 100), and page through with
+     * the `cursor` returned in `pagination.next_cursor` while `pagination.has_more` is `true`. Use
+     * `getPost` to fetch a single post's full `content`.
+     *
      * @returns any Success
      * @throws ApiError
      */
@@ -68,6 +80,7 @@ export class CmsService {
     }
     /**
      * Get blog post by slug
+     * Retrieve a single published blog post by its URL slug, including full `content` and any linked products (for shoppable posts). Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
      * @returns Post Success
      * @throws ApiError
      */
@@ -109,6 +122,7 @@ export class CmsService {
     }
     /**
      * List lookbooks
+     * List the store's published shoppable lookbooks (curated, image-led product galleries), newest first, with cursor-based pagination. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      * @returns any Success
      * @throws ApiError
      */
@@ -158,6 +172,7 @@ export class CmsService {
     }
     /**
      * Get lookbook details by slug
+     * Retrieve a single published lookbook by its URL slug, including its images and the products featured in each. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published lookbook matches the slug.
      * @returns Lookbook Success
      * @throws ApiError
      */

@@ -9,7 +9,22 @@ export class SearchService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * Simple text search
-     * Fast text-based product search. Accepts both publishable and secret API keys. When called with a marketplace operator key, searches products across all merchants in the marketplace. With a marketplace operator key, pass `?store_id=<merchant>` to narrow results to a single merchant.
+     * Fast text-based product search matching the query against product names, brands, and
+     * descriptions in the store's catalog. Returns a ranked list of matches with a relevance
+     * `score` and a human-readable `matchReason`.
+     *
+     * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys, so
+     * it is safe to call directly from client-side storefront code — no customer session required.
+     *
+     * **When to use:** use this GET endpoint for fast type-ahead and keyword search where exact
+     * term matching is enough. For natural-language intent ("wireless headphones with noise
+     * cancellation"), use the semantic `POST /v1/search` (`semanticSearch`) instead, which scores
+     * by meaning rather than literal terms.
+     *
+     * **Marketplace:** when called with a marketplace operator key, searches products across all
+     * merchants in the marketplace; pass `?store_id=<merchant>` to narrow results to a single
+     * merchant.
+     *
      * @returns SearchResponse Success
      * @throws ApiError
      */
@@ -55,17 +70,24 @@ export class SearchService {
     }
     /**
      * Semantic search
-     * Semantic search using embeddings and cosine similarity.
-     * Understands natural language queries like "wireless headphones with noise cancellation".
+     * Semantic (meaning-based) product search powered by AI embeddings. Understands natural-language
+     * queries like "wireless headphones with noise cancellation" — matching shopper intent against
+     * product meaning rather than literal keyword overlap. Results carry a similarity `score` and a
+     * `matchReason`.
      *
-     * **✅ BOTH KEY TYPES SUPPORTED**
+     * **Auth:** works with both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
+     * Despite using `POST` (to carry the structured request body), this is a **read-only** operation,
+     * so publishable keys are allowed for client-side storefront search.
      *
-     * This endpoint works with both secret keys (tybrite_sk_*) and publishable keys (tybrite_pk_*).
+     * **When to use:** prefer this over the text `GET /v1/search` (`searchProducts`) when the query
+     * is conversational or descriptive. Two tuning options:
+     * - **`minScore`** (default `0.3`, range `0.0–1.0`) raises the similarity floor — increase it
+     * (e.g. `0.5`) to return only strong matches and suppress loosely-related products.
+     * - **`personalize`** (default `false`) nudges ranking toward a signed-in shopper's preferences
+     * when you also pass that shopper's session token as `x-auth-token`; relevance stays primary
+     * (it is blended, not replaced). Without a customer session it has no effect.
      *
-     * **Note:** Despite using POST method (to support complex request bodies with parameters),
-     * this is a read-only operation. Publishable keys are allowed for client-side search functionality.
-     *
-     * **Marketplace:** When called with a marketplace operator key, searches products across all
+     * **Marketplace:** when called with a marketplace operator key, searches products across all
      * merchants in the marketplace.
      *
      * @returns SearchResponse Success

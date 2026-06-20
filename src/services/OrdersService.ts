@@ -102,18 +102,6 @@ export class OrdersService {
      * - `X-Signature`: Base64-encoded HMAC signature
      *
      * **Example (Node.js):**
-     * ```javascript
-     * const crypto = require('crypto');
-     * const timestamp = Math.floor(Date.now() / 1000);
-     * const body = JSON.stringify(orderData);
-     * const payload = `${timestamp}.${body}`;
-     * const signature = crypto.createHmac('sha256', hmacSecret)
-     * .update(payload).digest('base64');
-     *
-     * // Include in headers:
-     * // X-Timestamp: 1771523993
-     * // X-Signature: IqdgKXgloLzL5akDgFEwPaK6wviozf...
-     * ```
      *
      * **🔄 Idempotency Protection**
      *
@@ -371,14 +359,6 @@ export class OrdersService {
      * 3. Compare the computed signature with the header value
      *
      * Example verification (Node.js):
-     * ```javascript
-     * const crypto = require('crypto');
-     * const signature = response.headers['x-signature'];
-     * const computed = crypto.createHmac('sha256', apiSecretKey)
-     * .update(JSON.stringify(response.data))
-     * .digest('hex');
-     * const isValid = signature === computed;
-     * ```
      *
      * @returns Order Successfully retrieved order
      * @throws ApiError

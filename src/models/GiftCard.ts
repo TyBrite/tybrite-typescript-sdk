@@ -6,7 +6,7 @@ export type GiftCard = {
     /**
      * Unique gift card identifier.
      */
-    id?: number;
+    id?: string;
     /**
      * The unique redeemable code.
      */
@@ -28,9 +28,9 @@ export type GiftCard = {
      */
     type?: string;
     /**
-     * Date the gift card expires. It is not redeemable on or after this date.
+     * Date the gift card expires (null if it never expires). It is not redeemable on or after this date.
      */
-    expiry_date?: string;
+    expiry_date?: string | null;
     /**
      * Customer the gift card is assigned to, if any.
      */

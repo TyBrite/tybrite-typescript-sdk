@@ -15,8 +15,8 @@ export class ShippingService {
      * Retrieve available delivery zones and distance-based pricing tiers for the store.
      *
      * **Returns:**
-     * - **pricing_tiers**: Distance-based pricing (e.g., 0-5km: KES 50, 5-10km: KES 100)
-     * - **delivery_zones**: Custom polygon zones (e.g., CBD Zone: KES 150)
+     * - **pricing_tiers**: Distance-based pricing (e.g., 0-10km: $5.99, 10-50km: $9.99)
+     * - **delivery_zones**: Custom polygon zones (e.g., Manhattan Zone: $7.99)
      *
      * **Dual Pricing System:**
      * - Distance-based tiers are automatically applied based on calculated distance
@@ -50,7 +50,7 @@ export class ShippingService {
      *
      * **Location Input Options:**
      * - **Option 1:** Provide `latitude` and `longitude` (GPS coordinates)
-     * - **Option 2:** Provide `place_name` (e.g., "Westlands, Nairobi, Kenya") - automatically geocoded
+     * - **Option 2:** Provide `place_name` (e.g., "Brooklyn, New York") - automatically geocoded
      *
      * **Calculation Logic:**
      * 1. If `place_name` provided, geocode to coordinates internally

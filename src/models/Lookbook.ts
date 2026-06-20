@@ -8,9 +8,34 @@ export type Lookbook = {
     slug?: string;
     description?: string;
     featured_image?: string;
-    collection_id?: string;
+    /**
+     * Publication status. Only `published` lookbooks are returned by the public API.
+     */
+    status?: Lookbook.status;
+    /**
+     * The product collection this lookbook is backed by, or null if it is standalone.
+     */
+    collection_id?: string | null;
     published_at?: string;
     created_at?: string;
-    images?: Array<Record<string, any>>;
+    /**
+     * Ordered gallery images. Each image may carry shoppable `hotspots`.
+     */
+    images?: Array<{
+        url?: string;
+        /**
+         * Shoppable product hotspots positioned on the image.
+         */
+        hotspots?: Array<Record<string, any>>;
+    }>;
 };
+export namespace Lookbook {
+    /**
+     * Publication status. Only `published` lookbooks are returned by the public API.
+     */
+    export enum status {
+        PUBLISHED = 'published',
+        DRAFT = 'draft',
+    }
+}
 

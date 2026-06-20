@@ -4,7 +4,6 @@
 /* eslint-disable */
 export type Review = {
     id: string;
-    store_id: string;
     product_id: string;
     variant_id?: string | null;
     /**

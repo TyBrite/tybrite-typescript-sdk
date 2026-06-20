@@ -46,11 +46,30 @@ export class IngestionService {
      * @throws ApiError
      */
     public ingestProducts({
+        idempotencyKey,
+        xTimestamp,
+        xSignature,
         requestBody,
         format,
         strategy = 'upsert_by_sku',
         dryRun = false,
     }: {
+        /**
+         * Unique key per batch; retrying with the same key returns the original result instead of re-importing.
+         */
+        idempotencyKey: string,
+        /**
+         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Used to prevent replay attacks.
+         *
+         */
+        xTimestamp: number,
+        /**
+         * Base64-encoded HMAC-SHA256 of the payload (`${X-Timestamp}.${raw_body}`), signed with your
+         * HMAC secret from Settings → Integration Settings. Required in addition to the secret key.
+         *
+         */
+        xSignature: string,
         /**
          * A batch of products. For JSON use `{ "products": [ … ] }` (or a bare array). For
          * CSV, the first row is a header; for XML, a `<products>` root with `<product>`
@@ -77,6 +96,11 @@ export class IngestionService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/ingest/products',
+            headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Timestamp': xTimestamp,
+                'X-Signature': xSignature,
+            },
             query: {
                 'format': format,
                 'strategy': strategy,

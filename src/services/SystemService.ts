@@ -119,73 +119,46 @@ export class SystemService {
          * - `features,payments`: ~2-3KB (85% reduction)
          *
          * **SDK Usage:**
-         * ```typescript
-         * // Get full response object (all sections)
-         * const fullInfo = await client.store.getStoreInfo();
-         * console.log(fullInfo.store.name);
-         * console.log(fullInfo.catalog.products.total);
          *
-         * // Get filtered response (specific sections only)
-         * const catalogInfo = await client.store.getStoreInfo({
-             * sections: ['catalog', 'features']
-             * });
-             *
-             * // Destructure to extract specific section directly
-             * // (JavaScript destructuring - extracts 'features' property from response)
-             * const { features } = await client.store.getStoreInfo({
-                 * sections: ['features']
-                 * });
-                 * if (features.multi_currency) {
-                     * // Use currency-aware endpoints
-                     * }
-                     * ```
-                     *
-                     */
-                    sections?: string,
-                    /**
-                     * Control cache behavior. Set to `false` to bypass cache and fetch fresh data.
-                     *
-                     * **Default:** `true` (use cache if available)
-                     *
-                     * **Cache Duration:** 5 minutes (300 seconds)
-                     *
-                     * **When to Bypass Cache:**
-                     * - After updating store configuration
-                     * - After adding/removing products or categories
-                     * - After changing payment or shipping settings
-                     * - When you need real-time data
-                     *
-                     * **Cache Headers:**
-                     * - `X-Cache: HIT` - Response served from cache
-                     * - `X-Cache: MISS` - Response fetched from database
-                     * - `Cache-Control: public, max-age=300` - Browser/CDN caching
-                     *
-                     * **SDK Usage:**
-                     * ```typescript
-                     * // Use cache (default)
-                     * const cached = await client.store.getStoreInfo();
-                     *
-                     * // Bypass cache for fresh data
-                     * const fresh = await client.store.getStoreInfo({ cache: false });
-                     * ```
-                     *
-                     */
-                    cache?: boolean,
-                }): CancelablePromise<StoreInfoResponse> {
-                    return this.httpRequest.request({
-                        method: 'GET',
-                        url: '/v1/store/info',
-                        query: {
-                            'sections': sections,
-                            'cache': cache,
-                        },
-                        errors: {
-                            400: `Invalid request - malformed data or missing required fields`,
-                            401: `Authentication failed - invalid or missing API key`,
-                            403: `Insufficient permissions - operation requires secret key`,
-                            429: `Rate limit exceeded`,
-                            500: `Internal server error`,
-                        },
-                    });
-                }
-            }
+         */
+        sections?: string,
+        /**
+         * Control cache behavior. Set to `false` to bypass cache and fetch fresh data.
+         *
+         * **Default:** `true` (use cache if available)
+         *
+         * **Cache Duration:** 5 minutes (300 seconds)
+         *
+         * **When to Bypass Cache:**
+         * - After updating store configuration
+         * - After adding/removing products or categories
+         * - After changing payment or shipping settings
+         * - When you need real-time data
+         *
+         * **Cache Headers:**
+         * - `X-Cache: HIT` - Response served from cache
+         * - `X-Cache: MISS` - Response fetched from database
+         * - `Cache-Control: public, max-age=300` - Browser/CDN caching
+         *
+         * **SDK Usage:**
+         *
+         */
+        cache?: boolean,
+    }): CancelablePromise<StoreInfoResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/store/info',
+            query: {
+                'sections': sections,
+                'cache': cache,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Rate limit exceeded`,
+                500: `Internal server error`,
+            },
+        });
+    }
+}

@@ -7,7 +7,7 @@
  */
 export type ShippingCalculationByPlace = {
     /**
-     * Address or place name to geocode (e.g., "Westlands, Nairobi, Kenya")
+     * Address or place name to geocode (e.g., "SoHo, New York, USA")
      */
     place_name: string;
     /**

@@ -91,6 +91,10 @@ export type StoreInfoResponse = {
                 list?: Array<{
                     id?: string;
                     name?: string;
+                    /**
+                     * Category image URL, if the merchant set one.
+                     */
+                    image?: string | null;
                     product_count?: number;
                 }>;
             };
@@ -99,7 +103,27 @@ export type StoreInfoResponse = {
                 list?: Array<{
                     id?: string;
                     name?: string;
+                    /**
+                     * Subcategory image URL, if the merchant set one.
+                     */
+                    image?: string | null;
+                    /**
+                     * Name of the top-level category this subcategory belongs to.
+                     */
                     category?: string;
+                    category_id?: string | null;
+                    /**
+                     * The parent subcategory's id, or null for a top-level subcategory.
+                     */
+                    parent_id?: string | null;
+                    /**
+                     * The parent subcategory's name, or null for a top-level subcategory.
+                     */
+                    parent_name?: string | null;
+                    /**
+                     * Ids of this subcategory's direct (one-level-down) child subcategories.
+                     */
+                    children?: Array<string>;
                     product_count?: number;
                 }>;
             };
@@ -161,9 +185,19 @@ export type StoreInfoResponse = {
      */
     shipping?: {
         zones?: {
+            /**
+             * Number of shipping rules — the combined count of custom delivery zones and distance-based pricing tiers (equals `list.length`).
+             */
             total?: number;
+            /**
+             * Both custom polygon delivery zones and distance-based pricing tiers, each tagged with its `type`.
+             */
             list?: Array<{
                 name?: string;
+                /**
+                 * `zone` = a custom polygon delivery zone; `distance_tier` = a distance-based pricing tier.
+                 */
+                type?: 'zone' | 'distance_tier';
                 delivery_fee?: number;
                 free_threshold?: number | null;
             }>;
@@ -185,25 +219,44 @@ export type StoreInfoResponse = {
         };
     };
     /**
-     * Feature flags (optional, included when requested)
+     * Feature flags (optional, included when requested). Each flag reports whether a capability is actually available to this store right now. Plan-dependent capabilities (smart search & recommendations, dynamic pricing, multi-currency, content pages & lookbooks, returns) report `true` only when the store's plan includes them AND they are configured; a storefront should use these flags to decide which UI to show.
      */
     features?: {
+        /**
+         * Smart recommendations are available (plan-dependent and configured).
+         */
         ai_recommendations?: boolean;
+        /**
+         * Smart search is available (plan-dependent and configured).
+         */
         semantic_search?: boolean;
+        /**
+         * Selling in multiple currencies is available (plan-dependent and configured).
+         */
         multi_currency?: boolean;
+        /**
+         * Automatic pricing rules are available (plan-dependent and configured).
+         */
         dynamic_pricing?: boolean;
         gift_cards?: boolean;
         promotions?: boolean;
         /**
-         * The store publishes blog/CMS posts.
+         * The store publishes content pages (plan-dependent and configured).
          */
         cms?: boolean;
         /**
-         * The store publishes shoppable lookbooks.
+         * The store publishes shoppable lookbooks (plan-dependent and configured).
          */
         lookbooks?: boolean;
+        /**
+         * The store accepts customer-lodged returns (Settings → General → Returns).
+         */
+        returns?: boolean;
         messaging?: boolean;
         specifications?: boolean;
+        /**
+         * The store has product collections (storefront catalog groupings) to display.
+         */
         collections?: boolean;
     };
     /**

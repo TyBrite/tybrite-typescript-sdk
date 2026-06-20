@@ -302,8 +302,22 @@ export class MessagingService {
         });
     }
     /**
-     * Send message to thread
-     * Add a message to an existing thread
+     * Send a message to a thread
+     * Append a new message to an existing conversation thread on behalf of the
+     * signed-in shopper. The store sees it in their admin inbox and can reply;
+     * the reply streams back to the shopper over the realtime channel
+     * (see `getMessagingRealtimeToken`).
+     *
+     * **Auth:** API key in `Authorization: Bearer` (a **publishable** key is fine —
+     * this is a browser-origin storefront write) **plus** the shopper's customer
+     * session token in `x-auth-token`. The token must own the thread, otherwise
+     * the request returns `403`.
+     *
+     * **Body field:** the message text goes in `message`. (Note the sibling
+     * `editMessage` endpoint uses `message_content` instead.)
+     *
+     * **SDK**
+     *
      * @returns any Message sent
      * @throws ApiError
      */
@@ -348,8 +362,22 @@ export class MessagingService {
         });
     }
     /**
-     * Create new conversation
-     * Start a new message thread with an initial customer message. Requires a secret key.
+     * Start a new conversation
+     * Open a new message thread with the store and post the shopper's first
+     * message in one call. Returns the created thread (with its `id`), which you
+     * then use to send follow-ups (`sendMessage`) and read replies.
+     *
+     * **Auth:** API key in `Authorization: Bearer` (a **publishable** key is fine —
+     * this is a browser-origin storefront write) **plus** the shopper's customer
+     * session token in `x-auth-token` when you pass `customer_id` (the token must
+     * own that customer, otherwise `403`).
+     *
+     * **`thread_type`** classifies the inquiry: `general`, `order_inquiry`,
+     * `product_inquiry`, `support`, `complaint`, `delivery`, `return`, `refund`,
+     * or `technical`.
+     *
+     * **SDK**
+     *
      * @returns any Conversation created
      * @throws ApiError
      */

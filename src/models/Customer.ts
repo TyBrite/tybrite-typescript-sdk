@@ -7,8 +7,17 @@ export type Customer = {
     name?: string;
     email?: string;
     phone?: string;
-    address?: string;
+    /**
+     * The customer's address, or null if not on file.
+     */
+    address?: string | null;
     status?: Customer.status;
+    /**
+     * The customer's loyalty/spend tier, derived from their purchase history. New
+     * customers start at `bronze`.
+     *
+     */
+    tier?: Customer.tier;
     join_date?: string;
     /**
      * Optional identifier from an external identity provider (Auth0, Clerk, Cognito,
@@ -27,7 +36,10 @@ export type Customer = {
      */
     marketing_consent?: boolean;
     total_purchases?: number;
-    last_purchase?: string;
+    /**
+     * Timestamp of the customer's most recent purchase, or null if they have not purchased yet.
+     */
+    last_purchase?: string | null;
     /**
      * The customer's total redeemable store-credit balance. Store credit is
      * issued when a customer accepts a store-credit offer on a return, and can
@@ -37,14 +49,10 @@ export type Customer = {
     store_credit_balance?: number;
     created_at?: string;
     updated_at?: string;
-    store_metrics?: {
-        total_purchases?: number;
-        total_spent?: number;
-        first_purchase_date?: string;
-        last_purchase_date?: string;
-        status?: string;
-        preferred_store?: string;
-    };
+    /**
+     * Aggregated purchase metrics for the customer, or null until they have purchase history.
+     */
+    store_metrics?: any | null;
     /**
      * Whether this customer record belongs to the live or test environment.
      */
@@ -54,6 +62,17 @@ export namespace Customer {
     export enum status {
         ACTIVE = 'active',
         INACTIVE = 'inactive',
+    }
+    /**
+     * The customer's loyalty/spend tier, derived from their purchase history. New
+     * customers start at `bronze`.
+     *
+     */
+    export enum tier {
+        BRONZE = 'bronze',
+        SILVER = 'silver',
+        GOLD = 'gold',
+        PLATINUM = 'platinum',
     }
     /**
      * Whether this customer record belongs to the live or test environment.

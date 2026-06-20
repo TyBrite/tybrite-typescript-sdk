@@ -12,6 +12,11 @@ export class CartWishlistService {
      * Get cart
      * Retrieve cart contents for customer or session.
      *
+     * **Auth / key type:** publishable key (`tybrite_pk_*`) or secret key
+     * (`tybrite_sk_*`) — both accepted. Anonymous (session-only) carts need just the
+     * key; authenticated carts (`customer_id`) also require a customer session token
+     * (`x-auth-token`) proving the caller owns that customer record.
+     *
      * **Cart Association:**
      * - Provide `X-Session-Id` header for anonymous carts (before customer login)
      * - Provide `customer_id` query parameter for authenticated customer carts
@@ -30,6 +35,8 @@ export class CartWishlistService {
      * GET /v1/cart?customer_id=550e8400-e29b-41d4-a716-446655440000
      * Authorization: Bearer tybrite_pk_live_YOUR_API_KEY
      * ```
+     *
+     * **SDK example:**
      *
      * @returns any Success
      * @throws ApiError
@@ -55,8 +62,14 @@ export class CartWishlistService {
         items?: Array<CartItem>;
         total_items?: number;
         subtotal?: number;
-        session_id?: string;
-        customer_id?: string;
+        /**
+         * Set for anonymous (session) carts; null for an authenticated customer cart.
+         */
+        session_id?: string | null;
+        /**
+         * Set for authenticated customer carts; null for an anonymous (session) cart.
+         */
+        customer_id?: string | null;
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -81,10 +94,16 @@ export class CartWishlistService {
      * Clear cart
      * Clear all items from a cart for the given customer or session.
      *
+     * **Auth / key type:** publishable or secret key. Anonymous carts need only the
+     * key + `X-Session-Id`; authenticated carts (`customer_id`) also require the
+     * customer session token (`x-auth-token`).
+     *
      * **Cart Association:**
      * - Provide `X-Session-Id` header for anonymous carts
      * - Provide `customer_id` query parameter for authenticated customer carts
      * - If neither provided, returns 400 error
+     *
+     * **SDK example:**
      *
      * @returns any Cart cleared
      * @throws ApiError
@@ -134,6 +153,11 @@ export class CartWishlistService {
      * Add item to cart with automatic stock checking. If the same variant
      * already exists in the cart, the quantity is incremented.
      *
+     * **Auth / key type:** publishable or secret key. This is a storefront write
+     * that is deliberately pk-accessible (it originates in the browser). Anonymous
+     * carts need only the key + `X-Session-Id`; authenticated carts (`customer_id`
+     * in the body) also require the customer session token (`x-auth-token`).
+     *
      * **Variant Selection:**
      * - `variant_id` is required to specify which variant to add (e.g., Black vs Blue color)
      * - For simple products (no variants), use the default variant's ID
@@ -157,7 +181,7 @@ export class CartWishlistService {
      * Content-Type: application/json
      *
      * {
-         * "variant_id": "83b6a47e-4f5c-4090-b8d3-4b606b78f1b4",
+         * "variant_id": "9a47e047-b1b6-4c35-9617-820629e22e04",
          * "quantity": 2
          * }
          * ```
@@ -169,11 +193,13 @@ export class CartWishlistService {
          * Content-Type: application/json
          *
          * {
-             * "variant_id": "83b6a47e-4f5c-4090-b8d3-4b606b78f1b4",
+             * "variant_id": "9a47e047-b1b6-4c35-9617-820629e22e04",
              * "quantity": 2,
              * "customer_id": "650e8400-e29b-41d4-a716-446655440000"
              * }
              * ```
+             *
+             * **SDK example** (adds the Sony WH-1000XM4 default variant, $349.99):
              *
              * @returns any Item added (returns refreshed cart)
              * @throws ApiError
@@ -236,6 +262,12 @@ export class CartWishlistService {
              * Update the quantity of an existing cart item. Setting `quantity` to `0`
              * removes the item from the cart. Ownership is verified against either
              * `customer_id` (when provided) or the `X-Session-Id` header.
+             *
+             * **Auth / key type:** publishable or secret key. Authenticated carts
+             * (`customer_id` in the body) also require the customer session token
+             * (`x-auth-token`); anonymous carts are verified by `X-Session-Id`.
+             *
+             * **SDK example:**
              *
              * @returns any Item updated (returns refreshed cart)
              * @throws ApiError
@@ -301,9 +333,14 @@ export class CartWishlistService {
              * Remove cart item
              * Remove a specific item from the cart by its cart item ID.
              *
+             * **Auth / key type:** publishable or secret key. For authenticated carts the
+             * customer session token (`x-auth-token`) is also required.
+             *
              * **Key Type Support:**
              * - Publishable keys (`tybrite_pk_*`) — fully supported (browser/storefront)
              * - Secret keys (`tybrite_sk_*`) — also supported (server-side)
+             *
+             * **SDK example:**
              *
              * @returns any Item removed successfully
              * @throws ApiError
@@ -345,10 +382,17 @@ export class CartWishlistService {
              * Merge carts
              * Merge an anonymous session cart into a customer cart after login.
              *
-             * For each item in the session cart, the worker either increments the
-             * quantity of a matching `(product_id, variant_id)` row in the customer
-             * cart (and deletes the session row) or re-assigns the session row to
-             * the customer. The refreshed merged cart is returned.
+             * For each item in the session cart, either the quantity of a matching
+             * `(product_id, variant_id)` row in the customer cart is incremented (and the
+             * session row deleted) or the session row is re-assigned to the customer. The
+             * refreshed merged cart is returned.
+             *
+             * **Auth / key type:** publishable key + a customer session token
+             * (`x-auth-token`) is **required** — the resolved customer must match the
+             * `customer_id` in the body. Use it right after the shopper signs in to carry
+             * their pre-login cart over.
+             *
+             * **SDK example:**
              *
              * @returns any Carts merged (returns refreshed cart)
              * @throws ApiError
@@ -400,6 +444,12 @@ export class CartWishlistService {
              * Retrieve a customer's wishlist. Wishlists are always customer-scoped,
              * so `customer_id` is required (anonymous wishlists are not supported).
              *
+             * **Auth / key type:** publishable key + a customer session token
+             * (`x-auth-token`) is **required** — the resolved customer must match the
+             * `customer_id` query parameter.
+             *
+             * **SDK example:**
+             *
              * @returns any Success
              * @throws ApiError
              */
@@ -443,6 +493,12 @@ export class CartWishlistService {
              * Add a variant to a customer's wishlist. Returns `201 Created` on success.
              * If the same `(customer_id, product_id, variant_id)` already exists,
              * returns `409 Conflict` instead of duplicating the entry.
+             *
+             * **Auth / key type:** publishable key + a customer session token
+             * (`x-auth-token`) is **required** — the resolved customer must match the
+             * `customer_id` in the body.
+             *
+             * **SDK example** (saves the Sony WH-1000XM4 default variant):
              *
              * @returns any Item added (returns refreshed wishlist)
              * @throws ApiError

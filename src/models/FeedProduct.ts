@@ -13,8 +13,11 @@ export type FeedProduct = {
     name?: string;
     description?: string;
     category?: string;
-    subcategory?: string;
-    brand?: string;
+    /**
+     * Subcategory name, or null if the product is not assigned one.
+     */
+    subcategory?: string | null;
+    brand?: string | null;
     /**
      * A single primary image URL (convenience for simple consumers).
      */
@@ -36,11 +39,11 @@ export type FeedProduct = {
     price?: number;
     sale_price?: number | null;
     stock?: number;
-    variant_name?: string;
+    variant_name?: string | null;
     /**
-     * Present on multi-variant products so a consumer can regroup variants.
+     * Present on multi-variant products so a consumer can regroup variants; null otherwise.
      */
-    product_group?: string;
+    product_group?: string | null;
     /**
      * SEO title, when present (omitted to keep the feed lean when null).
      */

@@ -87,7 +87,7 @@ export class GiftCardsService {
         fields,
     }: {
         /**
-         * The unique gift card code to look up (e.g. `V5G6-4N7H-9P2R-8W1S`).
+         * The unique gift card code to look up (e.g. `GTSA-1B2C-3D4E-5F6G`).
          */
         code: string,
         /**

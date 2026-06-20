@@ -34,7 +34,7 @@ export type { IngestProduct } from './models/IngestProduct';
 export { IngestResult } from './models/IngestResult';
 export type { IngestRowError } from './models/IngestRowError';
 export type { IngestSummary } from './models/IngestSummary';
-export type { Lookbook } from './models/Lookbook';
+export { Lookbook } from './models/Lookbook';
 export type { MarketplaceCheckoutResponse } from './models/MarketplaceCheckoutResponse';
 export { MarketplaceCollection } from './models/MarketplaceCollection';
 export { MarketplaceCollectionDetail } from './models/MarketplaceCollectionDetail';
