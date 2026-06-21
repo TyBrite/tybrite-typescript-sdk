@@ -48,6 +48,7 @@ export class ProductsService {
      */
     public listProducts({
         search,
+        brand,
         categoryId,
         subcategoryId,
         limit = 50,
@@ -74,6 +75,13 @@ export class ProductsService {
          *
          */
         search?: string,
+        /**
+         * Filter products to a single brand (case-insensitive exact match). Use this to build a
+         * brand landing page — pair it with `GET /v1/brands` to render a "shop by brand" row, then
+         * pass the chosen brand here to list that brand's products.
+         *
+         */
+        brand?: string,
         /**
          * Filter products by category UUID. Use this to build category-specific product pages.
          *
@@ -155,7 +163,7 @@ export class ProductsService {
          * Comma-separated list of fields to include in the response. This is a powerful bandwidth optimization feature that can reduce response size by 50-90%.
          *
          * **Allowed Fields:**
-         * - **Core:** `product_id`, `variant_id`, `name`, `sku`, `description`
+         * - **Core:** `id` (alias of `product_id`), `product_id`, `variant_id`, `name`, `sku`, `description`
          * - **Pricing:** `price`, `selling_price`, `sale_price`, `display_currency`, `currency_symbol`
          * - **Inventory:** `stock`, `threshold`, `last_restocked`
          * - **Media:** `media`, `thumbnail_url`
@@ -241,6 +249,7 @@ export class ProductsService {
             url: '/v1/products',
             query: {
                 'search': search,
+                'brand': brand,
                 'category_id': categoryId,
                 'subcategory_id': subcategoryId,
                 'limit': limit,
@@ -252,6 +261,47 @@ export class ProductsService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                429: `Rate limit exceeded`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List brands
+     * Return the distinct brands in the catalog, each with the number of products under it,
+     * sorted by product count (most products first). Use this to build brand navigation — for
+     * example a "featured brands" row after the hero — then pass a chosen brand to
+     * `GET /v1/products?brand=<brand>` to list that brand's products.
+     *
+     * Brands come from each product's `brand` field; products with no brand are omitted. On a
+     * marketplace operator key the brands are aggregated across all active merchants (pass
+     * `store_id` to scope to one merchant).
+     *
+     * @returns any The store's distinct brands with product counts.
+     * @throws ApiError
+     */
+    public listBrands({
+        storeId,
+    }: {
+        /**
+         * Operator scope only — narrow the brand list to a single merchant's catalog.
+         */
+        storeId?: string,
+    }): CancelablePromise<{
+        brands?: Array<{
+            brand?: string;
+            product_count?: number;
+        }>;
+        total?: number;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/brands',
+            query: {
+                'store_id': storeId,
+            },
+            errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 429: `Rate limit exceeded`,
                 500: `Internal server error`,

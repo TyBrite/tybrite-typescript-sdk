@@ -40,11 +40,15 @@ export class GcConnectService {
          */
         redirectUri: string,
         /**
-         * Space-separated list of permission scopes your application is requesting.
+         * Space-separated list of permission scopes your application is requesting. Scopes are
+         * **enforced per request** — a token is rejected with `403 insufficient_scope` if it calls an
+         * endpoint it wasn't granted the matching scope for. Request only what your app needs.
          *
-         * Available scopes: `read`, `write`, `orders:read`, `orders:write`,
-         * `customers:read`, `customers:write`, `payments:read`, `cart:write`,
-         * `cms:read`, `shipping:read`, `pricing:read`
+         * Available scopes: `read`, `write`, `products:read`, `categories:read`, `pricing:read`,
+         * `orders:read`, `orders:write`, `customers:read`, `customers:write`, `payments:read`,
+         * `cart:write`, `cms:read`, `shipping:read`, `reviews:read`, `reviews:write`,
+         * `gift_cards:read`, `messaging:read`, `messaging:write`, `returns:read`, `returns:write`,
+         * `promotions:read`, `recommendations:read`, `search:read`, `store:read`
          *
          */
         scope: string,

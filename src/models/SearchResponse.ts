@@ -7,7 +7,6 @@ export type SearchResponse = {
     query?: string;
     results?: Array<SearchResult>;
     totalResults?: number;
-    searchTimeMs?: number;
     message?: string;
 };
 
