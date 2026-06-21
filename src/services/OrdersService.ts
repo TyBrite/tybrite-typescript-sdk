@@ -115,6 +115,26 @@ export class OrdersService {
      * - Requests with invalid/missing signatures return 401 Unauthorized
      * - Timestamps older than 5 minutes are rejected to prevent replay attacks
      *
+     * **🛡️ Server-side price validation (anti-tampering)**
+     *
+     * HMAC proves the body wasn't altered in transit; it does **not** prove the amounts are honest.
+     * So the server independently recomputes the order from authoritative data and rejects any
+     * mismatch — you cannot set your own prices or discounts:
+     *
+     * - **Item prices** are recomputed from the live catalog. `unit_price` / `total_price` that don't
+     * match the catalog price → **`400 price_mismatch`**. (The stored order always uses the catalog
+     * price, never the value you send.)
+     * - **`subtotal`, `tax_amount`, `total_amount`** must reconcile to `subtotal + tax + shipping −
+     * discount` over those catalog prices → otherwise **`400 price_mismatch`**.
+     * - **`discount_amount`** is validated against the discount the promotions / gift card you claim
+     * actually grant (computed server-side from `promotion_usages` + `gift_card_redemption`). A
+     * `discount_amount` greater than that legitimate maximum → **`400 discount_invalid`**. A discount
+     * with no real promotion/gift card behind it → max is `0`. (You may apply *less* than the maximum.)
+     * - **`shipping_amount`** may not be negative → **`400 price_mismatch`**.
+     *
+     * In short: send the **real catalog prices** and the **actual promotions/gift card** the shopper is
+     * entitled to. Don't compute or invent prices/discounts client-side — the server is the authority.
+     *
      * @returns any Order created successfully (or existing order returned if idempotency key matches)
      * @throws ApiError
      */

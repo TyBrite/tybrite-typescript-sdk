@@ -550,8 +550,19 @@ export class ProductsService {
         });
     }
     /**
-     * Get product specifications
-     * Retrieves the latest specification version for a specific product
+     * Get a variant's specifications
+     * Returns the latest published specification version for a single product **variant**.
+     *
+     * **Important — this endpoint is keyed by VARIANT id, not product id.** Specifications are
+     * stored per variant, so the `{id}` path segment must be a **variant** UUID (e.g. the
+     * `variant_id` from a product detail, or an `id` from `GET /v1/product-specifications`).
+     * Passing a *product* id (or a variant that has no published specifications) returns
+     * `404 not_found` — "No specifications found for this product". To browse all specifications
+     * across the catalog, use `GET /v1/product-specifications` (which lists them with their
+     * `variant_id`).
+     *
+     * Read access — works with a publishable or secret key.
+     *
      * @returns any Successfully retrieved product specification
      * @throws ApiError
      */
@@ -559,7 +570,9 @@ export class ProductsService {
         id,
     }: {
         /**
-         * Product UUID
+         * The **variant** UUID whose specifications to fetch (NOT a product id). A product id
+         * returns 404 — specifications are variant-keyed.
+         *
          */
         id: string,
     }): CancelablePromise<{
@@ -590,7 +603,11 @@ export class ProductsService {
     /**
      * List product specifications
      * Returns a paginated list of product specifications for the authenticated store,
-     * ordered by most recently updated. Supports filtering by `product_id` and `status`.
+     * ordered by most recently updated. Each row carries the `variant_id` it belongs to
+     * (specifications are stored per variant). Supports filtering by `product_id` (which
+     * matches on `variant_id` — pass a variant UUID) and `status`.
+     *
+     * Read access — works with a publishable or secret key.
      *
      * @returns any Success
      * @throws ApiError
@@ -602,7 +619,9 @@ export class ProductsService {
         cursor,
     }: {
         /**
-         * Filter specifications by product UUID
+         * Filter to a single variant's specifications. Despite the name, this matches on
+         * `variant_id` — pass a **variant** UUID.
+         *
          */
         productId?: string,
         /**

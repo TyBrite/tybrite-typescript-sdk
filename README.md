@@ -157,7 +157,7 @@ const updated = await client.orders.updateOrder({
 ```
 
 ### HMAC Signature Verification
-Orders and payments require HMAC-SHA256 signatures for security (prevents tampering and replay attacks).
+Orders and payments require HMAC-SHA256 signatures, which prove the request body wasn't altered in transit and block replay attacks (a 5-minute timestamp window). HMAC does **not** vouch for the *values* in the body — see [Server is the price authority](#server-is-the-price-authority) below for how amounts are validated.
 
 ```typescript
 import crypto from 'crypto';
@@ -206,6 +206,37 @@ const payment = await client.payments.initializePayment({
 
 **Note:** The SDK automatically handles HMAC signing when you provide your HMAC secret during initialization. Get your HMAC secret from Settings → Integration Settings in your dashboard.
 
+### Server is the price authority
+
+Checkout never trusts client-supplied money. When you call `orders.createOrder`, `marketplace.marketplaceCheckout`, or `payments.initializePayment`, the server independently recomputes every item price from the live catalog and validates the totals — so a signed-but-dishonest body is still rejected. Send honest values:
+
+- **Item prices** — set each item's `unit_price` / `total_price` to the catalog price (the value from `products` / `pricing`), never a number you computed. A mismatch returns `400 price_mismatch`, and the stored order always uses the catalog price regardless.
+- **Discounts** — a `discount_amount` must be backed by a real entitlement. Pass the actual `promotion_usages: [{ promotion_id, discount_amount }]` and/or `gift_card_redemption: { code, amount }` the shopper qualifies for; the server recomputes the legitimate maximum and rejects anything above it with `400 discount_invalid` (a discount with no real promotion or gift card behind it caps at 0). Never fabricate or hardcode a discount to lower the price.
+- **Totals** — `subtotal + tax + shipping − discount` must reconcile, and `shipping_amount` may not be negative (`400 price_mismatch`). A gift card is a **payment**, not a line discount, so `total_amount` does not subtract it.
+- **Payments** — when you pass an `order_id`, `initializePayment` checks `amount` against the order's authoritative total and returns `400 amount_mismatch` on a mismatch; pass the order's real `total_amount`.
+
+To discover the legitimate discount *before* checkout, use the server-side calculators and send exactly what they return:
+
+```typescript
+// What does this promotion actually take off the cart?
+const promo = await client.promotions.calculatePromotionDiscount({
+  id: 'promo_id',
+  requestBody: { cart: [{ product_id: 'prod_abc', quantity: 2, price: 49.99 }] },
+});
+// → { eligible: true, discount_amount: 10.00, reason: null }
+
+// Or let the server pick the single best promotion to auto-apply:
+const best = await client.promotions.calculateBestPromotion({
+  requestBody: { cart: [{ product_id: 'prod_abc', quantity: 2, price: 49.99 }] },
+});
+
+// Check a gift card's redeemable balance before applying it:
+const gc = await client.giftCards.checkGiftCard({ code: 'GC-XXXX-YYYY' });
+// → { valid: true, balance: 25.00, currency: 'USD' }
+```
+
+For multi-merchant `marketplaceCheckout`, you pass discount **identifiers only** — each `discounts` entry names a `merchant_store_id` and an optional `promotion_id` / `gift_card_code`; the server resolves the real amount per merchant (and the operator-funded share) and rejects an invalid one with `400 discount_invalid`. There is no client-supplied amount on that call at all.
+
 ### Anonymous Carts
 Handle carts for users who haven't logged in yet using `X-Session-Id`.
 
@@ -235,7 +266,9 @@ const { products } = await marketplace.products.listProducts({ limit: 20 });
 // Narrow to a single merchant's shop page
 const merchantProducts = await marketplace.products.listProducts({ storeId: 'merchant-a' });
 
-// One cart, many merchants → one payment, auto-split
+// One cart, many merchants → one payment, auto-split.
+// Send identifiers only (variant/merchant/quantity, and discount ids) — the server
+// prices and splits everything. See "Server is the price authority" above.
 const order = await marketplace.marketplace.marketplaceCheckout({
   requestBody: {
     items: [

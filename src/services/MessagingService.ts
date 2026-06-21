@@ -475,8 +475,12 @@ export class MessagingService {
     }
     /**
      * Edit message
-     * Edits the content of an existing message. Sets `is_edited = true` and records `edited_at`.
-     * Cannot edit a soft-deleted message. Requires a secret key.
+     * Edits the content of one of the customer's **own** messages. Sets `is_edited = true` and
+     * records `edited_at`. Cannot edit a soft-deleted message.
+     *
+     * This is a customer-self write: it works with a **publishable** key plus the customer's session
+     * token in `x-auth-token` (the same browser-origin pattern as cart/wishlist writes). The session
+     * token proves ownership of the message; a customer can only edit messages they sent.
      *
      * @returns any Message updated
      * @throws ApiError
@@ -526,7 +530,12 @@ export class MessagingService {
     }
     /**
      * Delete message
-     * Deletes a message. Requires a secret key.
+     * Soft-deletes one of the customer's **own** messages (returns `success`, `message_id`, and the
+     * `deleted_at` timestamp).
+     *
+     * This is a customer-self write: it works with a **publishable** key plus the customer's session
+     * token in `x-auth-token` (the same browser-origin pattern as cart/wishlist writes). The session
+     * token proves ownership; a customer can only delete messages they sent.
      *
      * @returns any Message soft-deleted
      * @throws ApiError

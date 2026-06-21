@@ -83,6 +83,15 @@ export class PaymentsService {
      * - Prevents duplicate charges on network retries
      * - Returns existing payment if key already used
      *
+     * **🛡️ Amount validation (anti-tampering)**
+     *
+     * When you pass an `order_id`, the server validates `amount` against that order's **authoritative
+     * total** — a `amount` that doesn't match the order total is rejected with **`400 amount_mismatch`**.
+     * The order total was itself validated against the catalog + the shopper's real promotions/gift card
+     * at order creation (see the order endpoint's server-side price validation), so you cannot charge
+     * less than the order is worth. Pass the order's real `total_amount`; don't compute or alter it
+     * client-side.
+     *
      * **Provider-Specific Flows:**
      *
      * **Stripe (redirect):**
