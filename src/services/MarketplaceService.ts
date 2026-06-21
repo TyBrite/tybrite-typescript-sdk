@@ -36,6 +36,20 @@ export class MarketplaceService {
      * `discount_breakdown`, and `discount_amount` plus `merchant_gross` on each
      * `merchant_breakdown` entry.
      *
+     * 🛡️ **The server is the price authority (anti-tampering).** You never send money
+     * amounts on this call — only identifiers. Each item's price is recomputed from the
+     * marketplace catalog, and a `discounts` entry only *names* a `promotion_id` /
+     * `gift_card_code`; the server independently resolves the actual discount that
+     * merchant's promotion or gift card grants (and the operator-funded share),
+     * computes every `gross`, `discount_amount`, `merchant_gross`, commission, and the
+     * payment total from those resolved values, and charges exactly that. A named
+     * discount that doesn't validate (expired, ineligible, wrong store) is rejected with
+     * `400 discount_invalid` rather than silently applied. There is no client-supplied
+     * `discount_amount` or per-item price to tamper with — a manipulated basket cannot
+     * lower what is charged. The resolved breakdown is then held server-side and used
+     * verbatim to finalize the order after payment succeeds; nothing the client sends
+     * after checkout can change what each merchant is paid.
+     *
      * Stock is reserved at checkout: the items are held against each merchant's
      * inventory immediately so concurrent shoppers cannot oversell the last units,
      * and the hold becomes a real stock reduction when payment succeeds. If an item

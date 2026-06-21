@@ -241,15 +241,30 @@ For multi-merchant `marketplaceCheckout`, you pass discount **identifiers only**
 Handle carts for users who haven't logged in yet using `X-Session-Id`.
 
 ```typescript
-// Add item to anonymous cart
+// Add item to anonymous cart — cart items are variant-grained (see "Product IDs vs Variant IDs").
 await client.cartWishlist.addToCart({
   requestBody: {
-    product_id: 'prod_abc',
+    variant_id: 'variant_abc',
     quantity: 1
   },
   xSessionId: 'session_uuid_generated_on_client'
 });
 ```
+
+### Product IDs vs Variant IDs
+
+A **product** is the catalog entry (the "Cotton Hoodie"); a **variant** is a specific buyable SKU of it (the "Cotton Hoodie / Navy / M"). Every product has at least one variant, one marked the default. The rule: **money and inventory are variant-grained; catalog and discovery are product-grained.** Carry the `variant_id` you put in the cart all the way through to the order — don't switch to `product_id` at checkout, or you may order the *default* variant instead of the one the shopper chose.
+
+| Operation | Pass |
+| :--- | :--- |
+| `cartWishlist.addToCart`, `addToWishlist` | **`variant_id`** (required) — a specific SKU. |
+| `marketplace.marketplaceCheckout` items | **`variant_id`** (required). |
+| `orders.createOrder` items | **`variant_id`** preferred (the chosen SKU); `product_id` alone resolves the **default** variant. Send at least one — if both, `variant_id` wins. |
+| `events.record` | **Either** `variant_id` or `product_id` — the server resolves the product. |
+| `reviews.submitReview` | **`product_id`** (required); `variant_id` is an optional pin and is `null` on most reviews (expected, not missing). |
+| `recommendations.getRecommendations` | **`product_id`** — the seed product. |
+| `returns.createReturn` items | Neither — items reference the original `order_item_id`. |
+| `products.getProduct`, `pricing.*` | **Either** — a multi-variant product returns a `variants[]` array; read the chosen `variant_id` from there. |
 
 ### Multi-Merchant Marketplaces
 On a marketplace deployment, authenticate the storefront with a **marketplace operator key** (a publishable key). Catalog reads (`products`, `taxonomy`, `search`) then return the combined catalog across every active merchant. Pass `storeId` to narrow any of those reads to a single merchant's shop page. Read the marketplace's own identity and branding (or one merchant's full store information) with `marketplace.getMarketplaceInfo`, and check out a single cart spanning multiple merchants — one payment is split to each merchant automatically.

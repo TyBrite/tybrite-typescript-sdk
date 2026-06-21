@@ -202,13 +202,13 @@ export class OrdersService {
              */
             items: Array<{
                 /**
-                 * Product UUID (required)
-                 */
-                product_id: string;
-                /**
-                 * Variant UUID (optional - uses default variant if not provided)
+                 * Variant (SKU) UUID. Preferred. Identifies the exact variant to order. If omitted, the product's default variant is used.
                  */
                 variant_id?: string;
+                /**
+                 * Product UUID. Optional when `variant_id` is given (it is resolved from the variant); when sent alone, the product's default variant is ordered.
+                 */
+                product_id?: string;
                 /**
                  * Product name captured on the line item. Optional — if omitted, it is resolved from the product automatically.
                  */
