@@ -1,19 +1,27 @@
 # @tybrite-labs/sdk
 
-**Galactic Core — The Programmable Commerce Platform**
+**The TypeScript SDK for Galactic Core — a headless commerce API.**
 
-Official TypeScript SDK for the Tybrite Galactic Core API.
+Build storefronts, mobile apps, and custom commerce experiences against [Galactic Core](https://gc.tybritelabs.com): a fully-typed client for the catalog, cart, checkout, orders, payments, customers, search, recommendations, promotions, gift cards, reviews, returns, and messaging — one call places an order and the inventory, accounting, and customer records update themselves. Your code owns the frontend; Galactic Core runs the commerce backend behind a versioned REST API and real-time webhooks.
 
-Galactic Core is the programmable interface layer that transforms GalacticOS into a globally accessible Headless Commerce Backend-as-a-Service (BaaS) through clean, versioned REST APIs and real-time webhooks.
+## Documentation
+
+📚 Full docs, guides, and a live API reference: **[docs.tybritelabs.com](https://docs.tybritelabs.com)**
+
+| | |
+| :--- | :--- |
+| **[API Reference →](https://docs.tybritelabs.com/api-reference/introduction)** | Every endpoint, parameter, and response shape. |
+| **[SDK Reference →](https://docs.tybritelabs.com/sdk/introduction)** | This SDK, method by method, with TypeScript examples. |
+| **[Workflow Examples →](https://docs.tybritelabs.com/workflows/introduction)** | Start-to-finish recipes — checkout, returning customer, search & discovery, marketplace, webhooks. |
 
 ## Features
 
-- **🚀 Headless Commerce**: Full control over your frontend with a robust backend.
-- **🌍 Global by Design**: Multi-currency, multi-store, and edge-optimized (10-50ms latency).
-- **🧠 AI-Powered**: Built-in semantic search and product recommendations.
-- **📦 Complete Lifecycle**: interconnected Inventory, Orders, Customers, and Accounting.
-- **🔒 Enterprise Security**: Role-based access, double-entry accounting, and audit trails.
-- **⚡ Developer First**: Fully typed SDK, automatic retries using idempotency, and field filtering.
+- **🛍️ Complete commerce surface** — catalog & variants, cart & wishlist, checkout, orders, payments, customers, promotions, gift cards, reviews, returns, and customer messaging.
+- **🧠 Smart discovery** — semantic search, "frequently bought together", trending, and personalized recommendations out of the box.
+- **🌍 Global by design** — multi-currency pricing (the currency rides on every priced response), regional shipping, and tax handling; served from the edge worldwide.
+- **🔗 Side effects handled for you** — placing a paid order reduces stock, redeems gift cards, books the sale, and updates customer history in one call; partial failures surface as `post_processing_warnings`.
+- **🔒 Safe by default** — publishable vs. secret keys, HMAC request signing, idempotent retries, and a server that is the price authority (it recomputes prices and validates discounts, so a tampered payload can't lower the total).
+- **⚡ Developer-first** — fully typed, sparse fieldsets (`fields=`) to trim payloads, cursor pagination, and real-time webhooks for order/inventory/customer events.
 
 ## Installation
 To get started with the Tybrite SDK, install it via npm:
@@ -77,22 +85,290 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`returns`**: Returns a shopper lodges against their own online orders. `listReturnReasons()` fetches the reason codes + labels for your dropdown (API key only — no customer session). `createReturn({ requestBody, xAuthToken })` lodges a return for one of the signed-in customer's orders (it starts `pending`), and `listReturns(...)` / `getReturn({ id, xAuthToken })` track the customer's own returns and per-item status. List/get/create require a customer session — pass `xAuthToken` (a session token) **or** `xExternalAuth` (a bring-your-own-auth assertion). `reason_description` is required only when `reason_code` is `other`. A customer can only see and create their own returns; approving, refunding, issuing store credit, restocking, and rejecting are merchant actions in the admin, not in this API. When a return carries a pending store-credit offer (`credit_offer.status === 'pending'`), the shopper can `acceptReturnCredit({ id, xAuthToken })` to take the credit or `requestReturnRefund({ id, xAuthToken })` to ask for a refund instead; `getStoreCredit({ xAuthToken })` returns their redeemable balance. Spend store credit at checkout by passing `apply_store_credit: true` to `orders.createOrder`.
 - **`system`**: Platform health checks and store metadata, including the store's currency (see below).
 
+## Key usage by operation
+
+Which key each operation needs. **`pk`** = publishable (browser-safe, read + cart/wishlist writes); **`sk`** = secret (server-only, full access); **+ session** = also requires the shopper's `xAuthToken` (or `xExternalAuth`); **+ HMAC** = secret key **and** a request signature (see [HMAC Signature Verification](#hmac-signature-verification)).
+
+| Operation | Key |
+| :--- | :--- |
+| Products, collections, specs, **brands** (`client.products.*`) | `pk` or `sk` |
+| Categories & subcategories (`client.taxonomy.*`) | `pk` or `sk` |
+| Prices (`client.pricing.*`) | `pk` or `sk` |
+| Search — text & semantic (`client.search.*`) | `pk` or `sk` |
+| **Recommendations** (`client.recommendations.*`) | **`sk` only** |
+| Event capture (`client.events.recordEvent`) | `pk` (browser) |
+| Analytics (`client.analytics.collectAnalyticsEvent`) | `pk` (browser) |
+| Blog posts & lookbooks (`client.cms.*`) | `pk` or `sk` |
+| Store info (`client.system.getStoreInfo`), health | `pk` or `sk` |
+| Cart & wishlist (`client.cartWishlist.*`) | `pk` (browser) — **+ session** when a `customer_id` is supplied |
+| Auth — login / register / logout / OTP / reset (`client.authentication.*`) | **`sk` only** |
+| Create customer (`createCustomer`) | **`sk` only** |
+| Customer self — profile & addresses (`getCustomer`, `updateCustomer`, …) | `pk` **+ session** |
+| List / get orders (`listOrders`, `getOrder`) | **`sk` only** |
+| Create / update order (`createOrder`, `updateOrder`) | **`sk` only + HMAC** |
+| Payment methods (`getPaymentMethods`) | `pk` or `sk` |
+| Initialize / verify payment (`initializePayment`, `verifyPayment`) | **`sk` only** (init also **+ HMAC**) |
+| List reviews (`listReviews`) | `pk` or `sk` (pk sees approved only) |
+| Submit/delete own review (`client.reviews.*` writes) | `pk` **+ session** |
+| Returns — lodge / track / accept-credit (`client.returns.*`) | `pk` **+ session** (`listReturnReasons` needs no session) |
+| Messaging (`client.messaging.*`) | `pk` **+ session** |
+| Gift card check (`checkGiftCard`) | `pk` or `sk` · list mine (`listGiftCards`) → `pk` **+ session** |
+| Promotions (`client.promotions.*`), Shipping (`client.shipping.*`) | `pk` or `sk` |
+| Webhook endpoints & events (`client.webhooks.*`) | **`sk` only** |
+| Catalog ingestion push (`ingestProducts`) | **`sk` only + HMAC** · sample/test → `sk` |
+| GC Connect — authorize / token / revoke (`client.gcConnect.*`) | Public (OAuth client credentials) · list sessions → `sk` |
+| Marketplace — checkout, info, profile (`client.marketplace.*`) | Operator key (profile also **+ `X-Customer-Token`**) |
+
+## Examples by service
+
+One happy-path example per service. Unless noted, examples assume a publishable-key client
+(`const client = new Tybrite({ apiKey: 'tybrite_pk_live_...' })`); where a call is secret-key only,
+the example uses `server` (`const server = new Tybrite({ apiKey: 'tybrite_sk_live_...' })`) and says
+so. See the [Key usage by operation](#key-usage-by-operation) matrix below, plus
+[Authentication](#authentication) and [HMAC Signature Verification](#hmac-signature-verification).
+
+### products
+
+```typescript
+const { brands } = await client.products.listBrands();
+// → [{ brand: 'Acme', product_count: 42 }, ...] — pair with listProducts({ brand }) for a brand page
+```
+
+### taxonomy
+
+```typescript
+const { categories } = await client.taxonomy.listCategories({ limit: 50 });
+// → [{ id, name, slug, product_count }, ...] — build your nav, then filter listProducts({ categoryId })
+```
+
+### pricing
+
+```typescript
+const price = await client.pricing.getProductPrice({ id: 'product-uuid', quantity: 2 });
+// → { resolved_price, display_currency, currency_symbol, base_currency, exchange_rate, ... }
+```
+
+### search
+
+```typescript
+const results = await client.search.searchProducts({ q: 'wireless headphones', limit: 10 });
+// → { query, results: [{ productId, score }], totalResults }
+// Natural-language? Use client.search.semanticSearch({ requestBody: { query, limit } }).
+```
+
+### recommendations
+
+```typescript
+// Secret-key only (a publishable key gets 403) — call from your server.
+const { recommendations } = await server.recommendations.getRecommendations({
+  requestBody: { type: 'similar', productId: 'product-uuid', limit: 8 },
+});
+// → { type, recommendations: [...ranked products], fromCache, computedAt }
+// Types: similar | also-bought | next | trending | new | personalized | bundle
+```
+
+### giftCards
+
+```typescript
+const card = await client.giftCards.checkGiftCard({ code: 'GIFT-XXXX-YYYY' });
+// → { valid, balance, currency } — redeem by passing gift_card_redemption to orders.createOrder
+```
+
+### promotions
+
+```typescript
+const best = await client.promotions.calculateBestPromotion({
+  requestBody: { cart: [{ product_id: 'product-uuid', quantity: 2, price: 49.99 }] },
+});
+// → the single highest-value promotion to auto-apply, with the discount it grants
+```
+
+### cartWishlist
+
+```typescript
+const cart = await client.cartWishlist.addToCart({
+  requestBody: { variant_id: 'variant-uuid', quantity: 1 },
+  xSessionId: 'session-uuid', // anonymous cart; or pass xAuthToken for a signed-in shopper
+});
+// → the updated cart with its line items and totals
+```
+
+### authentication
+
+```typescript
+const session = await client.authentication.login({
+  requestBody: { email: 'shopper@example.com', password: '...' },
+});
+// → { access_token, ... } — pass access_token as xAuthToken on customer-scoped calls
+```
+
+### customers
+
+```typescript
+const customer = await client.customers.getCustomer({ id: 'customer-uuid', xAuthToken: session.access_token });
+// → { id, name, email, phone, store_metrics, ... } (requires the customer's own session)
+```
+
+### orders
+
+```typescript
+// Secret key + HMAC signing required — see HMAC Signature Verification.
+const order = await client.orders.getOrder({ id: 'order-uuid' });
+// → the order with line items, totals and status
+```
+
+### payments
+
+```typescript
+const { methods } = await client.payments.getPaymentMethods();
+// → the providers this store has configured (e.g. stripe). initializePayment is secret-key + HMAC.
+```
+
+### shipping
+
+```typescript
+const fee = await client.shipping.calculateShipping({
+  requestBody: { latitude: 40.7128, longitude: -74.006, order_total: 120 },
+});
+// → { delivery_fee, currency, zone, ... }
+```
+
+### returns
+
+```typescript
+const reasons = await client.returns.listReturnReasons();
+// → [{ code: 'damaged', label: 'Arrived damaged' }, ...] for your return-reason dropdown.
+// createReturn / listReturns / getReturn require a customer session (xAuthToken or xExternalAuth).
+```
+
+### reviews
+
+```typescript
+const { reviews } = await client.reviews.listReviews({ productId: 'product-uuid', sort: 'newest' });
+// → approved reviews for the product. submitReview requires a customer session.
+```
+
+### messaging
+
+```typescript
+// Customer-scoped: pass the shopper's session token + their customer id.
+const { threads } = await client.messaging.listThreads({ xAuthToken: session.access_token, customerId: 'customer-uuid' });
+// → the customer's support threads. Live updates: getMessagingRealtimeToken + subscribeToThread.
+```
+
+### cms
+
+```typescript
+const { posts } = await client.cms.listPosts({ limit: 10 });
+// → published blog posts (shoppable). Lookbooks: client.cms.listLookbooks(...).
+```
+
+### events
+
+```typescript
+await client.events.recordEvent({
+  requestBody: { event_type: 'view', product_id: 'product-uuid', session_id: 'session-uuid' },
+});
+// → 202 fire-and-forget; powers the `next` recommendation type. Never blocks the page.
+```
+
+### analytics
+
+```typescript
+await client.analytics.collectAnalyticsEvent({
+  requestBody: { event_type: 'page_view', visitor_id: 'visitor-uuid', session_id: 'session-uuid', path: '/products/abc' },
+});
+// → fire-and-forget; device/browser/geo are derived server-side. Powers merchant analytics.
+```
+
+### system
+
+```typescript
+const { store, features } = await client.system.getStoreInfo({});
+// → store config (default_currency, currencies, timezone, ...) + a `features` flag block
+if (features.gift_cards) renderGiftCardField();
+```
+
+**Reading `features` flags.** Each flag answers "render this capability **now**?" — it is `true`
+only when the capability is both available to the store **and** has data/config to surface. `false`
+is broad: the plan doesn't include it, or it's included but not set up yet, or both. Two kinds:
+- **Plan-gated** (`true` = plan includes it AND configured): `ai_recommendations`, `semantic_search`,
+  `multi_currency`, `dynamic_pricing`, `cms`, `lookbooks`, `returns`. Starter has none of these;
+  Growth adds `cms`/`lookbooks`/`returns`; Premium & Enterprise add the rest.
+- **Data-presence** (`true` = the store has ≥1 of that item; every plan): `gift_cards`, `promotions`,
+  `messaging`, `specifications`, `collections`.
+
+Because `false` is ambiguous, `features.feature_status` gives the **reason** per flag — `available`
+(boolean `true`), `awaiting_data` (in plan/ungated but no data yet → **pre-build the UI**, it lights
+up automatically when data arrives), or `not_in_plan` (plan excludes it → hide; upgrade required):
+
+```typescript
+if (features.gift_cards) renderGiftCardField();
+else if (features.feature_status.gift_cards === 'awaiting_data') renderGiftCardField({ pending: true });
+// 'not_in_plan' → don't build it
+```
+
+### marketplace
+
+```typescript
+// Marketplace (operator key) deployments only.
+const info = await client.marketplace.getMarketplaceInfo({});
+// → marketplace identity + branding; pass { storeId } for one merchant's full store info
+```
+
+### ingestion
+
+```typescript
+const sample = await client.ingestion.getIngestSample({ format: 'json' });
+// → a sample feed to model your data on. ingestProducts (the write) needs a secret key + signature.
+```
+
+### webhooks
+
+```typescript
+const { webhook_endpoints } = await client.webhooks.listWebhookEndpoints({ limit: 50 });
+// → your registered endpoints. createWebhookEndpoint registers a new one (secret key).
+```
+
+### gcConnect
+
+```typescript
+// "Login with GC" OAuth-style flow — your app sends the merchant to the authorize URL.
+const request = await client.gcConnect.getConnectAuthorize({
+  clientId: 'your-client-id',
+  redirectUri: 'https://your-app.com/callback',
+  scope: 'products:read orders:read',
+  state: 'csrf-token',
+});
+// → the consent request details to render before the merchant approves access
+```
+
+
 ## Advanced Usage
 
 ### Currency
-Each store defines its own currency, returned as `store.default_currency` from
-`getStoreInfo` (with the accepted list in `store.currencies`). Catalog prices are expressed in
-that currency, so there's no separate currency call — read it once and format with it.
+**Currency rides on every priced response — you don't fetch it separately.** Each product (from
+`listProducts`/`getProduct`) and every pricing response carries `display_currency` (the code) and
+`currency_symbol` inline; pricing responses also add `base_currency` and `exchange_rate`. So you
+format money straight from the row you already loaded. Both fields are `fields=`-selectable.
 
 ```typescript
-const { store, features } = await client.system.getStoreInfo({ sections: 'features' });
-const currency = store.default_currency;     // e.g. 'EUR' — the currency prices are in
-const accepted = store.currencies;           // e.g. ['EUR','KES','CNY','GBP','USD']
-const fmt = (n: number) =>
-  new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(n);
+const fmt = (amount: number, currency: string) =>
+  new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount);
 
-const products = await client.products.listProducts();
-products.data.forEach((p) => console.log(p.name, fmt(p.price))); // p.price is in the store currency
+const { products } = await client.products.listProducts({
+  fields: 'name,price,display_currency,currency_symbol',
+});
+products.forEach((p) => console.log(p.name, fmt(p.price, p.display_currency))); // e.g. €349.99
+```
+
+Store information is **configuration metadata** — use it to know *which* currencies a store supports
+(e.g. to render a currency switcher), not as the per-response source of truth:
+
+```typescript
+const { store } = await client.system.getStoreInfo({});
+store.default_currency; // the store's base currency (same value pricing returns as base_currency)
+store.currencies;       // every currency the store has enabled, e.g. ['USD','GBP','EUR']
 ```
 
 Single-currency stores (`currencies: ['EUR']`) display everything in `default_currency`.
@@ -360,6 +636,11 @@ const result = await client.orders.createOrder({
 console.log(result.store_credit_applied); // how much credit was applied
 ```
 
+## Resources
+
+- **Product:** [gc.tybritelabs.com](https://gc.tybritelabs.com)
+- **Documentation:** [docs.tybritelabs.com](https://docs.tybritelabs.com) — [API Reference](https://docs.tybritelabs.com/api-reference/introduction) · [SDK Reference](https://docs.tybritelabs.com/sdk/introduction) · [Workflow Examples](https://docs.tybritelabs.com/workflows/introduction)
+
 ## License
 
-Proprietary - Tybrite Labs
+MIT © Tybrite Labs

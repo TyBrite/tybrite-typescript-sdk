@@ -219,7 +219,22 @@ export type StoreInfoResponse = {
         };
     };
     /**
-     * Feature flags (optional, included when requested). Each flag reports whether a capability is actually available to this store right now. Plan-dependent capabilities (smart search & recommendations, dynamic pricing, multi-currency, content pages & lookbooks, returns) report `true` only when the store's plan includes them AND they are configured; a storefront should use these flags to decide which UI to show.
+     * Feature flags (optional, included when requested). Each flag is a boolean answering "should the storefront show this capability right now?" — use them to decide which UI to render.
+     *
+     * **What `true` / `false` mean.** A flag is `true` only when the capability is BOTH available to the store AND has data/config to surface. `false` is deliberately broad — it can mean any of: the store's plan doesn't include the feature, the plan includes it but it isn't set up/has no data yet, or both. A `false` flag therefore does NOT tell you *why* it's off; treat it simply as "don't render this yet."
+     *
+     * **Two kinds of flag:**
+     * - **Plan-gated** — `ai_recommendations`, `semantic_search`, `multi_currency`,
+     * `dynamic_pricing`, `cms`, `lookbooks`, `returns`. `true` requires the store's plan to
+     * include the feature AND it to be configured. By plan: Starter includes none of these;
+     * Growth adds content pages/lookbooks (`cms`, `lookbooks`) and `returns`; Premium and
+     * Enterprise add smart search & recommendations (`ai_recommendations`, `semantic_search`),
+     * `dynamic_pricing`, and `multi_currency`.
+     *
+     * - **Data-presence (every plan)** — `gift_cards`, `promotions`, `messaging`,
+     * `specifications`, `collections`. Not plan-gated at all; `true` simply means the store
+     * currently has at least one of that item (e.g. `gift_cards: true` = the store has issued
+     * one or more gift cards). `false` means none exist yet, not that the feature is forbidden.
      */
     features?: {
         /**
@@ -238,7 +253,13 @@ export type StoreInfoResponse = {
          * Automatic pricing rules are available (plan-dependent and configured).
          */
         dynamic_pricing?: boolean;
+        /**
+         * The store has issued at least one gift card (data-presence; every plan).
+         */
         gift_cards?: boolean;
+        /**
+         * The store has at least one promotion (data-presence; every plan).
+         */
         promotions?: boolean;
         /**
          * The store publishes content pages (plan-dependent and configured).
@@ -252,12 +273,22 @@ export type StoreInfoResponse = {
          * The store accepts customer-lodged returns (Settings → General → Returns).
          */
         returns?: boolean;
+        /**
+         * The store has at least one customer conversation thread (data-presence; every plan).
+         */
         messaging?: boolean;
+        /**
+         * The store has published product specifications (data-presence; every plan).
+         */
         specifications?: boolean;
         /**
          * The store has product collections (storefront catalog groupings) to display.
          */
         collections?: boolean;
+        /**
+         * The REASON behind each flag above, keyed by the same feature name — so you can tell a feature that's off because the plan excludes it apart from one that's in the plan but has no data yet. Each value is one of: `available` (usable now — the boolean is `true`); `awaiting_data` (entitled/ungated but nothing to show yet — the boolean is `false`, but you can safely **pre-build the UI** and it will light up automatically once data exists); or `not_in_plan` (a plan-gated feature the store's plan doesn't include — hide it, an upgrade is required). Data-presence features (gift_cards, promotions, messaging, specifications, collections) are never `not_in_plan`.
+         */
+        feature_status?: Record<string, 'available' | 'awaiting_data' | 'not_in_plan'>;
     };
     /**
      * Indicates whether this store is part of a marketplace, so a storefront can adapt its experience accordingly.
