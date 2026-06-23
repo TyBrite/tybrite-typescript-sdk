@@ -119,7 +119,7 @@ export class IngestionService {
                 - Idempotency-Key reused with a different request body
                 `,
                 422: `Every row failed validation; nothing was written.`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
     }
@@ -147,7 +147,7 @@ export class IngestionService {
                 'format': format,
             },
             errors: {
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
     }
@@ -185,7 +185,7 @@ export class IngestionService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
     }
@@ -230,7 +230,7 @@ export class IngestionService {
             },
             errors: {
                 404: `The store has no public feed (not opted in, or wrong/missing token).`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
     }
@@ -260,7 +260,7 @@ export class IngestionService {
             },
             errors: {
                 404: `The store has no public feed.`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
     }

@@ -28,7 +28,7 @@ export class ReturnsService {
             url: '/v1/returns/reasons',
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -93,7 +93,7 @@ export class ReturnsService {
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -167,7 +167,7 @@ export class ReturnsService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -286,7 +286,7 @@ export class ReturnsService {
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 422: `Returns are not enabled for this store.`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -352,7 +352,7 @@ export class ReturnsService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -426,7 +426,7 @@ export class ReturnsService {
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 409: `There is no pending store-credit offer to accept on this return.`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -493,7 +493,7 @@ export class ReturnsService {
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 409: `There is no pending store-credit offer on this return.`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });

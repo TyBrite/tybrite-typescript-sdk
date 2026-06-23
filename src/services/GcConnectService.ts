@@ -78,7 +78,7 @@ export class GcConnectService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -149,7 +149,7 @@ export class GcConnectService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -211,7 +211,7 @@ export class GcConnectService {
                 - \`invalid_request\` — missing required field
                 `,
                 401: `Invalid \`client_id\` or \`client_secret\`.`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -274,7 +274,7 @@ export class GcConnectService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Invalid \`client_id\` or \`client_secret\`.`,
                 404: `Resource not found`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -301,7 +301,7 @@ export class GcConnectService {
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });

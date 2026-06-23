@@ -52,7 +52,7 @@ export class PaymentsService {
             errors: {
                 400: `Invalid request (invalid field names in \`fields\` query parameter)`,
                 401: `Authentication failed - invalid or missing API key`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -230,7 +230,7 @@ export class PaymentsService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });
@@ -303,7 +303,7 @@ export class PaymentsService {
                 400: `Invalid request (missing required fields, invalid provider, provider misconfigured, or upstream provider rejected verification)`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Forbidden - Publishable keys cannot verify payments. Use a secret key (tybrite_sk_*).`,
-                429: `Rate limit exceeded`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });

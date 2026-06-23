@@ -20,15 +20,15 @@ export type Error = {
          */
         current_cart_quantity?: number;
         /**
-         * Rate limit ceiling (present on rate_limit_exceeded errors).
+         * Rate limit ceiling (present on rate_limited / quota_exceeded errors).
          */
         limit?: number;
         /**
-         * Requests remaining in the current window (present on rate_limit_exceeded errors).
+         * Requests remaining in the current window (present on rate_limited / quota_exceeded errors).
          */
         remaining?: number;
         /**
-         * Unix timestamp when the rate limit window resets (present on rate_limit_exceeded errors).
+         * Unix timestamp when the rate limit / quota window resets (present on rate_limited / quota_exceeded errors).
          */
         reset?: number;
     };
