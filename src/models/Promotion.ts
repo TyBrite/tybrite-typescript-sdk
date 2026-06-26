@@ -33,9 +33,13 @@ export type Promotion = {
      */
     conditions?: string | null;
     /**
-     * URL of the promotion image.
+     * URL of the promotion banner image. This is the default banner — used on desktop and as the fallback whenever `image_mobile` is not set.
      */
     image?: string | null;
+    /**
+     * Optional banner image sized for mobile viewports. When set, render this on small screens and fall back to `image` on larger ones (e.g. a `<picture>` element with a mobile `<source>`). When absent, use `image` everywhere.
+     */
+    image_mobile?: string | null;
     /**
      * Products that make up a bundle promotion (present for `bundle` type).
      */

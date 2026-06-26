@@ -209,4 +209,50 @@ export class CmsService {
             },
         });
     }
+    /**
+     * Subscribe an email to the store's newsletter
+     * Capture a storefront newsletter signup. Email is the identity — this works for anonymous
+     * visitors and signed-in shoppers alike (a signed-in storefront simply prefills the email
+     * field). When the store has connected a marketing tool, the new subscriber is automatically
+     * synced to the merchant's chosen list.
+     *
+     * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys, so
+     * it can be called directly from the storefront. No customer session required.
+     *
+     * **Idempotent:** re-subscribing the same email is safe — it returns `200` with
+     * `already_subscribed: true` and never creates a duplicate. A fresh signup returns `201`.
+     *
+     * @returns any Already subscribed (idempotent re-subscribe).
+     * @throws ApiError
+     */
+    public subscribeNewsletter({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The subscriber's email address.
+             */
+            email: string;
+            /**
+             * Optional free-text label for where the signup happened (e.g. a blog post or lookbook slug, or `footer`). Surfaced to the merchant and forwarded as an event property.
+             */
+            source?: string | null;
+        },
+    }): CancelablePromise<{
+        subscribed?: boolean;
+        already_subscribed?: boolean;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/newsletter/subscribe',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
 }

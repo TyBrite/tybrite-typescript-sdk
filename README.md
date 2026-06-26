@@ -261,6 +261,9 @@ const { threads } = await client.messaging.listThreads({ xAuthToken: session.acc
 ```typescript
 const { posts } = await client.cms.listPosts({ limit: 10 });
 // → published blog posts (shoppable). Lookbooks: client.cms.listLookbooks(...).
+
+// Capture a newsletter signup from the storefront (email-keyed, idempotent):
+await client.cms.subscribeNewsletter({ requestBody: { email: 'shopper@example.com', source: 'footer' } });
 ```
 
 ### events
