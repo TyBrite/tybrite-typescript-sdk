@@ -42,7 +42,6 @@ export type { MarketplaceCollectionListResponse } from './models/MarketplaceColl
 export { MarketplaceInfoResponse } from './models/MarketplaceInfoResponse';
 export type { MerchantBreakdownItem } from './models/MerchantBreakdownItem';
 export { Message } from './models/Message';
-export { MessagingRealtimeToken } from './models/MessagingRealtimeToken';
 export { Order } from './models/Order';
 export type { OrderItem } from './models/OrderItem';
 export type { Pagination } from './models/Pagination';

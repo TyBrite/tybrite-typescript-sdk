@@ -3,7 +3,6 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Message } from '../models/Message';
-import type { MessagingRealtimeToken } from '../models/MessagingRealtimeToken';
 import type { Thread } from '../models/Thread';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
@@ -305,8 +304,8 @@ export class MessagingService {
      * Send a message to a thread
      * Append a new message to an existing conversation thread on behalf of the
      * signed-in shopper. The store sees it in their admin inbox and can reply;
-     * the reply streams back to the shopper over the realtime channel
-     * (see `getMessagingRealtimeToken`).
+     * the reply streams back to the shopper live over the realtime WebSocket
+     * (see `subscribeThread`).
      *
      * **Auth:** API key in `Authorization: Bearer` (a **publishable** key is fine —
      * this is a browser-origin storefront write) **plus** the shopper's customer
@@ -574,67 +573,91 @@ export class MessagingService {
         });
     }
     /**
-     * Get realtime connection details for a thread
-     * Returns the connection details a storefront needs to receive a thread's new messages in
-     * realtime, without polling. Use these details with a realtime client to subscribe to the
-     * conversation and have incoming messages pushed to you as they are sent.
+     * Subscribe to a thread's new messages in realtime (WebSocket)
+     * Opens a **WebSocket** connection that streams a conversation's new messages to you live, with
+     * no polling. As soon as either side posts a message, every connected subscriber of that thread
+     * receives it.
      *
-     * Two response shapes are returned depending on how the request is authenticated, indicated by
-     * the `mode` field:
+     * This is a WebSocket upgrade, not a normal request — send the standard upgrade headers
+     * (`Upgrade: websocket`). The connection is served on the API's own domain; the server responds
+     * `101 Switching Protocols` and then pushes one JSON frame per new message:
      *
-     * - **`direct`** — returned for a customer signed in through Galactic Core
-     * (supply their session token via `x-auth-token`). The response includes a short-lived
-     * `token` the storefront uses to subscribe directly; the customer only ever receives updates
-     * for their own thread.
-     * - **`broadcast`** — returned for customers authenticated with your own identity provider
-     * (supply the signed identity assertion via `x-external-auth`), for server-side integrations,
-     * and for marketplace operators. Subscribe to the named `channel` to receive the thread's
-     * message events.
+     * ```json
+     * { "type": "message.created", "payload": { "thread_id": "…", "message": { … } } }
+     * ```
      *
-     * In both cases, pair `realtime_url` + `realtime_key` + `channel` (and `token` when
-     * present) with the `subscribeToThread` helper in the SDK to start receiving messages live.
+     * **Authentication.** Because a browser `WebSocket` cannot set request headers, supply the
+     * credentials as **query parameters** on the connection URL (they may also be sent as headers
+     * from non-browser clients):
      *
-     * @returns MessagingRealtimeToken Realtime connection details
+     * - `api_key` — your publishable key (a publishable key is fine; this is a browser-origin read).
+     * - **one** customer credential, proving the caller owns the thread:
+     * - `auth_token` — the session token of a customer signed in through Galactic Core
+     * (equivalently the `x-auth-token` header), **or**
+     * - `external_auth` — a signed identity assertion for a customer authenticated with your own
+     * identity provider (equivalently the `x-external-auth` header).
+     *
+     * The server validates the credential and confirms the customer is the thread's participant
+     * before accepting the socket; an unauthorized or non-participant connection is closed. Use the
+     * `subscribeToThread` helper in the SDK to manage the connection (it returns an unsubscribe
+     * function), or open the WebSocket yourself.
+     *
+     * Send the text frame `ping` at intervals to keep an idle connection alive; the server replies
+     * `pong`.
+     *
+     * @returns void
      * @throws ApiError
      */
-    public getMessagingRealtimeToken({
-        requestBody,
-        xAuthToken,
-        xExternalAuth,
+    public subscribeThread({
+        id,
+        apiKey,
+        authToken,
+        externalAuth,
     }: {
-        requestBody: {
-            /**
-             * The conversation to receive realtime messages for.
-             */
-            thread_id: string;
-        },
         /**
-         * Session token of a customer signed in through Galactic Core. Supply this to receive the
-         * `direct` connection details for that customer's own thread.
+         * The conversation to receive realtime messages for.
+         */
+        id: string,
+        /**
+         * Your publishable key, supplied as a query parameter for the WebSocket handshake (browsers
+         * cannot set the `Authorization` header on a WebSocket). May also be sent as the
+         * `Authorization: Bearer` header from non-browser clients.
          *
          */
-        xAuthToken?: string,
+        apiKey?: string,
+        /**
+         * Session token of a customer signed in through Galactic Core. Supply this (or
+         * `external_auth`) to authorize the subscription. May also be sent as the `x-auth-token` header.
+         *
+         */
+        authToken?: string,
         /**
          * Signed identity assertion for a customer authenticated with your own identity provider.
-         * Supply this (instead of `x-auth-token`) to receive the `broadcast` connection details.
+         * Supply this (or `auth_token`) to authorize the subscription. May also be sent as the
+         * `x-external-auth` header.
          *
          */
-        xExternalAuth?: string,
-    }): CancelablePromise<MessagingRealtimeToken> {
+        externalAuth?: string,
+    }): CancelablePromise<void> {
         return this.httpRequest.request({
-            method: 'POST',
-            url: '/v1/messaging/realtime-token',
-            headers: {
-                'x-auth-token': xAuthToken,
-                'x-external-auth': xExternalAuth,
+            method: 'GET',
+            url: '/v1/messaging/threads/{id}/subscribe',
+            path: {
+                'id': id,
             },
-            body: requestBody,
-            mediaType: 'application/json',
+            query: {
+                'api_key': apiKey,
+                'auth_token': authToken,
+                'external_auth': externalAuth,
+            },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                426: `Upgrade Required — the request reached the endpoint without a WebSocket upgrade. Reconnect
+                with the \`Upgrade: websocket\` header.
+                `,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

@@ -1,91 +1,126 @@
 /**
- * Subscribe to a messaging thread's live events. Pass the connection details returned by
- * getMessagingRealtimeToken (mode, realtimeUrl, realtimeKey, token, channel).
+ * Realtime messaging helper — subscribe to a thread's new messages over a plain
+ * WebSocket served on the API's own domain. No third-party realtime SDK and no
+ * extra dependency: this uses the platform `WebSocket` (browsers, Deno, Bun, and
+ * Node 22+ all provide it globally).
  *
- * Re-exported from src/index.ts. The export is re-added on every SDK regeneration by
- * scripts/post-generate.js (see the "Realtime helper export" block there), because the
- * code generator overwrites src/index.ts. Do not rely on the generator preserving it.
+ * Re-exported from src/index.ts. The export is re-added on every SDK regeneration
+ * by scripts/post-generate.js (the code generator overwrites src/index.ts).
  */
 
-import { createClient } from '@supabase/supabase-js';
-
+/**
+ * @deprecated The connection no longer has distinct modes — there is one
+ * WebSocket transport for every caller. Kept only for backwards-compatible
+ * type imports; ignore it.
+ */
 export type SubscribeMode = 'direct' | 'broadcast';
 
 export interface SubscribeToThreadOptions {
-  /** Base URL of the realtime service (from getMessagingRealtimeToken). */
-  realtimeUrl: string;
-  /** Public connection key (from getMessagingRealtimeToken). */
-  realtimeKey: string;
-  /** Channel name to subscribe to (from getMessagingRealtimeToken). */
-  channel: string;
-  /** Connection mode (from getMessagingRealtimeToken). */
-  mode: SubscribeMode;
   /**
-   * Short-lived subscription token. Required for `direct`; ignored for `broadcast`.
+   * Base API URL, e.g. `https://api.tybritelabs.com`. `http(s)://` is upgraded to
+   * `ws(s)://` automatically. Defaults to `https://api.tybritelabs.com`.
    */
-  token?: string | null;
-  /** Called with each new message as it arrives. */
+  baseUrl?: string;
+  /** The conversation to subscribe to. */
+  threadId: string;
+  /** Your publishable key (`tybrite_pk_*`). */
+  apiKey: string;
+  /**
+   * The signed-in customer's session token (from `client.auth.login`). Supply this
+   * OR `externalAuth` — one customer credential is required to authorize the socket.
+   */
+  authToken?: string;
+  /**
+   * A signed external-identity assertion (bring-your-own-auth). Supply this OR
+   * `authToken`.
+   */
+  externalAuth?: string;
+  /** Called with each new message's payload as it arrives. */
   onMessage: (message: any) => void;
+  /** Optional: called if the socket closes or errors. */
+  onClose?: (event: { code: number; reason: string }) => void;
+  /**
+   * Heartbeat interval (ms) to keep an idle connection alive. The server replies
+   * `pong` to a `ping` frame. Default 25000; set 0 to disable.
+   */
+  heartbeatMs?: number;
 }
 
-/** Derive the thread id from a channel name of the form `thread:<id>`. */
-function threadIdFromChannel(channel: string): string | null {
-  const idx = channel.indexOf(':');
-  return idx === -1 ? null : channel.slice(idx + 1);
-}
+const DEFAULT_BASE_URL = 'https://api.tybritelabs.com';
 
 /**
- * Subscribe to a conversation and receive new messages in realtime, without polling.
+ * Subscribe to a conversation and receive new messages in realtime, without
+ * polling. Opens a WebSocket to the thread's subscribe endpoint; the server
+ * pushes one frame per new message:
  *
- * Returns an unsubscribe function — call it to tear down the subscription.
+ *   { type: 'message.created', payload: { thread_id, message } }
+ *
+ * `onMessage` is called with `payload.message` for each new message. Returns an
+ * unsubscribe function — call it to tear down the connection.
  */
-export async function subscribeToThread(
-  options: SubscribeToThreadOptions
-): Promise<() => void> {
-  const { realtimeUrl, realtimeKey, channel, mode, token, onMessage } = options;
+export function subscribeToThread(options: SubscribeToThreadOptions): () => void {
+  const {
+    baseUrl = DEFAULT_BASE_URL,
+    threadId,
+    apiKey,
+    authToken,
+    externalAuth,
+    onMessage,
+    onClose,
+    heartbeatMs = 25_000,
+  } = options;
 
-  if (mode === 'direct') {
-    if (!token) {
-      throw new Error('subscribeToThread: a token is required for direct mode.');
-    }
-    const threadId = threadIdFromChannel(channel);
-    const client = createClient(realtimeUrl, realtimeKey, {
-      global: { headers: { Authorization: 'Bearer ' + token } },
-      realtime: { params: { eventsPerSecond: 10 } },
-    });
-    // Authorize the realtime socket with the customer's own session token.
-    if (typeof client.realtime?.setAuth === 'function') {
-      client.realtime.setAuth(token);
-    }
-    const sub = client
-      .channel(channel)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'ecommerce_messages',
-          filter: 'thread_id=eq.' + threadId,
-        },
-        (payload: any) => onMessage(payload.new)
-      )
-      .subscribe();
-
-    return () => {
-      client.removeChannel(sub);
-    };
+  if (!threadId) throw new Error('subscribeToThread: threadId is required.');
+  if (!apiKey) throw new Error('subscribeToThread: apiKey is required.');
+  if (!authToken && !externalAuth) {
+    throw new Error('subscribeToThread: supply authToken (Galactic Core session) or externalAuth.');
+  }
+  if (typeof WebSocket === 'undefined') {
+    throw new Error('subscribeToThread: no global WebSocket in this runtime (Node 22+ or a browser is required).');
   }
 
-  // broadcast mode — bring-your-own-auth customers, server integrations, operators.
-  const client = createClient(realtimeUrl, realtimeKey, {
-    realtime: { params: { eventsPerSecond: 10 } },
+  const wsBase = baseUrl.replace(/^http/i, 'ws').replace(/\/+$/, '');
+  const params = new URLSearchParams({ api_key: apiKey });
+  if (authToken) params.set('auth_token', authToken);
+  if (externalAuth) params.set('external_auth', externalAuth);
+  const url = `${wsBase}/v1/messaging/threads/${threadId}/subscribe?${params.toString()}`;
+
+  const ws = new WebSocket(url);
+  let heartbeat: ReturnType<typeof setInterval> | undefined;
+  let closed = false;
+
+  ws.addEventListener('open', () => {
+    if (heartbeatMs > 0) {
+      heartbeat = setInterval(() => {
+        try { ws.send('ping'); } catch { /* socket gone */ }
+      }, heartbeatMs);
+    }
   });
-  const sub = client
-    .channel(channel)
-    .on('broadcast', { event: '*' }, (event: any) => onMessage(event.payload))
-    .subscribe();
+
+  ws.addEventListener('message', (ev: MessageEvent) => {
+    const raw = typeof ev.data === 'string' ? ev.data : '';
+    if (!raw || raw === 'pong') return;
+    let frame: any;
+    try { frame = JSON.parse(raw); } catch { return; }
+    if (frame && frame.type === 'message.created') {
+      onMessage(frame.payload?.message ?? frame.payload);
+    }
+  });
+
+  const teardown = () => {
+    if (heartbeat) clearInterval(heartbeat);
+  };
+  ws.addEventListener('close', (ev: CloseEvent) => {
+    teardown();
+    if (!closed) onClose?.({ code: ev.code, reason: ev.reason });
+  });
+  ws.addEventListener('error', () => {
+    // The subsequent 'close' carries the code/reason; nothing else to do here.
+  });
 
   return () => {
-    client.removeChannel(sub);
+    closed = true;
+    teardown();
+    try { ws.close(1000); } catch { /* already closed */ }
   };
 }
