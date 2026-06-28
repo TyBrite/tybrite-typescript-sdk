@@ -104,6 +104,7 @@ export { SandboxService } from './services/SandboxService';
 export { SearchService } from './services/SearchService';
 export { ShippingService } from './services/ShippingService';
 export { SystemService } from './services/SystemService';
+export { TaxService } from './services/TaxService';
 export { TaxonomyService } from './services/TaxonomyService';
 export { WebhooksService } from './services/WebhooksService';
 

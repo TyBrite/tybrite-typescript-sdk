@@ -77,6 +77,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`promotions`**: Read marketing campaigns and discounts, and compute discounts **server-side** so your storefront never reimplements the math: `calculatePromotionDiscount({ id, requestBody: { cart } })` returns the exact amount one promotion takes off a cart (with `eligible`/`reason` when it doesn't qualify), and `calculateBestPromotion({ requestBody: { cart } })` returns the single highest-value promotion to auto-apply. `bundle`/`bogo` promotions expose their product sets as id arrays (`bundle_products`, `bogo_required_products`, `bogo_free_products`) — pass `getPromotion({ id, expand: 'products' })` to get them resolved with embedded product details in one call (`*_resolved` arrays), or resolve the ids yourself with `products.getProduct`. Marketplace storefronts read and calculate a featured merchant's promotion by passing `storeId` (the `merchant_store_id` from the placement/collection).
 - **`giftCards`**: Gift card redemption, and balance tracking.
 - **`shipping`**: Shipping zone management and delivery cost calculation.
+- **`tax`**: Preview the tax for a shipping destination and cart **before** placing the order, so the storefront can show and charge the final tax-inclusive total. `previewTax({ requestBody: { ship_to, lines, currency } })` returns `tax_amount` plus a per-jurisdiction `tax_breakdown` when the store has automatic tax enabled (`tax_source: 'automatic'`), or `{ tax_source: 'fallback' }` when it isn't (apply the store's own rate). The estimate is never recorded for filing. Publishable-key accessible so it can be called from the browser at checkout — then compute `total_amount` (`subtotal + tax_amount + shipping − discount`) and pass that same total to `orders.createOrder`. (Order responses also carry `tax_amount`, `tax_breakdown`, and `tax_source`.)
 - **`taxonomy`**: Manage categories and subcategories.
 - **`cms`**: Shoppable content management (Blog posts, Lookbooks).
 - **`messaging`**: Real-time customer support messaging. Receive a thread's new messages live (no polling) by opening a WebSocket with the `subscribeToThread` helper exported from the package root — no extra dependency required.
@@ -96,6 +97,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Categories & subcategories (`client.taxonomy.*`) | `pk` or `sk` |
 | Prices (`client.pricing.*`) | `pk` or `sk` |
 | Search — text & semantic (`client.search.*`) | `pk` or `sk` |
+| Tax preview (`client.tax.previewTax`) | `pk` or `sk` (browser) |
 | **Recommendations** (`client.recommendations.*`) | **`sk` only** |
 | Event capture (`client.events.recordEvent`) | `pk` (browser) |
 | Analytics (`client.analytics.collectAnalyticsEvent`) | `pk` (browser) |
@@ -294,6 +296,24 @@ await client.analytics.collectAnalyticsEvent({
   requestBody: { event_type: 'page_view', visitor_id: 'visitor-uuid', session_id: 'session-uuid', path: '/products/abc' },
 });
 // → fire-and-forget; device/browser/geo are derived server-side. Powers merchant analytics.
+```
+
+### tax
+
+```typescript
+// Preview tax for the cart BEFORE placing the order, so the storefront shows the final total.
+const tax = await client.tax.previewTax({
+  requestBody: {
+    ship_to: { line1: '350 Fifth Avenue', city: 'New York', region: 'NY', country: 'US', postal_code: '10118' },
+    lines: [{ quantity: 2, amount: 598, item_code: 'SAM-WATCH-6', category_name: 'Wearables' }],
+    currency: 'USD',
+  },
+});
+// → { tax_amount: 53.08, tax_source: 'automatic', breakdown: [ { jurisName: 'NEW YORK CITY', rate: 0.045, tax: 26.91 }, … ] }
+// (or { tax_source: 'fallback' } when automatic tax isn't configured — apply the store's own rate.)
+
+const subtotal = 598, shipping = 5.99, discount = 0;
+const total_amount = subtotal + (tax.tax_amount ?? 0) + shipping - discount; // 657.07 → pass to createOrder
 ```
 
 ### system

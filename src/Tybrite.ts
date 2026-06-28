@@ -28,6 +28,7 @@ import { SandboxService } from './services/SandboxService';
 import { SearchService } from './services/SearchService';
 import { ShippingService } from './services/ShippingService';
 import { SystemService } from './services/SystemService';
+import { TaxService } from './services/TaxService';
 import { TaxonomyService } from './services/TaxonomyService';
 import { WebhooksService } from './services/WebhooksService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
@@ -55,6 +56,7 @@ export class Tybrite {
     public readonly search: SearchService;
     public readonly shipping: ShippingService;
     public readonly system: SystemService;
+    public readonly tax: TaxService;
     public readonly taxonomy: TaxonomyService;
     public readonly webhooks: WebhooksService;
     public readonly request: BaseHttpRequest;
@@ -93,6 +95,7 @@ export class Tybrite {
         this.search = new SearchService(this.request);
         this.shipping = new ShippingService(this.request);
         this.system = new SystemService(this.request);
+        this.tax = new TaxService(this.request);
         this.taxonomy = new TaxonomyService(this.request);
         this.webhooks = new WebhooksService(this.request);
     }

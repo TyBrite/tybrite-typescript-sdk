@@ -20,6 +20,14 @@ export type Order = {
     payment_reference?: string;
     subtotal?: number;
     tax_amount?: number;
+    /**
+     * Per-jurisdiction tax detail when tax was calculated automatically for the shipping destination (one entry per taxing jurisdiction). Null when a flat store rate was used.
+     */
+    tax_breakdown?: any[] | null;
+    /**
+     * How the tax figure was produced — `automatic` (jurisdiction-accurate calculation for the destination), `fallback` (automatic calculation was unavailable, so the store's configured rate was used), or `manual` (the store's configured rate).
+     */
+    tax_source?: Order.tax_source;
     shipping_amount?: number;
     discount_amount?: number;
     total_amount?: number;
@@ -66,6 +74,14 @@ export namespace Order {
         MPESA = 'mpesa',
         CASH = 'cash',
         BANK_TRANSFER = 'bank_transfer',
+    }
+    /**
+     * How the tax figure was produced — `automatic` (jurisdiction-accurate calculation for the destination), `fallback` (automatic calculation was unavailable, so the store's configured rate was used), or `manual` (the store's configured rate).
+     */
+    export enum tax_source {
+        AUTOMATIC = 'automatic',
+        FALLBACK = 'fallback',
+        MANUAL = 'manual',
     }
     /**
      * Whether this order was created in the live or test environment. Sandbox orders are isolated from production data.
