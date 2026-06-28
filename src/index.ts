@@ -100,6 +100,7 @@ export { PromotionsService } from './services/PromotionsService';
 export { RecommendationsService } from './services/RecommendationsService';
 export { ReturnsService } from './services/ReturnsService';
 export { ReviewsService } from './services/ReviewsService';
+export { SandboxService } from './services/SandboxService';
 export { SearchService } from './services/SearchService';
 export { ShippingService } from './services/ShippingService';
 export { SystemService } from './services/SystemService';
