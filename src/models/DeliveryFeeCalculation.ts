@@ -50,6 +50,24 @@ export type DeliveryFeeCalculation = {
          */
         longitude?: number;
     };
+    /**
+     * Which source produced the result — the store's delivery `zone`/`tier` rules, live carrier `shippo` rates, or `none` (unconfigured).
+     */
+    rate_source?: DeliveryFeeCalculation.rate_source;
+    /**
+     * Live multi-carrier rate options, present only when the store has carrier shipping connected AND a destination address + parcel were supplied. Each entry is a real carrier quote; pass a chosen `rate_id` to buy a label or place an order with that rate.
+     */
+    rates?: Array<{
+        /**
+         * The chosen carrier rate. Pass as shippo_rate_id on createOrder so the order's shipping amount is validated against this real quote.
+         */
+        rate_id?: string;
+        provider?: string;
+        service?: string | null;
+        amount?: number;
+        currency?: string;
+        estimated_days?: number | null;
+    }>;
 };
 export namespace DeliveryFeeCalculation {
     /**
@@ -62,6 +80,15 @@ export namespace DeliveryFeeCalculation {
         ZONE = 'zone',
         DISTANCE = 'distance',
         DEFAULT = 'default',
+    }
+    /**
+     * Which source produced the result — the store's delivery `zone`/`tier` rules, live carrier `shippo` rates, or `none` (unconfigured).
+     */
+    export enum rate_source {
+        ZONE = 'zone',
+        TIER = 'tier',
+        SHIPPO = 'shippo',
+        NONE = 'none',
     }
 }
 

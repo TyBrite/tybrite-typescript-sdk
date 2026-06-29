@@ -92,4 +92,49 @@ export class ShippingService {
             },
         });
     }
+    /**
+     * Track a shipment
+     * Returns the live tracking status for a parcel by carrier + tracking number. Requires the
+     * store to have multi-carrier shipping connected.
+     * @returns any Tracking status
+     * @throws ApiError
+     */
+    public trackShipment({
+        carrier,
+        number,
+    }: {
+        /**
+         * Carrier token (e.g. usps, ups, fedex).
+         */
+        carrier: string,
+        /**
+         * The tracking number.
+         */
+        number: string,
+    }): CancelablePromise<{
+        carrier?: string;
+        tracking_number?: string;
+        status?: string | null;
+        status_details?: string | null;
+        eta?: string | null;
+        history?: Array<{
+            status?: string;
+            status_details?: string;
+            status_date?: string;
+            location?: Record<string, any>;
+        }>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/shipping/tracking/{carrier}/{number}',
+            path: {
+                'carrier': carrier,
+                'number': number,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+            },
+        });
+    }
 }

@@ -76,7 +76,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`pricing`**: Dynamic pricing engine and discount rule resolution.
 - **`promotions`**: Read marketing campaigns and discounts, and compute discounts **server-side** so your storefront never reimplements the math: `calculatePromotionDiscount({ id, requestBody: { cart } })` returns the exact amount one promotion takes off a cart (with `eligible`/`reason` when it doesn't qualify), and `calculateBestPromotion({ requestBody: { cart } })` returns the single highest-value promotion to auto-apply. `bundle`/`bogo` promotions expose their product sets as id arrays (`bundle_products`, `bogo_required_products`, `bogo_free_products`) — pass `getPromotion({ id, expand: 'products' })` to get them resolved with embedded product details in one call (`*_resolved` arrays), or resolve the ids yourself with `products.getProduct`. Marketplace storefronts read and calculate a featured merchant's promotion by passing `storeId` (the `merchant_store_id` from the placement/collection).
 - **`giftCards`**: Gift card redemption, and balance tracking.
-- **`shipping`**: Shipping zone management and delivery cost calculation.
+- **`shipping`**: Delivery cost calculation + multi-carrier shipping. `getShippingZones` / `calculateShipping` price delivery from the merchant's zones + distance tiers (always available). When the store has **Shippo** connected and you pass a destination `address_to` + `parcel` to `calculateShipping`, the response ALSO includes live carrier `rates[]` (USPS/UPS/FedEx/DHL — each with `rate_id`, `provider`, `service`, `amount`, `estimated_days`); show them at checkout and carry the chosen `rate_id` into `orders.createOrder` as `shippo_rate_id`. For tracking, the lightest path is to link to the carrier's own tracking page (saved on the order at `shipping_metadata.shippo.tracking_url` when the label is bought — no API call); use `trackShipment({ carrier, number })` only when you want the live status rendered inside your own UI. (Buying a shipping label is a merchant fulfillment action done in the admin — it charges the merchant's carrier account, marks the order shipped, and emits `order.shipped` — so it isn't part of the storefront SDK.) Manual zones/tiers keep working with or without Shippo.
 - **`tax`**: Preview the tax for a shipping destination and cart **before** placing the order, so the storefront can show and charge the final tax-inclusive total. `previewTax({ requestBody: { ship_to, lines, currency } })` returns `tax_amount` plus a per-jurisdiction `tax_breakdown` when the store has automatic tax enabled (`tax_source: 'automatic'`), or `{ tax_source: 'fallback' }` when it isn't (apply the store's own rate). The estimate is never recorded for filing. Publishable-key accessible so it can be called from the browser at checkout — then compute `total_amount` (`subtotal + tax_amount + shipping − discount`) and pass that same total to `orders.createOrder`. (Order responses also carry `tax_amount`, `tax_breakdown`, and `tax_source`.)
 - **`taxonomy`**: Manage categories and subcategories.
 - **`cms`**: Shoppable content management (Blog posts, Lookbooks).
@@ -116,7 +116,8 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Returns — lodge / track / accept-credit (`client.returns.*`) | `pk` **+ session** (`listReturnReasons` needs no session) |
 | Messaging (`client.messaging.*`) | `pk` **+ session** |
 | Gift card check (`checkGiftCard`) | `pk` or `sk` · list mine (`listGiftCards`) → `pk` **+ session** |
-| Promotions (`client.promotions.*`), Shipping (`client.shipping.*`) | `pk` or `sk` |
+| Promotions (`client.promotions.*`) | `pk` or `sk` |
+| Shipping — zones, calculate, track (`client.shipping.*`) | `pk` or `sk` |
 | Webhook endpoints & events (`client.webhooks.*`) | **`sk` only** |
 | Catalog ingestion push (`ingestProducts`) | **`sk` only + HMAC** · sample/test → `sk` |
 | GC Connect — authorize / token / revoke (`client.gcConnect.*`) | Public (OAuth client credentials) · list sessions → `sk` |
@@ -231,10 +232,25 @@ const { methods } = await client.payments.getPaymentMethods();
 ### shipping
 
 ```typescript
+// Zone / distance pricing (always available):
 const fee = await client.shipping.calculateShipping({
   requestBody: { latitude: 40.7128, longitude: -74.006, order_total: 120 },
 });
-// → { delivery_fee, currency, zone, ... }
+// → { fee, rate_source: 'zone'|'tier'|'none', ... }
+
+// With Shippo connected — pass a destination + parcel to ALSO get live carrier rates:
+const quote = await client.shipping.calculateShipping({
+  requestBody: {
+    latitude: 40.748, longitude: -73.985, order_total: 120,
+    address_to: { street1: '350 5th Ave', city: 'New York', state: 'NY', zip: '10118', country: 'US' },
+    parcel: { length: '10', width: '8', height: '4', distance_unit: 'in', weight: '2', mass_unit: 'lb' },
+  },
+});
+// → { fee, rate_source: 'shippo', rates: [{ rate_id, provider, service, amount, estimated_days }, …] }
+// Show rates[], let the shopper pick, and pass the chosen rate_id to createOrder as `shippo_rate_id`.
+
+// Track a parcel once the order has a tracking number (the merchant buys the label in the admin):
+const status = await client.shipping.trackShipment({ carrier: 'usps', number: order.tracking_number });
 ```
 
 ### returns

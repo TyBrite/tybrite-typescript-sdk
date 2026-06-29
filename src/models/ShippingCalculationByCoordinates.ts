@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ShippingAddressInput } from './ShippingAddressInput';
+import type { ShippingParcelInput } from './ShippingParcelInput';
 /**
  * Calculate shipping using the customer's GPS coordinates.
  */
@@ -18,5 +20,8 @@ export type ShippingCalculationByCoordinates = {
      * Total order value (before shipping)
      */
     order_total?: number;
+    address_to?: ShippingAddressInput;
+    address_from?: ShippingAddressInput;
+    parcel?: ShippingParcelInput;
 };
 
