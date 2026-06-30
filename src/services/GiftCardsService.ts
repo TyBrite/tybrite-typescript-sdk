@@ -22,6 +22,7 @@ export class GiftCardsService {
     public listGiftCards({
         customerId,
         xAuthToken,
+        xExternalAuth,
         fields,
     }: {
         /**
@@ -32,6 +33,13 @@ export class GiftCardsService {
          * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required when customer_id is supplied so the gateway can prove the caller owns that customer record.
          */
         xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -53,6 +61,7 @@ export class GiftCardsService {
             url: '/v1/gift-cards',
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
             },
             query: {
                 'customer_id': customerId,

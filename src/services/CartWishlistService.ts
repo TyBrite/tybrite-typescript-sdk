@@ -43,6 +43,7 @@ export class CartWishlistService {
      */
     public getCart({
         xAuthToken,
+        xExternalAuth,
         customerId,
         xSessionId,
     }: {
@@ -50,6 +51,13 @@ export class CartWishlistService {
          * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
          */
         xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
         /**
          * Customer UUID for authenticated carts
          */
@@ -76,6 +84,7 @@ export class CartWishlistService {
             url: '/v1/cart',
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
                 'X-Session-Id': xSessionId,
             },
             query: {
@@ -110,6 +119,7 @@ export class CartWishlistService {
      */
     public clearCart({
         xAuthToken,
+        xExternalAuth,
         customerId,
         xSessionId,
     }: {
@@ -117,6 +127,13 @@ export class CartWishlistService {
          * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
          */
         xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
         /**
          * Customer UUID for authenticated carts (optional if using X-Session-Id)
          */
@@ -134,6 +151,7 @@ export class CartWishlistService {
             url: '/v1/cart',
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
                 'X-Session-Id': xSessionId,
             },
             query: {
@@ -207,6 +225,7 @@ export class CartWishlistService {
             public addToCart({
                 requestBody,
                 xAuthToken,
+                xExternalAuth,
                 xSessionId,
             }: {
                 requestBody: {
@@ -228,6 +247,13 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
+                /**
                  * Session ID for anonymous carts (UUID or random string stored in localStorage). Optional if `customer_id` is provided in the body.
                  */
                 xSessionId?: string,
@@ -243,6 +269,7 @@ export class CartWishlistService {
                     url: '/v1/cart/items',
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                         'X-Session-Id': xSessionId,
                     },
                     body: requestBody,
@@ -276,6 +303,7 @@ export class CartWishlistService {
                 id,
                 requestBody,
                 xAuthToken,
+                xExternalAuth,
                 xSessionId,
             }: {
                 /**
@@ -297,6 +325,13 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
+                /**
                  * Session ID for anonymous carts. Required for ownership verification when `customer_id` is not provided.
                  */
                 xSessionId?: string,
@@ -315,6 +350,7 @@ export class CartWishlistService {
                     },
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                         'X-Session-Id': xSessionId,
                     },
                     body: requestBody,
@@ -348,6 +384,7 @@ export class CartWishlistService {
             public removeCartItem({
                 id,
                 xAuthToken,
+                xExternalAuth,
             }: {
                 /**
                  * Cart item UUID
@@ -357,6 +394,13 @@ export class CartWishlistService {
                  * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
                  */
                 xAuthToken?: string,
+                /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
             }): CancelablePromise<{
                 success?: boolean;
                 message?: string;
@@ -369,6 +413,7 @@ export class CartWishlistService {
                     },
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                     },
                     errors: {
                         401: `Authentication failed - invalid or missing API key`,
@@ -398,13 +443,10 @@ export class CartWishlistService {
              * @throws ApiError
              */
             public mergeCart({
-                xAuthToken,
                 requestBody,
+                xAuthToken,
+                xExternalAuth,
             }: {
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken: string,
                 requestBody: {
                     /**
                      * Anonymous session ID whose cart should be merged
@@ -415,6 +457,17 @@ export class CartWishlistService {
                      */
                     customer_id: string;
                 },
+                /**
+                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+                 */
+                xAuthToken?: string,
+                /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
             }): CancelablePromise<{
                 items?: Array<CartItem>;
                 total_items?: number;
@@ -427,6 +480,7 @@ export class CartWishlistService {
                     url: '/v1/cart/merge',
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                     },
                     body: requestBody,
                     mediaType: 'application/json',
@@ -454,17 +508,25 @@ export class CartWishlistService {
              * @throws ApiError
              */
             public getWishlist({
-                xAuthToken,
                 customerId,
+                xAuthToken,
+                xExternalAuth,
             }: {
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken: string,
                 /**
                  * Customer UUID. Required — returns 400 if missing.
                  */
                 customerId: string,
+                /**
+                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+                 */
+                xAuthToken?: string,
+                /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
             }): CancelablePromise<{
                 items?: Array<WishlistItem>;
                 total_items?: number;
@@ -475,6 +537,7 @@ export class CartWishlistService {
                     url: '/v1/wishlist',
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                     },
                     query: {
                         'customer_id': customerId,
@@ -504,13 +567,10 @@ export class CartWishlistService {
              * @throws ApiError
              */
             public addToWishlist({
-                xAuthToken,
                 requestBody,
+                xAuthToken,
+                xExternalAuth,
             }: {
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken: string,
                 requestBody: {
                     /**
                      * Specific product variant UUID
@@ -521,6 +581,17 @@ export class CartWishlistService {
                      */
                     customer_id: string;
                 },
+                /**
+                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+                 */
+                xAuthToken?: string,
+                /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
             }): CancelablePromise<{
                 items?: Array<WishlistItem>;
                 total_items?: number;
@@ -531,6 +602,7 @@ export class CartWishlistService {
                     url: '/v1/wishlist',
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                     },
                     body: requestBody,
                     mediaType: 'application/json',
@@ -559,14 +631,11 @@ export class CartWishlistService {
              * @throws ApiError
              */
             public removeFromWishlist({
-                xAuthToken,
                 id,
                 customerId,
+                xAuthToken,
+                xExternalAuth,
             }: {
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken: string,
                 /**
                  * Wishlist item UUID
                  */
@@ -575,6 +644,17 @@ export class CartWishlistService {
                  * Customer UUID that owns the wishlist item. Required — returns 400 if missing.
                  */
                 customerId: string,
+                /**
+                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+                 */
+                xAuthToken?: string,
+                /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
             }): CancelablePromise<{
                 success?: boolean;
                 message?: string;
@@ -587,6 +667,7 @@ export class CartWishlistService {
                     },
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                     },
                     query: {
                         'customer_id': customerId,
@@ -610,14 +691,11 @@ export class CartWishlistService {
              * @throws ApiError
              */
             public moveWishlistToCart({
-                xAuthToken,
                 requestBody,
+                xAuthToken,
+                xExternalAuth,
                 xSessionId,
             }: {
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken: string,
                 requestBody: {
                     /**
                      * Wishlist item UUID to move
@@ -632,6 +710,17 @@ export class CartWishlistService {
                      */
                     quantity?: number;
                 },
+                /**
+                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+                 */
+                xAuthToken?: string,
+                /**
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 *
+                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+                 *
+                 */
+                xExternalAuth?: string,
                 /**
                  * Optional session ID used to associate the resulting cart row when the customer does not already have one.
                  */
@@ -651,6 +740,7 @@ export class CartWishlistService {
                     url: '/v1/wishlist/move-to-cart',
                     headers: {
                         'x-auth-token': xAuthToken,
+                        'x-external-auth': xExternalAuth,
                         'X-Session-Id': xSessionId,
                     },
                     body: requestBody,
