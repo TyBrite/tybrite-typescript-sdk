@@ -8,7 +8,7 @@
  *
  * **Field Filtering:**
  * Use dot notation to filter variant fields: variants.sku,variants.selling_price,variants.stock
- * This can reduce payload size by up to 52% by excluding internal fields like threshold, last_restocked.
+ * This can reduce payload size by excluding non-default fields like last_restocked.
  *
  */
 export type ProductVariant = {
@@ -37,11 +37,7 @@ export type ProductVariant = {
      */
     stock?: number;
     /**
-     * Low stock threshold (internal inventory field)
-     */
-    threshold?: number | null;
-    /**
-     * Last restock date (internal inventory field)
+     * Last restock date. Not included by default — request it explicitly with `fields=variants.last_restocked`.
      */
     last_restocked?: string | null;
     /**

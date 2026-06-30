@@ -145,11 +145,7 @@ export type Product = {
      */
     stock?: number | null;
     /**
-     * Low stock threshold
-     */
-    threshold?: number | null;
-    /**
-     * Last restock date
+     * Last restock date. Not included in the default list response — request it explicitly with `fields=last_restocked`.
      */
     last_restocked?: string | null;
     /**

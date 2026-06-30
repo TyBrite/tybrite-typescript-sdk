@@ -486,6 +486,8 @@ const updated = await client.orders.updateOrder({
 ### HMAC Signature Verification
 Orders and payments require HMAC-SHA256 signatures, which prove the request body wasn't altered in transit and block replay attacks (a 5-minute timestamp window). HMAC does **not** vouch for the *values* in the body — see [Server is the price authority](#server-is-the-price-authority) below for how amounts are validated.
 
+**Which secret to sign with:** if you obtained your keys through **Login with GC** (the GcConnect flow), sign with the `signing_secret` returned by the token exchange — it's scoped to your connection and can be rotated/revoked independently. Otherwise (a merchant signing for their own store), use the store's signing secret from **Settings → Integration Settings**. In the examples below, `hmacSecret` is whichever of these applies to you.
+
 ```typescript
 import crypto from 'crypto';
 

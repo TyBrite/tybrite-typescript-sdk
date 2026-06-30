@@ -16,6 +16,16 @@ export type ConnectTokenResponse = {
      */
     pk: string;
     /**
+     * Request-signing secret for THIS connection. Store it securely server-side alongside the
+     * secret key — it will not be shown again. Use it to sign write requests that require a
+     * signature (creating/updating orders, initializing payments): set `X-Timestamp` to the
+     * current Unix time and `X-Signature` to the HMAC-SHA256 of `{timestamp}.{request_body}`
+     * using this secret. Scoped to this connection, so it can be rotated or revoked
+     * independently of any other integration.
+     *
+     */
+    signing_secret?: string | null;
+    /**
      * Unique identifier for this key pair. Store it — required to call `POST /v1/connect/revoke`.
      */
     pair_id: string;

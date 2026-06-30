@@ -165,7 +165,7 @@ export class ProductsService {
          * **Allowed Fields:**
          * - **Core:** `id` (alias of `product_id`), `product_id`, `variant_id`, `name`, `sku`, `description`
          * - **Pricing:** `price`, `selling_price`, `sale_price`, `display_currency`, `currency_symbol`
-         * - **Inventory:** `stock`, `threshold`, `last_restocked`
+         * - **Inventory:** `stock`, `last_restocked` (`last_restocked` is not in the default response — request it explicitly)
          * - **Media:** `media`, `thumbnail_url`
          * - **SEO:** `product_slug`, `seo_title`, `seo_description`, `seo_keywords`
          * - **Taxonomy:** `category_id`, `category_name`, `subcategory_id`, `subcategory_name`
@@ -346,7 +346,7 @@ export class ProductsService {
      * - Flags: has_variants=true, variant_count
      * - Clean variants array with only variant-specific fields:
      * - variant_id, sku, price, sale_price, selling_price
-     * - stock, threshold, last_restocked
+     * - stock (last_restocked available via fields=variants.last_restocked)
      * - variant_attributes (color, size, etc.)
      * - variant_name, is_default
      *
@@ -390,7 +390,7 @@ export class ProductsService {
          * **Root-Level Fields:**
          * - **Core:** `product_id`, `variant_id`, `name`, `sku`, `description`
          * - **Pricing:** `price`, `selling_price`, `sale_price`, `price_range`, `display_currency`, `currency_symbol`
-         * - **Inventory:** `stock`, `total_stock`, `threshold`, `last_restocked`
+         * - **Inventory:** `stock`, `total_stock`, `last_restocked` (`last_restocked` is not in the default response — request it explicitly)
          * - **Media:** `media`, `thumbnail_url`
          * - **Metadata:** `brand`, `category_name`, `subcategory_name`, `attributes.*`
          * - **Flags:** `has_variants`, `variant_count`, `is_default`
@@ -434,7 +434,7 @@ export class ProductsService {
          * **SDK Usage:**
          *
          * **Performance Impact:**
-         * - Nested filtering excludes internal fields (threshold, last_restocked)
+         * - Nested filtering excludes non-default fields like last_restocked
          * - Perfect for mobile apps and bandwidth-constrained environments
          * - Recommended for product cards and listing pages
          *
