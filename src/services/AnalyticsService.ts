@@ -39,8 +39,14 @@ export class AnalyticsService {
              * dwell time — send it with `navigator.sendBeacon` from a `visibilitychange` /
              * `pagehide` handler so it survives the page unload.
              *
+             * For the CMS conversion funnel: `post_view` / `lookbook_view` when a shopper opens
+             * a blog post / shoppable lookbook (send `content_id`), and `content_click` when
+             * they click through to a product from inside that content (send `content_id` +
+             * `content_product_id`). To close the funnel, pass `content_id` (+ `content_type`)
+             * in the order's `attribution` at checkout — see the Orders API.
+             *
              */
-            event_type: 'page_view' | 'session_start' | 'page_close';
+            event_type: 'page_view' | 'session_start' | 'page_close' | 'post_view' | 'lookbook_view' | 'content_click';
             /**
              * A stable per-visitor identifier persisted in the browser (e.g. localStorage). Used to distinguish new vs returning visitors.
              */
@@ -70,6 +76,14 @@ export class AnalyticsService {
              * The signed-in shopper, when known.
              */
             customer_id?: string;
+            /**
+             * For `post_view` / `lookbook_view` / `content_click` — the CMS post or lookbook id. (Also accepted as `cms_content_id`.)
+             */
+            content_id?: string;
+            /**
+             * For `content_click` — the product the shopper clicked through to from inside the content. Required (with `content_id`) on a `content_click`.
+             */
+            content_product_id?: string;
         },
     }): CancelablePromise<{
         recorded?: boolean;

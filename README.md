@@ -70,6 +70,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`cartWishlist`**: Unified interface for shopping carts and wishlists.
 - **`search`**: Semantic (vector-based) and keyword search functionality. Pass `personalize: true` together with a customer session (`x-auth-token`) to nudge results toward that shopper's preferences while keeping query relevance primary.
 - **`recommendations`**: AI-driven suggestions. Types: `similar`, `also-bought` (each item flagged as a complement or an alternative), `next` (the products a shopper is most likely to view or add next given their current session — pass `sessionId` and/or a `productId` anchor), `trending`, `new`, `personalized`, and `bundle` (complements ranked ahead of alternatives).
+- **`discovery`**: Windowed storefront signal rankings — `getMostViewedProducts`, `getMostAddedToCartProducts`, `getBestConvertingProducts`, each over a `windowHours` window (1h/1d/7d/30d). Returns product ids + a score for a "Popular now" shelf, a "Trending in carts" section, or a PDP "hot" badge. **Publishable-key accessible, every plan** — a simple non-personalized signal list, distinct from the ML `recommendations` engine.
 - **`events`**: Record storefront interactions — `record({ requestBody: { event_type, variant_id | product_id, session_id } })` logs a product `view`, `add_to_cart`, or `add_to_wishlist`. These power the `next` recommendation type. Publishable-key accessible, so it can be called from the browser; the call returns immediately and never blocks the page.
 - **`analytics`**: First-party storefront analytics — `collectAnalyticsEvent({ requestBody: { event_type, visitor_id, session_id, path, referrer, utm_*, duration_ms? } })` records a `session_start` (first event of a browsing session), `page_view` (each route change), or `page_close` (on page hide, with `duration_ms`, sent via `navigator.sendBeacon` to capture time-on-page + exit pages). Device, browser, OS, and country/region/city are derived automatically from the request — no tracking script to add. These power the merchant's traffic, audience, conversion-funnel, and revenue-by-source reporting. Publishable-key accessible; fire-and-forget, never blocks the page. (To attribute revenue to a source, pass the session's `attribution` when creating the order — see `orders`.)
 - **`payments`**: Payment processing (Stripe, Mobile Money) and verification.
@@ -99,6 +100,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Search — text & semantic (`client.search.*`) | `pk` or `sk` |
 | Tax preview (`client.tax.previewTax`) | `pk` or `sk` (browser) |
 | **Recommendations** (`client.recommendations.*`) | **`sk` only** |
+| Discovery — most-viewed / carted / converting (`client.discovery.*`) | `pk` or `sk` (browser) |
 | Event capture (`client.events.recordEvent`) | `pk` (browser) |
 | Analytics (`client.analytics.collectAnalyticsEvent`) | `pk` (browser) |
 | Blog posts & lookbooks (`client.cms.*`) | `pk` or `sk` |

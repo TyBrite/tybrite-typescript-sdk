@@ -10,6 +10,7 @@ import { AuthenticationService } from './services/AuthenticationService';
 import { CartWishlistService } from './services/CartWishlistService';
 import { CmsService } from './services/CmsService';
 import { CustomersService } from './services/CustomersService';
+import { DiscoveryService } from './services/DiscoveryService';
 import { EventsService } from './services/EventsService';
 import { GcConnectService } from './services/GcConnectService';
 import { GiftCardsService } from './services/GiftCardsService';
@@ -38,6 +39,7 @@ export class Tybrite {
     public readonly cartWishlist: CartWishlistService;
     public readonly cms: CmsService;
     public readonly customers: CustomersService;
+    public readonly discovery: DiscoveryService;
     public readonly events: EventsService;
     public readonly gcConnect: GcConnectService;
     public readonly giftCards: GiftCardsService;
@@ -77,6 +79,7 @@ export class Tybrite {
         this.cartWishlist = new CartWishlistService(this.request);
         this.cms = new CmsService(this.request);
         this.customers = new CustomersService(this.request);
+        this.discovery = new DiscoveryService(this.request);
         this.events = new EventsService(this.request);
         this.gcConnect = new GcConnectService(this.request);
         this.giftCards = new GiftCardsService(this.request);
