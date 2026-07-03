@@ -51,7 +51,7 @@ export type DeliveryFeeCalculation = {
         longitude?: number;
     };
     /**
-     * Which source produced the result — the store's delivery `zone`/`tier` rules, live carrier `shippo` rates, or `none` (unconfigured).
+     * Which source produced the result — the store's delivery `zone`/`tier` rules, live carrier `shippo` rates, a `custom` carrier the store has connected, or `none` (unconfigured).
      */
     rate_source?: DeliveryFeeCalculation.rate_source;
     /**
@@ -82,12 +82,13 @@ export namespace DeliveryFeeCalculation {
         DEFAULT = 'default',
     }
     /**
-     * Which source produced the result — the store's delivery `zone`/`tier` rules, live carrier `shippo` rates, or `none` (unconfigured).
+     * Which source produced the result — the store's delivery `zone`/`tier` rules, live carrier `shippo` rates, a `custom` carrier the store has connected, or `none` (unconfigured).
      */
     export enum rate_source {
         ZONE = 'zone',
         TIER = 'tier',
         SHIPPO = 'shippo',
+        CUSTOM = 'custom',
         NONE = 'none',
     }
 }
