@@ -226,7 +226,7 @@ export class GcConnectService {
      * **Authentication:** `client_id` and `client_secret` in the request body.
      *
      * **Note:** Merchants can also disconnect your application at any time from
-     * their store's **Settings → Integrations → Connected Apps** panel.
+     * their store's **Integrations → Developer → Connected Apps** panel.
      * Galactic Core handles that automatically — you do not need to call this
      * endpoint for merchant-initiated disconnects.
      *
@@ -282,7 +282,7 @@ export class GcConnectService {
     /**
      * List active store connections
      * Returns all active third-party tool connections for the authenticated
-     * store. Powers the **Settings → Integrations → Connected Apps** panel.
+     * store. Powers the **Integrations → Developer → Connected Apps** panel.
      *
      * **Authentication:** Secret key (`tybrite_sk_*`) required.
      * Publishable keys return 403.

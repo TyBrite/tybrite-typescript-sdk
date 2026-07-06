@@ -36,7 +36,7 @@ export class IngestionService {
      * original result instead of re-processing.
      * - `X-Timestamp` — unix time in seconds, within 5 minutes of server time.
      * - `X-Signature` — base64 HMAC-SHA256 of `` `${X-Timestamp}.${raw_body}` `` signed with
-     * your store's signing secret (Settings → Integration Settings).
+     * your store's signing secret (the Integrations page, Developer section).
      *
      * Tip: validate your feed first with `POST /v1/ingest/test` (no key, no writes).
      *
@@ -66,7 +66,7 @@ export class IngestionService {
         xTimestamp: number,
         /**
          * Base64-encoded HMAC-SHA256 of the payload (`${X-Timestamp}.${raw_body}`), signed with your
-         * HMAC secret from Settings → Integration Settings. Required in addition to the secret key.
+         * HMAC secret from the Integrations page (Developer section). Required in addition to the secret key.
          *
          */
         xSignature: string,

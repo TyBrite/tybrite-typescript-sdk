@@ -120,7 +120,7 @@ export class PaymentsService {
      * 4. Verify payment status with `/v1/payments/verify`
      *
      * **Security Notes:**
-     * - HMAC secret is displayed in Settings → Integration Settings
+     * - HMAC secret is displayed in the Integrations page (Developer section)
      * - Never expose HMAC secret in client-side code
      * - Regenerate secret immediately if compromised
      * - Requests with invalid/missing signatures return 401 Unauthorized
@@ -157,7 +157,7 @@ export class PaymentsService {
         xTimestamp: number,
         /**
          * HMAC-SHA256 signature of the payload (timestamp + "." + request_body), base64-encoded.
-         * Sign using your HMAC secret from Settings → Integration Settings.
+         * Sign using your HMAC secret from the Integrations page (Developer section).
          *
          */
         xSignature: string,
