@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { B2bDirectOrderResponse } from '../models/B2bDirectOrderResponse';
 import type { B2bInvoice } from '../models/B2bInvoice';
 import type { B2bPurchaseOrder } from '../models/B2bPurchaseOrder';
 import type { B2bQuote } from '../models/B2bQuote';
@@ -463,6 +464,98 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 404: `Resource not found`,
+            },
+        });
+    }
+    /**
+     * Place a wholesale order directly (self-serve checkout)
+     * Places a wholesale order for an approved buyer directly, without the request-for-quote
+     * round-trip — the self-serve path for routine reorders at the buyer's own agreed prices.
+     *
+     * Send only the items and quantities; Galactic Core prices every line itself against the
+     * buyer's wholesale price list (per-buyer, group, or default), enforces each item's minimum
+     * order quantity, and computes the authoritative totals. Any price sent by the client is
+     * ignored. An item with no wholesale price for this buyer, or a quantity below its minimum
+     * order quantity, is rejected with a clear reason.
+     *
+     * How the order settles depends on the supplier's policy for this buyer:
+     * - **On terms** — the order is confirmed and a terms invoice is issued (subject to the buyer's
+     * credit limit). The response carries the invoice and its due date.
+     * - **Pay now** — the order is created awaiting payment. The response carries an `order_id` and
+     * `amount`; complete the payment through the standard payment flow (`/v1/payments/initialize`
+     * then `/v1/payments/verify`) with that `order_id`, exactly as for a normal online order.
+     *
+     * Requires the buyer's session token (x-auth-token or x-external-auth), an Idempotency-Key, and a
+     * request signature (X-Timestamp + X-Signature over the body with the store's signing secret) —
+     * the same signing a standard order requires.
+     *
+     * @returns B2bDirectOrderResponse Order placed. The `settlement` field is `terms` (an invoice was issued) or `pay_now`
+     * (an order awaiting payment). Fields present depend on which.
+     *
+     * @throws ApiError
+     */
+    public createDirectOrder({
+        idempotencyKey,
+        xTimestamp,
+        xSignature,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+    }: {
+        /**
+         * A unique key so a retried order is not duplicated.
+         */
+        idempotencyKey: string,
+        /**
+         * Unix timestamp (milliseconds) used in the request signature. Required — a direct order must be signed, like a standard order. Must be within 5 minutes of the server time.
+         */
+        xTimestamp: string,
+        /**
+         * Base64 HMAC-SHA256 of `{X-Timestamp}.{raw JSON body}` using the store's signing secret. Required — a direct order must be signed, like a standard order.
+         */
+        xSignature: string,
+        requestBody: {
+            /**
+             * The items to order. Prices are resolved by Galactic Core; do not send prices.
+             */
+            items: Array<{
+                variant_id: string;
+                quantity: number;
+            }>;
+            /**
+             * An optional note on the order.
+             */
+            note?: string;
+            /**
+             * An optional shipping address for this order.
+             */
+            shipping_address?: string;
+        },
+        /**
+         * Buyer session token (GC-native). Provide this or x-external-auth.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
+         */
+        xExternalAuth?: string,
+    }): CancelablePromise<B2bDirectOrderResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/b2b/orders',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'Idempotency-Key': idempotencyKey,
+                'X-Timestamp': xTimestamp,
+                'X-Signature': xSignature,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
             },
         });
     }

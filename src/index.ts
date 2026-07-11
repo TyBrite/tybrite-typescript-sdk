@@ -14,6 +14,7 @@ export type { Address } from './models/Address';
 export type { AdEventResponse } from './models/AdEventResponse';
 export { AdPlacement } from './models/AdPlacement';
 export type { AdSlotResponse } from './models/AdSlotResponse';
+export { B2bDirectOrderResponse } from './models/B2bDirectOrderResponse';
 export { B2bInvoice } from './models/B2bInvoice';
 export { B2bPurchaseOrder } from './models/B2bPurchaseOrder';
 export { B2bQuote } from './models/B2bQuote';
