@@ -84,6 +84,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`messaging`**: Real-time customer support messaging. Receive a thread's new messages live (no polling) by opening a WebSocket with the `subscribeToThread` helper exported from the package root — no extra dependency required. The same subscription can surface **presence** (`onPresence`) — who is connected to that conversation right now — for a "seller is online" indicator.
 - **`ingestion`**: Sync an external product catalog into a store. `ingestProducts({ requestBody })` accepts a batch of products as JSON (or send XML/CSV with the matching `Content-Type`), matches by **SKU** (existing SKUs are updated, new ones created; pass `strategy: 'create_only'` to skip existing), and groups rows that share a `product_group` into one multi-variant product. Returns a per-row result (`summary` counts + an `errors` array naming each rejected row). Requires a **secret key and a request signature** (sign like orders/payments — see HMAC Signature Verification). Validate a feed before integrating with the no-key helpers `getIngestSample({ format })` (returns a sample feed) and `testIngest({ requestBody })` (validates without writing).
 - **`marketplace`**: Multi-merchant marketplaces — marketplace identity and branding, aggregated catalog reads, single-merchant shop pages, unified multi-merchant checkout with automatic payment splitting, and the unified cross-merchant customer profile. Checkout supports **per-merchant discounts** (apply a merchant's own promotion or gift card to that merchant's portion of the basket; marketplace-wide operator promotions apply automatically). Serves **operator-curated collections** (homepage merchandising sections of products, merchants, or promotions) alongside **sponsored ad placements** (rendered with a required "Sponsored" disclosure label) and operator-curated fallback placements; logs impression/click beacons. Marketplace recommendations are computed deployment-wide across all merchants, each item stamped with its source `merchant_store_id` — including session/`next`-item suggestions across merchants and the complement/alternative distinction on co-purchase results.
+- **`b2B`**: Wholesale (B2B) — the buyer-facing flow on a supplier deployment. `createRfq({ requestBody, idempotencyKey, xAuthToken })` requests a quote for a set of items; the supplier prices it into a quote the buyer reads with `getQuote({ id })` and accepts with `acceptQuote({ id })` (which creates a purchase order) or declines with `rejectQuote({ id })`. Track purchase orders with `listPurchaseOrders`/`getPurchaseOrder`, and once the supplier confirms one, the terms invoice appears in `listInvoices`/`getInvoice`; settle it (in full or in parts) with `payInvoice({ id, requestBody: { amount, payment_method }, idempotencyKey })`. Every call needs the buyer's session — pass `xAuthToken` (a session token) **or** `xExternalAuth` (a bring-your-own-auth assertion) — and every create needs an `Idempotency-Key`. Pricing quotes, confirming orders, fulfilling, and setting buyer credit are supplier admin actions, not in this API.
 - **`returns`**: Returns a shopper lodges against their own online orders. `listReturnReasons()` fetches the reason codes + labels for your dropdown (API key only — no customer session). `createReturn({ requestBody, xAuthToken })` lodges a return for one of the signed-in customer's orders (it starts `pending`), and `listReturns(...)` / `getReturn({ id, xAuthToken })` track the customer's own returns and per-item status. List/get/create require a customer session — pass `xAuthToken` (a session token) **or** `xExternalAuth` (a bring-your-own-auth assertion). `reason_description` is required only when `reason_code` is `other`. A customer can only see and create their own returns; approving, refunding, issuing store credit, restocking, and rejecting are merchant actions in the admin, not in this API. When a return carries a pending store-credit offer (`credit_offer.status === 'pending'`), the shopper can `acceptReturnCredit({ id, xAuthToken })` to take the credit or `requestReturnRefund({ id, xAuthToken })` to ask for a refund instead; `getStoreCredit({ xAuthToken })` returns their redeemable balance. Spend store credit at checkout by passing `apply_store_credit: true` to `orders.createOrder`.
 - **`system`**: Platform health checks and store metadata, including the store's currency (see below).
 - **`sandbox`**: Developer tooling for the **sandbox (test) environment** — **secret test key (`tybrite_sk_test_*`) only**, and only ever affects sandbox data. `resetSandbox()` (or `deleteSandboxData()`) wipes all your sandbox test data instantly instead of waiting for the 30-day cleanup; `advanceSandboxTime({ requestBody: { advance_days } })` fast-forwards sandbox time so abandoned-cart windows elapse, reserved stock releases, and analytics roll forward without waiting (returns a summary of what shifted / was left alone); `replaySandboxWebhook({ requestBody: { event_id } | { type } })` re-sends a recorded sandbox webhook event to your endpoints without recreating the underlying record.
@@ -126,6 +127,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Catalog ingestion push (`ingestProducts`) | **`sk` only + HMAC** · sample/test → `sk` |
 | GC Connect — authorize / token / revoke (`client.gcConnect.*`) | Public (OAuth client credentials) · list sessions → `sk` |
 | Marketplace — checkout, info, profile (`client.marketplace.*`) | Operator key (profile also **+ `X-Customer-Token`**) |
+| B2B — RFQ / quote / PO / invoice (`client.b2B.*`) | `pk` or `sk` **+ buyer session** (`x-auth-token`/`x-external-auth`) · creates need `Idempotency-Key` · supplier deployments |
 | Sandbox tools — reset / time-travel / replay (`client.sandbox.*`) | **`sk` test key only** (`tybrite_sk_test_*`; sandbox env) |
 
 ## Examples by service
@@ -372,6 +374,28 @@ else if (features.feature_status.gift_cards === 'awaiting_data') renderGiftCardF
 // Marketplace (operator key) deployments only.
 const info = await client.marketplace.getMarketplaceInfo({});
 // → marketplace identity + branding; pass { storeId } for one merchant's full store info
+```
+
+### b2B
+
+```typescript
+// Wholesale (B2B) — supplier deployments. Every call needs the buyer's session
+// (x-auth-token or x-external-auth); creates need an Idempotency-Key.
+const session = "..."; // the buyer's x-auth-token from client.authentication.login
+
+// Request a quote → accept it into a purchase order → pay the invoice on terms.
+const rfq = await client.b2B.createRfq({
+  xAuthToken: session,
+  idempotencyKey: crypto.randomUUID(),
+  requestBody: { line_items: [{ variant_id: "…", quantity: 25 }] },
+});
+const po = await client.b2B.acceptQuote({ id: quoteId, xAuthToken: session });
+const invoices = await client.b2B.listInvoices({ xAuthToken: session });
+await client.b2B.payInvoice({
+  id: invoices.data[0].id, xAuthToken: session,
+  idempotencyKey: crypto.randomUUID(),
+  requestBody: { amount: 200, payment_method: "bank" },
+});
 ```
 
 ### ingestion

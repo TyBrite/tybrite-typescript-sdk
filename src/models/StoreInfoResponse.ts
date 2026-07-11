@@ -55,6 +55,17 @@ export type StoreInfoResponse = {
          * Store creation timestamp
          */
         created_at: string;
+        /**
+         * How this store sells, so a storefront can build the right experience:
+         * - `retail` — a standard consumer storefront: browse the catalog, add to cart, and pay now
+         * at checkout.
+         *
+         * - `wholesale` — the store sells to business buyers on payment terms. There is no direct
+         * pay-now checkout; buyers request a quote, receive a quote, place a purchase order, and
+         * are billed on a terms invoice. A wholesale storefront should surface the request-for-quote
+         * flow instead of an add-to-cart checkout.
+         */
+        commerce_model: StoreInfoResponse.commerce_model;
     };
     /**
      * Catalog overview (optional, included when requested)
@@ -295,7 +306,7 @@ export type StoreInfoResponse = {
      */
     marketplace?: {
         /**
-         * Whether the store runs on its own or inside a marketplace.
+         * The deployment kind this store runs in — `standard` (a store on its own), `marketplace` (inside a marketplace), or `supplier` (a B2B/wholesale deployment).
          */
         mode?: StoreInfoResponse.mode;
         /**
@@ -306,11 +317,26 @@ export type StoreInfoResponse = {
 };
 export namespace StoreInfoResponse {
     /**
-     * Whether the store runs on its own or inside a marketplace.
+     * How this store sells, so a storefront can build the right experience:
+     * - `retail` — a standard consumer storefront: browse the catalog, add to cart, and pay now
+     * at checkout.
+     *
+     * - `wholesale` — the store sells to business buyers on payment terms. There is no direct
+     * pay-now checkout; buyers request a quote, receive a quote, place a purchase order, and
+     * are billed on a terms invoice. A wholesale storefront should surface the request-for-quote
+     * flow instead of an add-to-cart checkout.
+     */
+    export enum commerce_model {
+        RETAIL = 'retail',
+        WHOLESALE = 'wholesale',
+    }
+    /**
+     * The deployment kind this store runs in — `standard` (a store on its own), `marketplace` (inside a marketplace), or `supplier` (a B2B/wholesale deployment).
      */
     export enum mode {
         STANDARD = 'standard',
         MARKETPLACE = 'marketplace',
+        SUPPLIER = 'supplier',
     }
 }
 

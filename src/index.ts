@@ -14,6 +14,10 @@ export type { Address } from './models/Address';
 export type { AdEventResponse } from './models/AdEventResponse';
 export { AdPlacement } from './models/AdPlacement';
 export type { AdSlotResponse } from './models/AdSlotResponse';
+export { B2bInvoice } from './models/B2bInvoice';
+export { B2bPurchaseOrder } from './models/B2bPurchaseOrder';
+export { B2bQuote } from './models/B2bQuote';
+export { B2bRfq } from './models/B2bRfq';
 export type { BestPromotion } from './models/BestPromotion';
 export { CartItem } from './models/CartItem';
 export type { Category } from './models/Category';
@@ -86,6 +90,7 @@ export { WishlistItem } from './models/WishlistItem';
 
 export { AnalyticsService } from './services/AnalyticsService';
 export { AuthenticationService } from './services/AuthenticationService';
+export { B2BService } from './services/B2BService';
 export { CartWishlistService } from './services/CartWishlistService';
 export { CmsService } from './services/CmsService';
 export { CustomersService } from './services/CustomersService';

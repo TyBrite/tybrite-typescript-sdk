@@ -309,6 +309,18 @@ export class OrdersService {
              *
              */
             store_credit_amount?: number;
+            /**
+             * Google ad click id, when the shopper arrived from a Google ad. On a paid order this lets the merchant's Google advertising get credit for the sale. Forward the true captured value; omit if not present.
+             */
+            gclid?: string | null;
+            /**
+             * Meta (Facebook & Instagram) ad click id, when the shopper arrived from a Meta ad. On a paid order this lets the merchant's Meta advertising get credit for the sale. The conversion is sent server-side (Conversions API) and de-duplicated against the storefront's Meta Pixel by the order id, so it counts even when the browser blocks the Pixel. Forward the true captured value; omit if not present.
+             */
+            fbclid?: string | null;
+            /**
+             * Advertising privacy-consent state captured at checkout, used to decide whether a conversion may be reported to an ad platform for this shopper's region (required for EEA shoppers; UK/Swiss records are not dropped for a missing signal). Always forward the true captured values — never guess.
+             */
+            ad_consent?: any | null;
         },
     }): CancelablePromise<{
         order: Order;
