@@ -16,6 +16,18 @@ export type ProductCollection = {
     is_active?: boolean;
     show_on_homepage?: boolean;
     display_priority?: number;
+    /**
+     * URL of the collection banner image (desktop, and the fallback used on all
+     * viewports when no mobile image is set).
+     *
+     */
+    image?: string | null;
+    /**
+     * Optional URL of a phone-sized collection banner. Storefronts render this on
+     * small viewports when set and fall back to `image` otherwise.
+     *
+     */
+    image_mobile?: string | null;
     created_at?: string;
     updated_at?: string;
 };

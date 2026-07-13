@@ -95,6 +95,21 @@ export type StoreInfoResponse = {
         collections?: {
             total?: number;
             names?: Array<string>;
+            /**
+             * The store's active collections with their banner images. `image` is the desktop
+             * banner (and the fallback for all viewports); `image_mobile` is an optional phone crop.
+             *
+             */
+            list?: Array<{
+                id?: string;
+                name?: string;
+                slug?: string;
+                type?: string | null;
+                show_on_homepage?: boolean;
+                display_priority?: number;
+                image?: string | null;
+                image_mobile?: string | null;
+            }>;
         };
         taxonomy?: {
             categories?: {
