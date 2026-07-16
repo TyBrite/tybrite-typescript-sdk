@@ -490,7 +490,8 @@ export class B2BService {
      * the same signing a standard order requires.
      *
      * @returns B2bDirectOrderResponse Order placed. The `settlement` field is `terms` (an invoice was issued) or `pay_now`
-     * (an order awaiting payment). Fields present depend on which.
+     * (an order awaiting payment). Fields present depend on which. `tax_amount` is always
+     * resolved server-side; `total`/`amount` are tax-inclusive.
      *
      * @throws ApiError
      */
@@ -527,9 +528,26 @@ export class B2BService {
              */
             note?: string;
             /**
-             * An optional shipping address for this order.
+             * An optional free-text shipping address for this order.
              */
             shipping_address?: string;
+            /**
+             * An optional structured shipping address. When provided, tax is calculated accurately for the destination; otherwise the store's configured rate applies.
+             */
+            shipping_address_parts?: {
+                line1?: string;
+                city?: string;
+                region?: string;
+                /**
+                 * ISO country code, e.g. US or GB.
+                 */
+                country?: string;
+                postal_code?: string;
+            };
+            /**
+             * The order currency, e.g. USD.
+             */
+            currency?: string;
         },
         /**
          * Buyer session token (GC-native). Provide this or x-external-auth.

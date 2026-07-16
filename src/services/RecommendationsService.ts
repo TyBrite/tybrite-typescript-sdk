@@ -23,6 +23,13 @@ export class RecommendationsService {
      * - **bundle**: Bundle suggestions. Items that complement the product are surfaced ahead of
      * alternatives.
      *
+     * **Minimum results.** Every response is topped up to at least 8 products (capped at `limit`,
+     * and at the number of active products in the store), so a storefront shelf never renders with
+     * only one or two items. When the requested algorithm returns fewer than eight, the response is
+     * backfilled — in order — from trending, engagement signals (views/adds-to-cart), featured
+     * products, and newest arrivals, de-duplicated and excluding the anchor product; `fallbackUsed`
+     * then includes `backfill`.
+     *
      * **⚠️ SECRET KEY REQUIRED**
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.

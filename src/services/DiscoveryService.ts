@@ -90,6 +90,11 @@ export class DiscoveryService {
      * convert, not merely products that get traffic. Products with fewer than 5 views in the window
      * are excluded so a tiny sample can't top the list.
      *
+     * **Minimum results.** Because the five-view threshold can leave this list very short on a new or
+     * low-traffic store, the response is topped up to at least 8 products (capped at `limit`, and at
+     * the store's active product count) by backfilling — in order — from trending, engagement signals
+     * (views/adds-to-cart), featured products, and newest arrivals, de-duplicated against the list.
+     *
      * Publishable-key accessible; available on every plan. Returns product ids + a `score` (the
      * view→purchase ratio; a score above 1 means more units sold than distinct views recorded).
      *

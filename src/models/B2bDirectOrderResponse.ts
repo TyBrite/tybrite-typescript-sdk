@@ -14,9 +14,13 @@ export type B2bDirectOrderResponse = {
     po_number: string;
     currency?: string;
     /**
-     * The order total (present on a terms order).
+     * The order total, tax included (present on a terms order).
      */
     total?: number;
+    /**
+     * The tax on the order, resolved server-side — jurisdiction-accurate when a shipping address is supplied, otherwise the store's configured rate, and zero for a tax-exempt buyer.
+     */
+    tax_amount?: number;
     /**
      * The issued invoice (terms only).
      */
@@ -38,7 +42,7 @@ export type B2bDirectOrderResponse = {
      */
     order_number?: string | null;
     /**
-     * The amount to pay (present on a pay-now order).
+     * The amount to pay, tax included (present on a pay-now order).
      */
     amount?: number;
 };

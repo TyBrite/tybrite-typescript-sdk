@@ -40,7 +40,7 @@ export class WebhooksService {
              * Array of event types to subscribe to. Use `["*"]` for all events.
              *
              * **Order lifecycle:** `order.created`, `order.paid`, `order.fulfilled`,
-             * `order.cancelled`, `order.refunded`, `order.updated`
+             * `order.shipped`, `order.cancelled`, `order.refunded`, `order.updated`
              *
              * **Payment lifecycle:** `payment.succeeded`, `payment.failed`, `payment.refunded`
              *
@@ -53,12 +53,41 @@ export class WebhooksService {
              *
              * **Gift cards:** `gift_card.issued`, `gift_card.redeemed`, `gift_card.expired`
              *
-             * **Promotions:** `promotion.applied`
+             * **Promotions:** `promotion.applied` (a promotion was applied to a checkout),
+             * `promotion.created`, `promotion.activated` (a promotion went live),
+             * `promotion.deactivated` (a live promotion ended, was paused, or expired)
+             *
+             * **Content & collections:** `collection.created`, `collection.updated`
+             * (a product collection was added or its homepage placement / banner changed),
+             * `post.published`, `lookbook.published`, `review.approved` (a review passed
+             * moderation and is now visible)
+             *
+             * **Store lifecycle & configuration:** `store.updated` (the store's name,
+             * logo, branding, contact, or base currency changed — carries a
+             * `changed_fields` list), `payment_provider.connected` (a payment provider was
+             * connected), `shipping_provider.connected` (a shipping-rate provider was
+             * connected), `channel.connected` (a sales channel was connected)
+             *
+             * **Feature availability:** `feature.status_changed` — a capability crossed
+             * from awaiting data to available (or the reverse), e.g. the store's first
+             * approved reviews arrive and reviews become usable. Carries `feature`,
+             * `status`, and `previous_status`. Use this to light up a storefront surface
+             * the moment its data exists. See the `automation-webhooks` guide.
              *
              * **Catalog sync & syndication:** `feed.sync.completed` (a scheduled
              * inbound feed-pull finished — carries created/updated/failed counts),
              * `channel.sync.completed` (a sales-channel push to Google/Meta/… finished —
              * carries pushed/rejected counts)
+             *
+             * **Wholesale (B2B):** for stores with wholesale enabled — `b2b.rfq.created`,
+             * `b2b.quote.sent`, `b2b.quote.accepted`, `b2b.quote.rejected`,
+             * `b2b.po.issued`, `b2b.po.confirmed`, `b2b.po.fulfilled`,
+             * `b2b.invoice.issued`, `b2b.invoice.paid`, `b2b.invoice.overdue`
+             *
+             * The store-lifecycle, content, and feature-availability events are designed
+             * for automation tools that keep a storefront in step with the store as it
+             * grows — the moment a promotion goes live, a collection becomes
+             * homepage-eligible, or a licensed capability gains its first data.
              *
              */
             events: Array<string>;
@@ -255,7 +284,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'feed.sync.completed' | 'channel.sync.completed';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'promotion.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed' | 'feed.sync.completed' | 'channel.sync.completed';
         },
     }): CancelablePromise<{
         success?: boolean;

@@ -15,6 +15,12 @@ export type ConnectAuthorizeResponse = {
         scopes: Array<string>;
         state: string;
         environment: ConnectAuthorizeResponse.environment;
+        /**
+         * True when the application registered a webhook URL, so connecting also creates a webhook
+         * subscription for the store (the consent screen can disclose the resulting event feed).
+         *
+         */
+        receives_webhooks?: boolean;
     };
 };
 export namespace ConnectAuthorizeResponse {

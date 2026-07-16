@@ -45,6 +45,36 @@ export type ConnectTokenResponse = {
      * Your application's client identifier.
      */
     client_id: string;
+    /**
+     * Present only if your application registered a webhook URL. When it did, connecting a merchant
+     * automatically creates a signed webhook subscription for their store — you do not need to call
+     * `createWebhookEndpoint` yourself. The subscription starts receiving events immediately.
+     *
+     * Verify each inbound event POST with `webhook_endpoint.signing_secret` (this is a **different**
+     * secret from `signing_secret` above: `signing_secret` signs YOUR outbound write requests, while
+     * `webhook_endpoint.signing_secret` verifies Galactic Core's inbound event POSTs to you). The
+     * secret is returned only once, here.
+     *
+     */
+    webhook_endpoint?: {
+        /**
+         * The webhook endpoint's id.
+         */
+        id?: string;
+        /**
+         * The receiver URL events are delivered to (the one your app registered).
+         */
+        url?: string;
+        /**
+         * The event types this subscription receives.
+         */
+        events?: Array<string>;
+        /**
+         * Secret for verifying inbound event signatures. Store it securely — shown only once.
+         *
+         */
+        signing_secret?: string;
+    };
 };
 export namespace ConnectTokenResponse {
     /**
