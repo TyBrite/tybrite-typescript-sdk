@@ -119,6 +119,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | List reviews (`listReviews`) | `pk` or `sk` (pk sees approved only) |
 | Submit/delete own review (`client.reviews.*` writes) | `pk` **+ session** |
 | Returns — lodge / track / accept-credit (`client.returns.*`) | `pk` **+ session** (`listReturnReasons` needs no session) |
+| Disputes — open / track / message / cancel (`client.disputes.*`) | `pk` **+ session** (`listDisputeReasons` needs no session) |
 | Messaging (`client.messaging.*`) | `pk` **+ session** |
 | Gift card check (`checkGiftCard`) | `pk` or `sk` · list mine (`listGiftCards`) → `pk` **+ session** |
 | Promotions (`client.promotions.*`) | `pk` or `sk` |
@@ -727,6 +728,44 @@ const result = await client.orders.createOrder({
   },
 });
 console.log(result.store_credit_applied); // how much credit was applied
+```
+
+### Disputes
+A dispute is how a shopper raises a problem with one of their own **marketplace** orders — item not received, damaged, or not as described. On a marketplace the operator sits between shopper and merchant: the shopper opens a dispute, the operator reviews it and applies a resolution (a refund, store credit, or another remedy), and the merchant is kept in the loop. This API is the **shopper half**: open a dispute, list and track their own, message the thread, and cancel one they opened while it is still open. There is no resolve/refund method here by design — the resolution is the operator's decision, surfaced back to your storefront via `resolution` and `resolution_amount`.
+
+A shopper can have only one open dispute per order. The reason list needs only an API key; every other action additionally needs a customer session (`xAuthToken`, or `xExternalAuth` for bring-your-own-auth).
+
+```typescript
+const client = new Tybrite({ apiKey: 'tybrite_pk_live_YOUR_API_KEY' });
+const customerToken = 'CUSTOMER_SESSION_TOKEN'; // from client.authentication.login(...)
+
+// Build the reason dropdown (no customer session needed)
+const { data: reasons } = await client.disputes.listDisputeReasons();
+
+// Open a dispute on the shopper's own order
+const { data: dispute } = await client.disputes.openDispute({
+  xAuthToken: customerToken,
+  requestBody: {
+    order_id: '770a0622-0401-63f6-c938-557766551111',
+    reason: 'not_received',
+    description: 'Tracking never updated and the parcel never arrived.',
+  },
+});
+
+// Add a message to the dispute's thread while it's reviewed
+await client.disputes.addDisputeMessage({
+  id: dispute.id,
+  xAuthToken: customerToken,
+  requestBody: { message: 'Attaching a screenshot showing no tracking movement for 10 days.' },
+});
+
+// Track it, and read the operator's resolution once resolved
+const { data: mine } = await client.disputes.listDisputes({ xAuthToken: customerToken, status: 'open' });
+const detail = await client.disputes.getDispute({ id: dispute.id, xAuthToken: customerToken });
+// detail.data.resolution / detail.data.resolution_amount once status === 'resolved'
+
+// Cancel it while still open (e.g. the parcel turned up)
+await client.disputes.cancelDispute({ id: dispute.id, xAuthToken: customerToken });
 ```
 
 ## Resources
