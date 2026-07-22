@@ -135,7 +135,15 @@ export class OrdersService {
      * In short: send the **real catalog prices** and the **actual promotions/gift card** the shopper is
      * entitled to. Don't compute or invent prices/discounts client-side — the server is the authority.
      *
-     * @returns any Order created successfully (or existing order returned if idempotency key matches)
+     * @returns Order The `Idempotency-Key` has already been used for this store, so the order it created is
+     * returned instead of a new one being made. The body is the order resource, exactly as
+     * `GET /v1/orders/{id}` would return it — note this differs from the `201` envelope, which
+     * nests the order under an `order` property.
+     *
+     * Retrying a create with the same key is always safe: concurrent retries resolve to the
+     * same order, and only the first request receives `201`.
+     *
+     * @returns any Order created successfully
      * @throws ApiError
      */
     public createOrder({
@@ -322,7 +330,7 @@ export class OrdersService {
              */
             ad_consent?: any | null;
         },
-    }): CancelablePromise<{
+    }): CancelablePromise<Order | {
         order: Order;
         /**
          * Present only when store credit was applied to this order. The
