@@ -59,6 +59,18 @@ The API uses **Bearer Authentication**. Your API key determines your environment
 | **Secret Key** | `tybrite_sk_...` | **Read/Write** | Server-side only. Required for Orders, Customers, and Payments. |
 | **Publishable Key** | `tybrite_pk_...` | **Read-Only** | Client-side safe. Use for Public Catalog, Search, and CMS. |
 
+### Customer sessions
+
+Endpoints that act on a specific shopper's data (their profile, cart, wishlist, reviews, returns, disputes, threads) need the shopper identified on top of the API key, by **exactly one** of three headers:
+
+| Header | What it is | When to use it |
+|--------|-----------|----------------|
+| `xAuthToken` | A Galactic Core session token from `client.authentication.*` (login / OTP / magic-link). | You let Galactic Core handle sign-in. |
+| `xExternalAuth` | A short HMAC assertion your backend signs after verifying the shopper in your own identity provider. | You run a backend and have already verified the shopper. |
+| `xIdpToken` | The shopper's **raw** identity-provider token (e.g. a Firebase ID token), which Galactic Core forwards to a verifier you register to validate. | You'd rather Galactic Core broker the verification (e.g. a thin storefront with only the provider's client-side token). Fail-closed: a rejected or unreachable verifier is treated as signed-out. |
+
+The last two are the two bring-your-own-auth modes — they differ only in **who verifies the identity-provider token**: you (sign an assertion) or Galactic Core (forward the raw token to your verifier). Both resolve to the same customer. Passing more than one of the three returns `400`.
+
 ## Service Reference
 
 The SDK is organized into services matching the API resources. Access them via the client instance (e.g., `client.products`).
@@ -93,7 +105,7 @@ The SDK is organized into services matching the API resources. Access them via t
 
 ## Key usage by operation
 
-Which key each operation needs. **`pk`** = publishable (browser-safe, read + cart/wishlist writes); **`sk`** = secret (server-only, full access); **+ session** = also requires the shopper's `xAuthToken` (or `xExternalAuth`); **+ HMAC** = secret key **and** a request signature (see [HMAC Signature Verification](#hmac-signature-verification)).
+Which key each operation needs. **`pk`** = publishable (browser-safe, read + cart/wishlist writes); **`sk`** = secret (server-only, full access); **+ session** = also requires the shopper's customer session — `xAuthToken`, `xExternalAuth`, or `xIdpToken` (see [Customer sessions](#customer-sessions)); **+ HMAC** = secret key **and** a request signature (see [HMAC Signature Verification](#hmac-signature-verification)).
 
 | Operation | Key |
 | :--- | :--- |
@@ -128,7 +140,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Catalog ingestion push (`ingestProducts`) | **`sk` only + HMAC** · sample/test → `sk` |
 | GC Connect — authorize / token / revoke (`client.gcConnect.*`) | Public (OAuth client credentials) · list sessions → `sk` |
 | Marketplace — checkout, info, profile (`client.marketplace.*`) | Operator key (profile also **+ `X-Customer-Token`**) |
-| B2B — RFQ / quote / PO / invoice (`client.b2B.*`) | `pk` or `sk` **+ buyer session** (`x-auth-token`/`x-external-auth`) · creates need `Idempotency-Key` · supplier deployments |
+| B2B — RFQ / quote / PO / invoice (`client.b2B.*`) | `pk` or `sk` **+ buyer session** (`x-auth-token`/`x-external-auth`/`x-idp-token`) · creates need `Idempotency-Key` · supplier deployments |
 | Sandbox tools — reset / time-travel / replay (`client.sandbox.*`) | **`sk` test key only** (`tybrite_sk_test_*`; sandbox env) |
 
 ## Examples by service

@@ -81,8 +81,14 @@ export class CustomersService {
      * HMAC-SHA256 signature of the claim using the store's `hmac_secret`. The
      * `external_id` must resolve to a customer whose `id` equals the `{id}`
      * path parameter. The claim's lifetime (`exp - iat`) must not exceed 300s.
+     * - `x-idp-token` — a raw token from the store's own identity provider.
+     * Galactic Core forwards it to the store's configured Auth verifier, which
+     * validates it and returns the identity; the resolved customer must equal
+     * the `{id}` path parameter. Verification is fail-closed — if the verifier
+     * rejects the token or is unreachable, the request is unauthenticated
+     * (`401`). Requires the store to have an Auth verifier configured.
      *
-     * Mismatch on either path returns `403`. Providing both headers returns `400`.
+     * Mismatch returns `403`. Providing more than one of these headers returns `400`.
      *
      * @returns Customer Success
      * @throws ApiError
@@ -91,20 +97,28 @@ export class CustomersService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         fields,
     }: {
         id: string,
         /**
-         * Galactic Core customer session access_token from `/v1/auth/login` or `/v1/auth/verify-otp`. The resolved customer must match the `{id}` path parameter. Provide this OR `x-external-auth`, not both.
+         * Galactic Core customer session access_token from `/v1/auth/login` or `/v1/auth/verify-otp`. The resolved customer must match the `{id}` path parameter. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO).
          *
-         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide this OR `x-auth-token`, not both.
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer must match the `{id}` path parameter.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -126,6 +140,7 @@ export class CustomersService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'fields': fields,
@@ -150,9 +165,12 @@ export class CustomersService {
      * - `x-auth-token` — Galactic Core customer session JWT.
      * - `x-external-auth` — bring-your-own-auth assertion (HMAC-signed claim
      * carrying `external_id` and a `(iat, exp)` window ≤ 300 seconds).
+     * - `x-idp-token` — a raw token from the store's own identity provider,
+     * which Galactic Core forwards to the store's Auth verifier (fail-closed).
      *
-     * Mismatch returns `403`. Providing both headers returns `400`. Protected
-     * fields (`store_id`, `auth_user_id`, `environment`) cannot be modified.
+     * Mismatch returns `403`. Providing more than one of these headers returns
+     * `400`. Protected fields (`store_id`, `auth_user_id`, `environment`) cannot
+     * be modified.
      *
      * @returns any Customer updated successfully
      * @throws ApiError
@@ -161,18 +179,26 @@ export class CustomersService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         requestBody,
     }: {
         id: string,
         /**
-         * Galactic Core customer session access_token. The resolved customer must match the `{id}` path parameter. Provide this OR `x-external-auth`, not both.
+         * Galactic Core customer session access_token. The resolved customer must match the `{id}` path parameter. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide this OR `x-auth-token`, not both.
+         * Bring-your-own-auth assertion. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity; the resolved customer must match the `{id}` path parameter.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         requestBody?: {
             email?: string;
             phone?: string;
@@ -198,6 +224,7 @@ export class CustomersService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',

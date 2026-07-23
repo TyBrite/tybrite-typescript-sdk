@@ -593,9 +593,11 @@ export class MessagingService {
      * - `api_key` — your publishable key (a publishable key is fine; this is a browser-origin read).
      * - **one** customer credential, proving the caller owns the thread:
      * - `auth_token` — the session token of a customer signed in through Galactic Core
-     * (equivalently the `x-auth-token` header), **or**
+     * (equivalently the `x-auth-token` header),
      * - `external_auth` — a signed identity assertion for a customer authenticated with your own
-     * identity provider (equivalently the `x-external-auth` header).
+     * identity provider (equivalently the `x-external-auth` header), **or**
+     * - `idp_token` — a raw token from your own identity provider that Galactic Core forwards to
+     * the store's Auth verifier to validate (equivalently the `x-idp-token` header).
      *
      * The server validates the credential and confirms the customer is the thread's participant
      * before accepting the socket; an unauthorized or non-participant connection is closed. Use the
@@ -613,6 +615,7 @@ export class MessagingService {
         apiKey,
         authToken,
         externalAuth,
+        idpToken,
     }: {
         /**
          * The conversation to receive realtime messages for.
@@ -633,11 +636,20 @@ export class MessagingService {
         authToken?: string,
         /**
          * Signed identity assertion for a customer authenticated with your own identity provider.
-         * Supply this (or `auth_token`) to authorize the subscription. May also be sent as the
-         * `x-external-auth` header.
+         * Supply exactly one customer credential (`auth_token`, `external_auth`, or `idp_token`) to
+         * authorize the subscription. May also be sent as the `x-external-auth` header.
          *
          */
         externalAuth?: string,
+        /**
+         * A raw token from your own identity provider (e.g. a Firebase ID token). Galactic Core
+         * forwards it to the store's configured Auth verifier, which validates it and returns the
+         * identity. Fail-closed: if the verifier rejects the token or is unreachable, the connection
+         * is not authorized. Supply exactly one customer credential (`auth_token`, `external_auth`, or
+         * `idp_token`). May also be sent as the `x-idp-token` header.
+         *
+         */
+        idpToken?: string,
     }): CancelablePromise<void> {
         return this.httpRequest.request({
             method: 'GET',
@@ -649,6 +661,7 @@ export class MessagingService {
                 'api_key': apiKey,
                 'auth_token': authToken,
                 'external_auth': externalAuth,
+                'idp_token': idpToken,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,

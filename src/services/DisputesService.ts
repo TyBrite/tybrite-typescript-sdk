@@ -46,22 +46,30 @@ export class DisputesService {
     public listDisputes({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         status,
         limit = 20,
         storeId,
     }: {
         /**
          * Customer session token from `POST /v1/auth/login` or
-         * `POST /v1/auth/verify-otp`. Provide this **or** `x-external-auth`.
+         * `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion identifying the customer. Provide this
-         * **or** `x-auth-token`.
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of
+         * `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * Filter to disputes in this status.
          */
@@ -87,6 +95,7 @@ export class DisputesService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'status': status,
@@ -120,6 +129,7 @@ export class DisputesService {
         requestBody,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         requestBody: {
@@ -138,13 +148,20 @@ export class DisputesService {
             description?: string;
         },
         /**
-         * Customer session token. Provide this **or** `x-external-auth`.
+         * Customer session token. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion. Provide this **or** `x-auth-token`.
+         * Bring-your-own-auth assertion. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only.** The merchant the shopper is acting at.
          *
@@ -163,6 +180,7 @@ export class DisputesService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,
@@ -200,6 +218,7 @@ export class DisputesService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         /**
@@ -207,13 +226,20 @@ export class DisputesService {
          */
         id: string,
         /**
-         * Customer session token. Provide this **or** `x-external-auth`.
+         * Customer session token. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion. Provide this **or** `x-auth-token`.
+         * Bring-your-own-auth assertion. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only.** The merchant the shopper is acting at.
          */
@@ -230,6 +256,7 @@ export class DisputesService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,
@@ -258,6 +285,7 @@ export class DisputesService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         /**
@@ -265,13 +293,20 @@ export class DisputesService {
          */
         id: string,
         /**
-         * Customer session token. Provide this **or** `x-external-auth`.
+         * Customer session token. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion. Provide this **or** `x-auth-token`.
+         * Bring-your-own-auth assertion. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only.** The merchant the shopper is acting at.
          */
@@ -291,6 +326,7 @@ export class DisputesService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,
@@ -327,6 +363,7 @@ export class DisputesService {
         requestBody,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         /**
@@ -340,13 +377,20 @@ export class DisputesService {
             message: string;
         },
         /**
-         * Customer session token. Provide this **or** `x-external-auth`.
+         * Customer session token. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion. Provide this **or** `x-auth-token`.
+         * Bring-your-own-auth assertion. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only.** The merchant the shopper is acting at.
          */
@@ -366,6 +410,7 @@ export class DisputesService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,

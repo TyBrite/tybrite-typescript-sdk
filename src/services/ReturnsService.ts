@@ -49,18 +49,26 @@ export class ReturnsService {
     public getStoreCredit({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         /**
-         * Customer session token. Provide this **or** `x-external-auth`.
+         * Customer session token. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion. Provide this **or** `x-auth-token`.
+         * Bring-your-own-auth assertion. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only — and required for operator keys.** The
          * merchant whose store-credit balance to read for the shopper. Ignored for
@@ -86,6 +94,7 @@ export class ReturnsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,
@@ -116,22 +125,30 @@ export class ReturnsService {
     public listReturns({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         status,
         limit = 20,
         storeId,
     }: {
         /**
          * Customer session token from `POST /v1/auth/login` or
-         * `POST /v1/auth/verify-otp`. Provide this **or** `x-external-auth`.
+         * `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion identifying the customer. Provide this
-         * **or** `x-auth-token`.
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of
+         * `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * Filter to returns in this status.
          */
@@ -157,6 +174,7 @@ export class ReturnsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'status': status,
@@ -203,6 +221,7 @@ export class ReturnsService {
         requestBody,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         requestBody: {
@@ -248,16 +267,23 @@ export class ReturnsService {
         },
         /**
          * Customer session token from `POST /v1/auth/login` or
-         * `POST /v1/auth/verify-otp`. Provide this **or** `x-external-auth`.
+         * `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion identifying the customer. Provide this
-         * **or** `x-auth-token`.
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of
+         * `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only — and required for operator keys.** On a
          * marketplace storefront, the merchant the order belongs to. Ignored for
@@ -274,6 +300,7 @@ export class ReturnsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,
@@ -307,6 +334,7 @@ export class ReturnsService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         /**
@@ -315,16 +343,23 @@ export class ReturnsService {
         id: string,
         /**
          * Customer session token from `POST /v1/auth/login` or
-         * `POST /v1/auth/verify-otp`. Provide this **or** `x-external-auth`.
+         * `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion identifying the customer. Provide this
-         * **or** `x-auth-token`.
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of
+         * `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only — and required for operator keys.** The
          * merchant the return belongs to. Ignored for single-store keys.
@@ -343,6 +378,7 @@ export class ReturnsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,
@@ -376,6 +412,7 @@ export class ReturnsService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         /**
@@ -383,13 +420,20 @@ export class ReturnsService {
          */
         id: string,
         /**
-         * Provide this **or** `x-external-auth`.
+         * Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Provide this **or** `x-auth-token`.
+         * Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only — and required for operator keys.** The
          * merchant the return belongs to. Ignored for single-store keys.
@@ -417,6 +461,7 @@ export class ReturnsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,
@@ -450,6 +495,7 @@ export class ReturnsService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         storeId,
     }: {
         /**
@@ -457,13 +503,20 @@ export class ReturnsService {
          */
         id: string,
         /**
-         * Provide this **or** `x-external-auth`.
+         * Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Provide this **or** `x-auth-token`.
+         * Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * **Marketplace operator key only — and required for operator keys.** The
          * merchant the return belongs to. Ignored for single-store keys.
@@ -484,6 +537,7 @@ export class ReturnsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'store_id': storeId,

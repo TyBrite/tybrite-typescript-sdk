@@ -44,6 +44,7 @@ export class CartWishlistService {
     public getCart({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         customerId,
         xSessionId,
     }: {
@@ -52,12 +53,19 @@ export class CartWishlistService {
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * Customer UUID for authenticated carts
          */
@@ -85,6 +93,7 @@ export class CartWishlistService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
                 'X-Session-Id': xSessionId,
             },
             query: {
@@ -120,6 +129,7 @@ export class CartWishlistService {
     public clearCart({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         customerId,
         xSessionId,
     }: {
@@ -128,12 +138,19 @@ export class CartWishlistService {
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * Customer UUID for authenticated carts (optional if using X-Session-Id)
          */
@@ -152,6 +169,7 @@ export class CartWishlistService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
                 'X-Session-Id': xSessionId,
             },
             query: {
@@ -226,6 +244,7 @@ export class CartWishlistService {
                 requestBody,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
                 xSessionId,
             }: {
                 requestBody: {
@@ -247,12 +266,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
                 /**
                  * Session ID for anonymous carts (UUID or random string stored in localStorage). Optional if `customer_id` is provided in the body.
                  */
@@ -270,6 +296,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                         'X-Session-Id': xSessionId,
                     },
                     body: requestBody,
@@ -304,6 +331,7 @@ export class CartWishlistService {
                 requestBody,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
                 xSessionId,
             }: {
                 /**
@@ -325,12 +353,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
                 /**
                  * Session ID for anonymous carts. Required for ownership verification when `customer_id` is not provided.
                  */
@@ -351,6 +386,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                         'X-Session-Id': xSessionId,
                     },
                     body: requestBody,
@@ -385,6 +421,7 @@ export class CartWishlistService {
                 id,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
             }: {
                 /**
                  * Cart item UUID
@@ -395,12 +432,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
             }): CancelablePromise<{
                 success?: boolean;
                 message?: string;
@@ -414,6 +458,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                     },
                     errors: {
                         401: `Authentication failed - invalid or missing API key`,
@@ -446,6 +491,7 @@ export class CartWishlistService {
                 requestBody,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
             }: {
                 requestBody: {
                     /**
@@ -462,12 +508,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
             }): CancelablePromise<{
                 items?: Array<CartItem>;
                 total_items?: number;
@@ -481,6 +534,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                     },
                     body: requestBody,
                     mediaType: 'application/json',
@@ -511,6 +565,7 @@ export class CartWishlistService {
                 customerId,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
             }: {
                 /**
                  * Customer UUID. Required — returns 400 if missing.
@@ -521,12 +576,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
             }): CancelablePromise<{
                 items?: Array<WishlistItem>;
                 total_items?: number;
@@ -538,6 +600,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                     },
                     query: {
                         'customer_id': customerId,
@@ -570,6 +633,7 @@ export class CartWishlistService {
                 requestBody,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
             }: {
                 requestBody: {
                     /**
@@ -586,12 +650,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
             }): CancelablePromise<{
                 items?: Array<WishlistItem>;
                 total_items?: number;
@@ -603,6 +674,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                     },
                     body: requestBody,
                     mediaType: 'application/json',
@@ -635,6 +707,7 @@ export class CartWishlistService {
                 customerId,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
             }: {
                 /**
                  * Wishlist item UUID
@@ -649,12 +722,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
             }): CancelablePromise<{
                 success?: boolean;
                 message?: string;
@@ -668,6 +748,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                     },
                     query: {
                         'customer_id': customerId,
@@ -694,6 +775,7 @@ export class CartWishlistService {
                 requestBody,
                 xAuthToken,
                 xExternalAuth,
+                xIdpToken,
                 xSessionId,
             }: {
                 requestBody: {
@@ -715,12 +797,19 @@ export class CartWishlistService {
                  */
                 xAuthToken?: string,
                 /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
                  *
                  * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
                  *
                  */
                 xExternalAuth?: string,
+                /**
+                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+                 *
+                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+                 *
+                 */
+                xIdpToken?: string,
                 /**
                  * Optional session ID used to associate the resulting cart row when the customer does not already have one.
                  */
@@ -741,6 +830,7 @@ export class CartWishlistService {
                     headers: {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
+                        'x-idp-token': xIdpToken,
                         'X-Session-Id': xSessionId,
                     },
                     body: requestBody,

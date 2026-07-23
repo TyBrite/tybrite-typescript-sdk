@@ -22,6 +22,7 @@ export class B2BService {
     public listRfqs({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Buyer session token (GC-native). Provide this or x-external-auth.
@@ -31,6 +32,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: Array<B2bRfq>;
     }> {
@@ -40,6 +48,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
@@ -60,6 +69,7 @@ export class B2BService {
         requestBody,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * A unique key so a retried create is not duplicated.
@@ -85,6 +95,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: B2bRfq;
     }> {
@@ -94,6 +111,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
                 'Idempotency-Key': idempotencyKey,
             },
             body: requestBody,
@@ -114,6 +132,7 @@ export class B2BService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         id: string,
         /**
@@ -124,6 +143,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: B2bRfq;
     }> {
@@ -136,6 +162,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 404: `Resource not found`,
@@ -151,6 +178,7 @@ export class B2BService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         id: string,
         /**
@@ -161,6 +189,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: B2bQuote;
     }> {
@@ -173,6 +208,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 404: `Resource not found`,
@@ -191,6 +227,7 @@ export class B2BService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         id: string,
         /**
@@ -201,6 +238,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: {
             quote_id?: string;
@@ -217,6 +261,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
@@ -233,6 +278,7 @@ export class B2BService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         id: string,
         /**
@@ -243,6 +289,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: {
             quote_id?: string;
@@ -258,6 +311,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
@@ -273,6 +327,7 @@ export class B2BService {
     public listPurchaseOrders({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Buyer session token (GC-native). Provide this or x-external-auth.
@@ -282,6 +337,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: Array<B2bPurchaseOrder>;
     }> {
@@ -291,6 +353,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
@@ -307,6 +370,7 @@ export class B2BService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         id: string,
         /**
@@ -317,6 +381,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: B2bPurchaseOrder;
     }> {
@@ -329,6 +400,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 404: `Resource not found`,
@@ -343,6 +415,7 @@ export class B2BService {
     public listInvoices({
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Buyer session token (GC-native). Provide this or x-external-auth.
@@ -352,6 +425,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: Array<B2bInvoice>;
     }> {
@@ -361,6 +441,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
@@ -377,6 +458,7 @@ export class B2BService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         id: string,
         /**
@@ -387,6 +469,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: B2bInvoice;
     }> {
@@ -399,6 +488,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 404: `Resource not found`,
@@ -420,6 +510,7 @@ export class B2BService {
         requestBody,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * A unique key so a retried create is not duplicated.
@@ -441,6 +532,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data?: {
             payment_id?: string;
@@ -457,6 +555,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
                 'Idempotency-Key': idempotencyKey,
             },
             body: requestBody,
@@ -502,6 +601,7 @@ export class B2BService {
         requestBody,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * A unique key so a retried order is not duplicated.
@@ -557,6 +657,13 @@ export class B2BService {
          * Bring-your-own-auth assertion identifying the buyer. Provide this or x-auth-token.
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<B2bDirectOrderResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -564,6 +671,7 @@ export class B2BService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
                 'Idempotency-Key': idempotencyKey,
                 'X-Timestamp': xTimestamp,
                 'X-Signature': xSignature,

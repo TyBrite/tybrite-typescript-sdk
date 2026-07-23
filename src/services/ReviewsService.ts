@@ -132,6 +132,7 @@ export class ReviewsService {
         requestBody,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         requestBody: {
             /**
@@ -167,16 +168,23 @@ export class ReviewsService {
             media_urls?: Array<string>;
         },
         /**
-         * Customer session JWT from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide this OR `x-external-auth`, not both.
+         * Customer session JWT from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         review: Review;
     }> {
@@ -186,6 +194,7 @@ export class ReviewsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -275,6 +284,7 @@ export class ReviewsService {
         id,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Review UUID.
@@ -282,17 +292,24 @@ export class ReviewsService {
         id: string,
         /**
          * Customer JWT for the review's author, from `POST /v1/auth/login` or
-         * `POST /v1/auth/verify-otp`. Provide this OR `x-external-auth`, not both.
+         * `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide this OR `x-auth-token`, not both.
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
          * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         success?: boolean;
         message?: string;
@@ -306,6 +323,7 @@ export class ReviewsService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
