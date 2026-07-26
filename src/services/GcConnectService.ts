@@ -90,6 +90,9 @@ export class GcConnectService {
      * connection, and returns the redirect URL the browser should follow to
      * complete the flow.
      *
+     * An agency-scoped application can be authorized only by a store that
+     * belongs to that agency; a store outside the agency receives `403`.
+     *
      * **Authentication:** The merchant's active Galactic Core session JWT in
      * the `Authorization: Bearer` header. This is not an API key — it is the
      * session token issued by the GC login flow.

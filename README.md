@@ -221,7 +221,7 @@ const cart = await client.cartWishlist.addToCart({
 
 ```typescript
 const session = await client.authentication.login({
-  requestBody: { email: 'shopper@example.com', password: '...' },
+  requestBody: { email: 'shopper@tybritelabs.com', password: '...' },
 });
 // → { access_token, ... } — pass access_token as xAuthToken on customer-scoped calls
 ```
@@ -315,7 +315,7 @@ const { posts } = await client.cms.listPosts({ limit: 10 });
 // → published blog posts (shoppable). Lookbooks: client.cms.listLookbooks(...).
 
 // Capture a newsletter signup from the storefront (email-keyed, idempotent):
-await client.cms.subscribeNewsletter({ requestBody: { email: 'shopper@example.com', source: 'footer' } });
+await client.cms.subscribeNewsletter({ requestBody: { email: 'shopper@tybritelabs.com', source: 'footer' } });
 ```
 
 ### events
@@ -570,7 +570,7 @@ const paymentBody = JSON.stringify({
   provider: 'stripe',
   amount: 100.00,
   currency: 'usd',
-  email: 'customer@example.com'
+  email: 'customer@tybritelabs.com'
 });
 
 const paymentPayload = `${paymentTimestamp}.${paymentBody}`;
@@ -672,7 +672,7 @@ const order = await marketplace.marketplace.marketplaceCheckout({
       { variant_id: 'v1', merchant_store_id: 'merchant-a', quantity: 1 },
       { variant_id: 'v2', merchant_store_id: 'merchant-b', quantity: 2 },
     ],
-    customer_email: 'shopper@example.com',
+    customer_email: 'shopper@tybritelabs.com',
     currency: 'USD',
   },
 });
@@ -731,7 +731,7 @@ const result = await client.orders.createOrder({
   xSignature: hmacSignature,
   requestBody: {
     customer_id: gcCustomerId,
-    customer_email: 'jane@example.com',
+    customer_email: 'jane@tybritelabs.com',
     customer_name: 'Jane Doe',
     billing_address: addr, shipping_address: addr,
     subtotal: 5000, total_amount: 5000, payment_method: 'card',

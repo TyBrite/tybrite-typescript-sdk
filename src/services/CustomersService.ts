@@ -254,6 +254,8 @@ export class CustomersService {
     public listAddresses({
         id,
         xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * The shopper's customer id.
@@ -263,6 +265,20 @@ export class CustomersService {
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
         xAuthToken: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; resolves the shopper whose addresses are managed.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         addresses: Array<CustomerAddress>;
     }> {
@@ -274,6 +290,8 @@ export class CustomersService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
@@ -300,6 +318,8 @@ export class CustomersService {
         id,
         xAuthToken,
         requestBody,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * The shopper's customer id.
@@ -335,6 +355,20 @@ export class CustomersService {
              */
             is_default_billing?: boolean;
         },
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; resolves the shopper whose addresses are managed.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         address: CustomerAddress;
     }> {
@@ -346,6 +380,8 @@ export class CustomersService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -376,6 +412,8 @@ export class CustomersService {
         addressId,
         xAuthToken,
         requestBody,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * The shopper's customer id.
@@ -403,6 +441,20 @@ export class CustomersService {
             is_default_shipping?: boolean;
             is_default_billing?: boolean;
         },
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; resolves the shopper whose addresses are managed.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         address: CustomerAddress;
     }> {
@@ -415,6 +467,8 @@ export class CustomersService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -442,6 +496,8 @@ export class CustomersService {
         id,
         addressId,
         xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * The shopper's customer id.
@@ -455,6 +511,20 @@ export class CustomersService {
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
         xAuthToken: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; resolves the shopper whose addresses are managed.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         success: boolean;
         message: string;
@@ -468,6 +538,8 @@ export class CustomersService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,

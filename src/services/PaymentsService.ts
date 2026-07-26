@@ -163,9 +163,13 @@ export class PaymentsService {
         xSignature: string,
         requestBody: {
             /**
-             * Payment provider to use
+             * Payment provider to use. The built-in providers are `stripe`, `paypal`, `paystack`,
+             * and `mpesa`. A store that has connected its own payment provider can also pass that
+             * provider's identifier here — the same value returned as `provider` (with
+             * `custom_provider: true`) by `GET /v1/payments/methods`.
+             *
              */
-            provider: 'stripe' | 'paypal' | 'paystack' | 'mpesa';
+            provider: string;
             /**
              * Payment amount (must be greater than 0)
              */

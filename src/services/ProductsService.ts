@@ -219,8 +219,8 @@ export class ProductsService {
          */
         storeId?: string,
         /**
-         * When `true` and the request is made on behalf of a signed-in customer (pass the
-         * customer's session token as `x-auth-token`), the returned page is ordered by how
+         * When `true` and the request is made on behalf of a signed-in customer (identify the
+         * shopper with any of `x-auth-token`, `x-external-auth`, or `x-idp-token`), the returned page is ordered by how
          * closely each product matches that shopper's preferences, with the default name order
          * as the tiebreak. Without a customer session, or for a shopper with no preference
          * signal yet, the order is unchanged.

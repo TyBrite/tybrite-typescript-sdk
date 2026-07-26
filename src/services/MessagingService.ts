@@ -117,6 +117,8 @@ export class MessagingService {
     public getThread({
         xAuthToken,
         id,
+        xExternalAuth,
+        xIdpToken,
         fields,
     }: {
         /**
@@ -124,6 +126,20 @@ export class MessagingService {
          */
         xAuthToken: string,
         id: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         /**
          * Comma-separated list of fields to include in the response.
          *
@@ -146,6 +162,8 @@ export class MessagingService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'fields': fields,
@@ -172,6 +190,8 @@ export class MessagingService {
         xAuthToken,
         id,
         requestBody,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
@@ -194,6 +214,20 @@ export class MessagingService {
              */
             pinned?: boolean;
         },
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         thread?: {
             id?: string;
@@ -213,6 +247,8 @@ export class MessagingService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -237,6 +273,8 @@ export class MessagingService {
     public getThreadMessages({
         xAuthToken,
         id,
+        xExternalAuth,
+        xIdpToken,
         limit = 50,
         cursor,
         order = 'asc',
@@ -247,6 +285,20 @@ export class MessagingService {
          */
         xAuthToken: string,
         id: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
         limit?: number,
         /**
          * Cursor for pagination (base64-encoded created_at value)
@@ -283,6 +335,8 @@ export class MessagingService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'limit': limit,
@@ -324,6 +378,8 @@ export class MessagingService {
         xAuthToken,
         id,
         requestBody,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
@@ -333,6 +389,20 @@ export class MessagingService {
         requestBody: {
             message: string;
         },
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         message?: {
             id?: string;
@@ -347,6 +417,8 @@ export class MessagingService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -383,6 +455,8 @@ export class MessagingService {
     public createConversation({
         requestBody,
         xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         requestBody: {
             /**
@@ -403,6 +477,20 @@ export class MessagingService {
          * Customer session access_token. Required when body.customer_id is supplied so the gateway can prove the caller owns that customer record.
          */
         xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         thread?: {
             id?: string;
@@ -420,6 +508,8 @@ export class MessagingService {
             url: '/v1/messaging/conversations',
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -443,12 +533,28 @@ export class MessagingService {
     public markThreadRead({
         xAuthToken,
         id,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
          */
         xAuthToken: string,
         id: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         success?: boolean;
         thread_id?: string;
@@ -461,6 +567,8 @@ export class MessagingService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
@@ -488,6 +596,8 @@ export class MessagingService {
         xAuthToken,
         id,
         requestBody,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
@@ -497,6 +607,20 @@ export class MessagingService {
         requestBody: {
             message_content: string;
         },
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         message?: {
             id?: string;
@@ -514,6 +638,8 @@ export class MessagingService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -542,12 +668,28 @@ export class MessagingService {
     public deleteMessage({
         xAuthToken,
         id,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
          */
         xAuthToken: string,
         id: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's `hmac_secret`. Claim lifetime capped at 300 seconds. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it against the provider and returns the identity; the resolved customer is used as the message author / thread participant.
+         *
+         * Use this when the store wants Galactic Core to verify tokens on its behalf rather than signing an assertion itself. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         success?: boolean;
         message_id?: string;
@@ -561,6 +703,8 @@ export class MessagingService {
             },
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,

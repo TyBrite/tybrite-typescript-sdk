@@ -13,6 +13,7 @@ export class AuthenticationService {
      * Register customer account
      * Create a new customer account with email and password.
      * Returns user details and authentication tokens upon successful registration.
+     * The email must be a real, deliverable address — disposable and example domains (e.g. `example.com`) are rejected with `400 invalid_request`.
      *
      * **Multi-Store Support:**
      * - If the email is already registered at another store, a new customer record

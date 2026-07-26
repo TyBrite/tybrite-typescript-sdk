@@ -56,7 +56,9 @@ export type IngestProduct = {
      */
     cost_price?: number;
     /**
-     * On-hand quantity.
+     * On-hand quantity. For a variant tracked by individual barcodes, `stock` is ignored
+     * (barcode-tracked stock is derived from scanned units); `threshold` still applies.
+     *
      */
     stock?: number;
     /**

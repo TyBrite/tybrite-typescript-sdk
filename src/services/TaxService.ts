@@ -12,7 +12,7 @@ export class TaxService {
      * order**, so a storefront can show the shopper the final, tax-inclusive total before they pay.
      *
      * When the store has automatic tax enabled, the response is calculated for the `ship_to`
-     * address and includes a per-jurisdiction `tax_breakdown`. When automatic tax is not
+     * address and includes a per-jurisdiction `breakdown`. When automatic tax is not
      * configured, the response is `{ "tax_source": "fallback" }` and you should apply the store's
      * own tax rate (the same amount the order endpoint would use). The estimate is never recorded
      * for filing — it is a quote only.

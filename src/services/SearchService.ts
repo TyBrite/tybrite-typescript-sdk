@@ -84,7 +84,8 @@ export class SearchService {
      * - **`minScore`** (default `0.3`, range `0.0–1.0`) raises the similarity floor — increase it
      * (e.g. `0.5`) to return only strong matches and suppress loosely-related products.
      * - **`personalize`** (default `false`) nudges ranking toward a signed-in shopper's preferences
-     * when you also pass that shopper's session token as `x-auth-token`; relevance stays primary
+     * when you also identify that shopper with any of `x-auth-token`, `x-external-auth`, or
+     * `x-idp-token`; relevance stays primary
      * (it is blended, not replaced). Without a customer session it has no effect.
      *
      * **Marketplace:** when called with a marketplace operator key, searches products across all
@@ -110,8 +111,8 @@ export class SearchService {
              */
             minScore?: number;
             /**
-             * When `true` and the request is made on behalf of a signed-in customer (pass the
-             * customer's session token as `x-auth-token`), results are nudged toward the
+             * When `true` and the request is made on behalf of a signed-in customer (identify the
+             * shopper with any of `x-auth-token`, `x-external-auth`, or `x-idp-token`), results are nudged toward the
              * shopper's preferences while keeping query relevance primary (relevance is
              * blended with preference, not replaced). Without a customer session, or for a
              * shopper with no preference signal yet, ranking is by query relevance only.

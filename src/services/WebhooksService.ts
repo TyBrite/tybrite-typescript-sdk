@@ -284,7 +284,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'promotion.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed' | 'feed.sync.completed' | 'channel.sync.completed';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'promotion.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed';
         },
     }): CancelablePromise<{
         success?: boolean;
