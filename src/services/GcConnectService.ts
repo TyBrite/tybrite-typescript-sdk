@@ -170,6 +170,13 @@ export class GcConnectService {
      * **The code is single-use and expires after 10 minutes.** Attempting to
      * exchange an already-used or expired code returns an error.
      *
+     * **Store `sk` and `signing_secret` — both are returned only once.** The
+     * `sk` authenticates every request you make for that merchant. The
+     * `signing_secret` signs the writes that require a signature (creating and
+     * updating orders, initializing payments): set `X-Timestamp` to the current
+     * Unix time and `X-Signature` to the base64 HMAC-SHA256 of
+     * `{timestamp}.{requestBody}`. Neither value can be retrieved later.
+     *
      * **Rate limit:** 10 requests/minute per IP address.
      *
      * **Security:** Always verify that the `state` value in the callback
