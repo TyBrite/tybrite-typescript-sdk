@@ -54,11 +54,24 @@ export class WebhooksService {
              * **Gift cards:** `gift_card.issued`, `gift_card.redeemed`, `gift_card.expired`
              *
              * **Promotions:** `promotion.applied` (a promotion was applied to a checkout),
-             * `promotion.created`, `promotion.activated` (a promotion went live),
-             * `promotion.deactivated` (a live promotion ended, was paused, or expired)
+             * `promotion.created`, `promotion.activated` (a promotion went live or was
+             * scheduled to), `promotion.deactivated` (a live promotion ended, was paused, or
+             * expired). A promotion awaiting approval is not yet a promotion: no event fires
+             * while it is a draft, and `promotion.created` arrives when it is approved.
+             *
+             * **Pricing:** `pricing_rule.created`, `pricing_rule.activated` (a dynamic-pricing
+             * rule went live), `pricing_rule.updated` (a live rule's discount, scope, priority,
+             * or window changed — the prices it produces are now different), and
+             * `pricing_rule.deactivated`. Like promotions, a rule awaiting approval emits
+             * nothing until it goes live. Subscribe to these if you render prices and need to
+             * re-read when the rules behind them change.
              *
              * **Content & collections:** `collection.created`, `collection.updated`
-             * (a product collection was added or its homepage placement / banner changed),
+             * (a product collection was added, its homepage placement / banner changed, **or
+             * its membership changed** — products added, removed, or re-ordered). A membership
+             * change carries `members_changed: true`, and fires once per collection per change,
+             * not once per product.
+             *
              * `post.published`, `lookbook.published`, `review.approved` (a review passed
              * moderation and is now visible)
              *
@@ -284,7 +297,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'promotion.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed';
         },
     }): CancelablePromise<{
         success?: boolean;
