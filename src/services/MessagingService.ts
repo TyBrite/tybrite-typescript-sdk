@@ -497,6 +497,18 @@ export class MessagingService {
             subject?: string;
             status?: string;
             priority?: string;
+            /**
+             * What the conversation is about. Inferred from the request when not supplied: `order_inquiry` when `order_id` is given, `product_inquiry` when `product_id` is given, otherwise `general`.
+             */
+            thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical';
+            /**
+             * The order this conversation is about, echoed from the request.
+             */
+            order_id?: string | null;
+            /**
+             * The product this conversation is about, echoed from the request.
+             */
+            product_id?: string | null;
         };
         message?: {
             id?: string;
