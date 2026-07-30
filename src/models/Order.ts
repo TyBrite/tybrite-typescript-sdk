@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { Address } from './Address';
 import type { OrderItem } from './OrderItem';
+import type { OrderStatusNote } from './OrderStatusNote';
 export type Order = {
     id?: string;
     order_number?: string;
@@ -34,6 +35,13 @@ export type Order = {
     billing_address?: Address;
     shipping_address?: Address;
     items?: Array<OrderItem>;
+    /**
+     * Customer-visible updates the merchant added as the order moved — the work between payment and
+     * dispatch (preparation, checks, packing) that a shopper otherwise hears nothing about. Oldest
+     * first, so it reads as a timeline. Internal notes are never included.
+     *
+     */
+    status_notes?: Array<OrderStatusNote>;
     notes?: string;
     tracking_number?: string;
     estimated_delivery?: string;

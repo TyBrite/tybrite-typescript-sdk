@@ -52,6 +52,7 @@ export type { MerchantBreakdownItem } from './models/MerchantBreakdownItem';
 export { Message } from './models/Message';
 export { Order } from './models/Order';
 export type { OrderItem } from './models/OrderItem';
+export type { OrderStatusNote } from './models/OrderStatusNote';
 export type { Pagination } from './models/Pagination';
 export type { PaymentInitializeResponse } from './models/PaymentInitializeResponse';
 export { PaymentMethod } from './models/PaymentMethod';
