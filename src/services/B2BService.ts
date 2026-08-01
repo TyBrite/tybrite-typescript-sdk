@@ -53,6 +53,7 @@ export class B2BService {
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -120,6 +121,7 @@ export class B2BService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -166,6 +168,7 @@ export class B2BService {
             },
             errors: {
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -212,6 +215,7 @@ export class B2BService {
             },
             errors: {
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -266,6 +270,7 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -316,6 +321,7 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -358,6 +364,7 @@ export class B2BService {
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -404,6 +411,7 @@ export class B2BService {
             },
             errors: {
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -446,6 +454,7 @@ export class B2BService {
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -492,6 +501,7 @@ export class B2BService {
             },
             errors: {
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -563,6 +573,7 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -682,6 +693,7 @@ export class B2BService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }

@@ -56,6 +56,7 @@ export class CustomersService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
                 409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
                 Common causes:
                 - Email already registered to another customer at this store
@@ -296,6 +297,7 @@ export class CustomersService {
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -389,6 +391,7 @@ export class CustomersService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -477,6 +480,7 @@ export class CustomersService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -545,6 +549,7 @@ export class CustomersService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }

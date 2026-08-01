@@ -194,6 +194,10 @@ export class PaymentsService {
              */
             phone?: string;
             /**
+             * ISO 3166-1 alpha-2 country code for the payer. Passed through to a payment method the merchant has added themselves, which may use it to offer the local payment options for that country. The built-in methods ignore it.
+             */
+            country?: string;
+            /**
              * Optional order ID to link payment to an order
              */
             order_id?: string;
@@ -234,8 +238,11 @@ export class PaymentsService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                409: `The payment method is still configured with test credentials and cannot take a real payment. The store must switch it to live mode first. On a sandbox request this does not apply.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
+                502: `A payment method the merchant added themselves did not complete the request. Retry, or fall back to another method.`,
+                504: `The payment provider did not respond in time. Safe to retry.`,
             },
         });
     }
@@ -307,8 +314,11 @@ export class PaymentsService {
                 400: `Invalid request (missing required fields, invalid provider, provider misconfigured, or upstream provider rejected verification)`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Forbidden - Publishable keys cannot verify payments. Use a secret key (tybrite_sk_*).`,
+                404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
+                502: `A payment method the merchant added themselves did not complete the verification. The payment's real state is unchanged; retry.`,
+                504: `The payment provider did not respond in time. Safe to retry.`,
             },
         });
     }

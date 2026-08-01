@@ -262,6 +262,7 @@ export class DisputesService {
                 'store_id': storeId,
             },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 404: `Resource not found`,
                 500: `Internal server error`,
@@ -332,6 +333,7 @@ export class DisputesService {
                 'store_id': storeId,
             },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,

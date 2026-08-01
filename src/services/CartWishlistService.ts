@@ -422,6 +422,8 @@ export class CartWishlistService {
                 xAuthToken,
                 xExternalAuth,
                 xIdpToken,
+                customerId,
+                xSessionId,
             }: {
                 /**
                  * Cart item UUID
@@ -445,6 +447,14 @@ export class CartWishlistService {
                  *
                  */
                 xIdpToken?: string,
+                /**
+                 * The signed-in shopper whose cart line is being removed. Send this together with a customer credential header; for an anonymous cart send `X-Session-Id` instead.
+                 */
+                customerId?: string,
+                /**
+                 * Session ID for anonymous carts. Required for ownership verification when `customer_id` is not provided.
+                 */
+                xSessionId?: string,
             }): CancelablePromise<{
                 success?: boolean;
                 message?: string;
@@ -459,10 +469,16 @@ export class CartWishlistService {
                         'x-auth-token': xAuthToken,
                         'x-external-auth': xExternalAuth,
                         'x-idp-token': xIdpToken,
+                        'X-Session-Id': xSessionId,
+                    },
+                    query: {
+                        'customer_id': customerId,
                     },
                     errors: {
+                        400: `Invalid request - malformed data or missing required fields`,
                         401: `Authentication failed - invalid or missing API key`,
                         403: `Insufficient permissions - operation requires secret key`,
+                        404: `Resource not found`,
                         429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                         500: `Internal server error`,
                     },

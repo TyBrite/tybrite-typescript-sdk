@@ -81,6 +81,10 @@ export class AnalyticsService {
              */
             content_id?: string;
             /**
+             * Alias of `content_id`. Send one or the other, not both.
+             */
+            cms_content_id?: string;
+            /**
              * For `content_click` — the product the shopper clicked through to from inside the content. Required (with `content_id`) on a `content_click`.
              */
             content_product_id?: string;
@@ -96,7 +100,9 @@ export class AnalyticsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
             },
         });
     }

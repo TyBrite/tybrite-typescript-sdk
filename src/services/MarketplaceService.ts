@@ -64,6 +64,8 @@ export class MarketplaceService {
      */
     public marketplaceCheckout({
         requestBody,
+        xCustomerToken,
+        xAuthToken,
     }: {
         requestBody: {
             /**
@@ -104,11 +106,36 @@ export class MarketplaceService {
                  */
                 gift_card_code?: string;
             }>;
+            /**
+             * Where the shopper came from, recorded so the sale is credited to the right traffic source in the merchant's reports. The same fields are also accepted at the top level of this request body if you already send them that way.
+             */
+            attribution?: {
+                /**
+                 * The shopper's storefront session, linking the order to their visit.
+                 */
+                session_id?: string;
+                utm_source?: string;
+                utm_medium?: string;
+                utm_campaign?: string;
+                referrer?: string;
+            };
         },
+        /**
+         * Session token of a shopper signed in through Galactic Core, tying the checkout to their account rather than treating it as a guest checkout. Optional. Also accepted as `x-auth-token`.
+         */
+        xCustomerToken?: string,
+        /**
+         * Alias of `x-customer-token`.
+         */
+        xAuthToken?: string,
     }): CancelablePromise<MarketplaceCheckoutResponse> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/cart/checkout',
+            headers: {
+                'x-customer-token': xCustomerToken,
+                'x-auth-token': xAuthToken,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -152,6 +179,7 @@ export class MarketplaceService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }
@@ -273,6 +301,7 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -322,6 +351,7 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -359,6 +389,7 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error`,
             },
         });
     }
@@ -402,6 +433,7 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 404: `Resource not found`,
+                500: `Internal server error`,
             },
         });
     }

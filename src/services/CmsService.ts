@@ -87,6 +87,10 @@ export class CmsService {
     public getPost({
         slug,
         fields,
+        visitorId,
+        sessionId,
+        xVisitorId,
+        xSessionId,
     }: {
         slug: string,
         /**
@@ -101,6 +105,32 @@ export class CmsService {
          *
          */
         fields?: string,
+        /**
+         * Identifies the shopper viewing the post, so the view is attributed to them in
+         * your content analytics. Send the same value you use for other storefront
+         * analytics calls. When omitted, the view is attributed to a coarse fallback
+         * derived from the request, so repeat views by one shopper may not group together.
+         *
+         * The `x-visitor-id` header carries the same value and takes precedence.
+         *
+         */
+        visitorId?: string,
+        /**
+         * Groups this view into a browsing session. When omitted, a session is derived
+         * from the visitor identity.
+         *
+         * The `x-session-id` header carries the same value and takes precedence.
+         *
+         */
+        sessionId?: string,
+        /**
+         * Header form of `visitor_id`. Takes precedence over the query parameter when both are sent.
+         */
+        xVisitorId?: string,
+        /**
+         * Header form of `session_id`. Takes precedence over the query parameter when both are sent.
+         */
+        xSessionId?: string,
     }): CancelablePromise<Post> {
         return this.httpRequest.request({
             method: 'GET',
@@ -108,8 +138,14 @@ export class CmsService {
             path: {
                 'slug': slug,
             },
+            headers: {
+                'x-visitor-id': xVisitorId,
+                'x-session-id': xSessionId,
+            },
             query: {
                 'fields': fields,
+                'visitor_id': visitorId,
+                'session_id': sessionId,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
@@ -179,6 +215,10 @@ export class CmsService {
     public getLookbook({
         slug,
         fields,
+        visitorId,
+        sessionId,
+        xVisitorId,
+        xSessionId,
     }: {
         slug: string,
         /**
@@ -190,6 +230,32 @@ export class CmsService {
          *
          */
         fields?: string,
+        /**
+         * Identifies the shopper viewing the lookbook, so the view is attributed to them in
+         * your content analytics. Send the same value you use for other storefront
+         * analytics calls. When omitted, the view is attributed to a coarse fallback
+         * derived from the request, so repeat views by one shopper may not group together.
+         *
+         * The `x-visitor-id` header carries the same value and takes precedence.
+         *
+         */
+        visitorId?: string,
+        /**
+         * Groups this view into a browsing session. When omitted, a session is derived
+         * from the visitor identity.
+         *
+         * The `x-session-id` header carries the same value and takes precedence.
+         *
+         */
+        sessionId?: string,
+        /**
+         * Header form of `visitor_id`. Takes precedence over the query parameter when both are sent.
+         */
+        xVisitorId?: string,
+        /**
+         * Header form of `session_id`. Takes precedence over the query parameter when both are sent.
+         */
+        xSessionId?: string,
     }): CancelablePromise<Lookbook> {
         return this.httpRequest.request({
             method: 'GET',
@@ -197,8 +263,14 @@ export class CmsService {
             path: {
                 'slug': slug,
             },
+            headers: {
+                'x-visitor-id': xVisitorId,
+                'x-session-id': xSessionId,
+            },
             query: {
                 'fields': fields,
+                'visitor_id': visitorId,
+                'session_id': sessionId,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,

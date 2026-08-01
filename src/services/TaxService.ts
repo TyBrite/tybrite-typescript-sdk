@@ -65,6 +65,30 @@ export class TaxService {
                 description?: string;
             }>;
             /**
+             * The origin the goods ship from. Which jurisdictions may tax a sale depends on where it ships from as well as where it ships to, so send this when fulfilling from a location other than the store's own address. Defaults to the store's address.
+             */
+            ship_from?: {
+                line1?: string;
+                city?: string;
+                /**
+                 * State / province / region code.
+                 */
+                region?: string;
+                /**
+                 * ISO 3166-1 alpha-2 country code.
+                 */
+                country?: string;
+                postal_code?: string;
+            };
+            /**
+             * Your identifier for the buyer. Send it when the buyer holds a tax exemption, so the estimate reflects it. Omitted, the cart is priced as an ordinary retail sale.
+             */
+            customer_code?: string;
+            /**
+             * Your own reference for this estimate, echoed back so you can tie it to a cart or quote in your system.
+             */
+            doc_code?: string;
+            /**
              * ISO 4217 currency code. Defaults to the store currency.
              */
             currency?: string;

@@ -18,8 +18,10 @@ export class MessagingService {
      * @throws ApiError
      */
     public listThreads({
-        xAuthToken,
         customerId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
         status,
         priority,
         threadType,
@@ -30,13 +32,21 @@ export class MessagingService {
         fields,
     }: {
         /**
-         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
-         */
-        xAuthToken: string,
-        /**
          * Customer UUID to filter threads by
          */
         customerId: string,
+        /**
+         * Session token of a customer signed in through Galactic Core, proving they own the threads being read. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Signed identity assertion for a customer authenticated with your own identity provider. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from your own identity provider, which Galactic Core forwards to the store's configured Auth verifier. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
         /**
          * Filter threads by status
          */
@@ -88,6 +98,8 @@ export class MessagingService {
             url: '/v1/messaging/threads',
             headers: {
                 'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'customer_id': customerId,
@@ -771,6 +783,9 @@ export class MessagingService {
         apiKey,
         authToken,
         externalAuth,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
         idpToken,
     }: {
         /**
@@ -798,6 +813,18 @@ export class MessagingService {
          */
         externalAuth?: string,
         /**
+         * Header form of `auth_token`, for non-browser clients that can set request headers on the handshake.
+         */
+        xAuthToken?: string,
+        /**
+         * Header form of `external_auth`.
+         */
+        xExternalAuth?: string,
+        /**
+         * Header form of `idp_token`.
+         */
+        xIdpToken?: string,
+        /**
          * A raw token from your own identity provider (e.g. a Firebase ID token). Galactic Core
          * forwards it to the store's configured Auth verifier, which validates it and returns the
          * identity. Fail-closed: if the verifier rejects the token or is unreachable, the connection
@@ -812,6 +839,11 @@ export class MessagingService {
             url: '/v1/messaging/threads/{id}/subscribe',
             path: {
                 'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'api_key': apiKey,

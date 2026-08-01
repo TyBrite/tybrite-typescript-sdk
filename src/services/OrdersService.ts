@@ -318,6 +318,34 @@ export class OrdersService {
              */
             store_credit_amount?: number;
             /**
+             * Your own order reference. When omitted, Galactic Core generates one. Use this to keep order numbers aligned with a system you already run.
+             */
+            order_number?: string;
+            /**
+             * ISO 4217 currency code the order is priced in. When omitted, the store's default storefront currency is used. Set it when you present prices in a currency the shopper selected, so the order is recorded in the same currency it was paid in.
+             */
+            currency?: string;
+            /**
+             * Stock reservation ids returned by `POST /v1/checkout/reserve`. Supplying them commits the stock already held for this shopper instead of decrementing it again, which is what keeps a high-demand drop from overselling between reservation and payment.
+             */
+            reservation_ids?: Array<string>;
+            /**
+             * Delivery latitude, used to resolve the delivery zone or distance tier that prices shipping. Send it with `shipping_longitude` when the shopper's coordinates are known; the server re-derives the shipping cost from them rather than trusting a client total.
+             */
+            shipping_latitude?: number;
+            /**
+             * Delivery longitude. See `shipping_latitude`.
+             */
+            shipping_longitude?: number;
+            /**
+             * The id of the shipping rate the shopper chose, when rates came from a multi-carrier quote. The rate is re-fetched and validated server-side before it is charged, so a modified or stale rate is rejected rather than honoured.
+             */
+            shippo_rate_id?: string;
+            /**
+             * Where this order came from, recorded for the merchant's analytics. Accepts the fields below; the same fields are also read from the top level of the request body if you already send them there. Promotions that actually applied are recorded from the server-validated result, so `promotion_ids` never inflates what a shopper received.
+             */
+            attribution?: any | null;
+            /**
              * Google ad click id, when the shopper arrived from a Google ad. On a paid order this lets the merchant's Google advertising get credit for the sale. Forward the true captured value; omit if not present.
              */
             gclid?: string | null;
@@ -378,6 +406,7 @@ export class OrdersService {
                 - Item already exists in wishlist
                 - Idempotency-Key reused with a different request body
                 `,
+                422: `The store runs its own order-validation rule and that rule rejected the order. The \`message\` carries the reason the store gave. No order is created. This is also returned when the store requires validation but the rule could not be reached, so an order is never created unchecked.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
@@ -558,6 +587,14 @@ export class OrdersService {
              * Timestamp when order was delivered
              */
             delivered_at?: string;
+            /**
+             * The reference your payment provider issued for this payment. Send it when marking an order paid that was charged outside Galactic Core, so the payment can be traced back to the provider's own record. When the store has added its own payment method, the reference is checked with that provider before the order is accepted as paid.
+             */
+            payment_reference?: string;
+            /**
+             * Stock reservation ids returned by `POST /v1/checkout/reserve`. Supplying them commits the stock already held for this shopper rather than decrementing it a second time.
+             */
+            reservation_ids?: Array<string>;
         },
     }): CancelablePromise<Order> {
         return this.httpRequest.request({
@@ -578,6 +615,7 @@ export class OrdersService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                422: `You marked the order paid with a \`payment_reference\`, but the payment method the merchant added does not report that reference as paid. The order is left unchanged rather than accepted on an unverified claim.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

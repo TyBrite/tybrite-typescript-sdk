@@ -60,6 +60,7 @@ export class PricingService {
         region,
         customerId,
         quantity,
+        orderTotal,
     }: {
         /**
          * Search by product name or SKU
@@ -155,6 +156,10 @@ export class PricingService {
          * Quantity for volume-based pricing discounts
          */
         quantity?: number,
+        /**
+         * The shopper's current cart subtotal. Send it whenever you know the cart total: pricing rules that depend on order value ("spend over $100") can only be evaluated when it is present, and are skipped otherwise.
+         */
+        orderTotal?: number,
     }): CancelablePromise<{
         products?: Array<{
             product_id?: string;
@@ -300,10 +305,12 @@ export class PricingService {
                 'region': region,
                 'customer_id': customerId,
                 'quantity': quantity,
+                'order_total': orderTotal,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
@@ -360,6 +367,7 @@ export class PricingService {
         region,
         customerId,
         quantity,
+        orderTotal,
     }: {
         /**
          * Product UUID or variant UUID
@@ -428,6 +436,10 @@ export class PricingService {
          * Quantity for volume-based pricing
          */
         quantity?: number,
+        /**
+         * The shopper's current cart subtotal. Send it whenever you know the cart total: pricing rules that depend on order value ("spend over $100") can only be evaluated when it is present, and are skipped otherwise.
+         */
+        orderTotal?: number,
     }): CancelablePromise<{
         product_id?: string;
         name?: string;
@@ -555,10 +567,12 @@ export class PricingService {
                 'region': region,
                 'customer_id': customerId,
                 'quantity': quantity,
+                'order_total': orderTotal,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
@@ -621,6 +635,7 @@ export class PricingService {
         region,
         customerId,
         quantity,
+        orderTotal,
     }: {
         /**
          * Product slug (SEO-friendly URL identifier)
@@ -689,6 +704,10 @@ export class PricingService {
          * Quantity for volume-based pricing
          */
         quantity?: number,
+        /**
+         * The shopper's current cart subtotal. Send it whenever you know the cart total: pricing rules that depend on order value ("spend over $100") can only be evaluated when it is present, and are skipped otherwise.
+         */
+        orderTotal?: number,
     }): CancelablePromise<{
         product_id?: string;
         name?: string;
@@ -816,10 +835,12 @@ export class PricingService {
                 'region': region,
                 'customer_id': customerId,
                 'quantity': quantity,
+                'order_total': orderTotal,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,

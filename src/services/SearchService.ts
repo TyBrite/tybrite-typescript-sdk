@@ -96,6 +96,9 @@ export class SearchService {
      */
     public semanticSearch({
         requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         requestBody: {
             /**
@@ -120,15 +123,33 @@ export class SearchService {
              */
             personalize?: boolean;
         },
+        /**
+         * Session token of a customer signed in through Galactic Core. Only used when `personalize` is true, to rank results toward that shopper's preferences. Optional everywhere else, and an absent or invalid credential simply returns unpersonalized results rather than an error.
+         */
+        xAuthToken?: string,
+        /**
+         * Signed identity assertion for a customer authenticated with your own identity provider. Serves the same purpose as `x-auth-token`; send whichever matches how the shopper signed in.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from your own identity provider, which Galactic Core forwards to the store's configured Auth verifier. Serves the same purpose as `x-auth-token`.
+         */
+        xIdpToken?: string,
     }): CancelablePromise<SearchResponse> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/search',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

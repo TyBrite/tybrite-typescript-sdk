@@ -187,9 +187,13 @@ export class PromotionsService {
         id: string,
         requestBody: {
             /**
-             * The cart lines to calculate the discount against.
+             * The cart lines to calculate the discount against. Also accepted under the name `items`, which behaves identically; send whichever matches your storefront's own cart shape, and `cart` when both are present.
              */
             cart: Array<PromotionCartItem>;
+            /**
+             * Alias of `cart`. Send one or the other, not both.
+             */
+            items?: Array<PromotionCartItem>;
         },
         /**
          * The merchant whose promotion to calculate against. Required for marketplace
@@ -244,9 +248,13 @@ export class PromotionsService {
     }: {
         requestBody: {
             /**
-             * The cart lines to evaluate promotions against.
+             * The cart lines to evaluate promotions against. Also accepted under the name `items`, which behaves identically; send whichever matches your storefront's own cart shape, and `cart` when both are present.
              */
             cart: Array<PromotionCartItem>;
+            /**
+             * Alias of `cart`. Send one or the other, not both.
+             */
+            items?: Array<PromotionCartItem>;
         },
         /**
          * The merchant whose promotions to evaluate. Required for marketplace

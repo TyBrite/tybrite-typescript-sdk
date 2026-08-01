@@ -467,6 +467,7 @@ export class ReturnsService {
                 'store_id': storeId,
             },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
@@ -543,6 +544,7 @@ export class ReturnsService {
                 'store_id': storeId,
             },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
