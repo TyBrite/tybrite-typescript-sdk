@@ -45,8 +45,34 @@ export class AnalyticsService {
              * `content_product_id`). To close the funnel, pass `content_id` (+ `content_type`)
              * in the order's `attribution` at checkout — see the Orders API.
              *
+             * `search` records what a shopper searched for. Send it with `search_query` and the
+             * `search_result_count` the search returned, so a merchant can see which searches
+             * their catalogue answers badly. The term is normalised before it is stored, and a
+             * search event is never associated with a customer.
+             *
              */
-            event_type: 'page_view' | 'session_start' | 'page_close' | 'post_view' | 'lookbook_view' | 'content_click';
+            event_type: 'page_view' | 'session_start' | 'page_close' | 'post_view' | 'lookbook_view' | 'content_click' | 'search';
+            /**
+             * The shopper's search term. Required when `event_type` is `search`, ignored
+             * otherwise. Leading, trailing and repeated whitespace is collapsed and the term is
+             * lowercased before storage, so casing and spacing do not fragment the reporting.
+             * May also be sent as `q`.
+             *
+             */
+            search_query?: string;
+            /**
+             * Alias for `search_query`. Accepted so a storefront can reuse the same field name it
+             * sends to the search endpoint; `search_query` takes precedence when both are given.
+             *
+             */
+            'q'?: string;
+            /**
+             * How many results the search returned. Send `0` when it returned none — that is the
+             * signal a merchant most needs, marking a search the catalogue could not answer at
+             * all. Only meaningful when `event_type` is `search`.
+             *
+             */
+            search_result_count?: number;
             /**
              * A stable per-visitor identifier persisted in the browser (e.g. localStorage). Used to distinguish new vs returning visitors.
              */
