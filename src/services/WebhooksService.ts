@@ -75,6 +75,32 @@ export class WebhooksService {
              * `post.published`, `lookbook.published`, `review.approved` (a review passed
              * moderation and is now visible)
              *
+             * **Deletion & restore:** `product.deleted`, `product_variant.deleted`,
+             * `promotion.deleted`, `collection.deleted`, `post.deleted`, `lookbook.deleted`,
+             * `pricing_rule.deleted`, `customer.deleted`, `subcategory.deleted` — the record
+             * has left the API. It no longer appears in any list, cannot be fetched by id, and
+             * stops taking effect (a deleted promotion stops discounting; a deleted product
+             * cannot be bought). Each carries the record's `id` and `name`, plus `deleted_at`
+             * and `restorable_until`.
+             *
+             * Deleting is reversible for 90 days, so every one of these has a matching
+             * `.restored` event (`product.restored`, `promotion.restored`, and so on) that
+             * fires when the merchant brings the record back. `restorable_until` tells you how
+             * long you have: you may tear down your copy immediately and rebuild it on
+             * `.restored`, or hold it until the window closes.
+             *
+             * Deleting a product also deletes its variants, so a `product.deleted` is followed
+             * by a `product_variant.deleted` for each one. Restoring the product restores them
+             * together.
+             *
+             * **Visibility:** `category.activated`, `category.deactivated`,
+             * `subcategory.activated`, `subcategory.deactivated`. A category that is switched
+             * off is filtered out of every catalog read, so it disappears from your storefront
+             * exactly as a deleted one would — these events tell you when that happens.
+             * Categories cannot be deleted (they are a fixed platform set a merchant enables or
+             * disables), so this is the only lifecycle signal they produce. Subscribe if you
+             * render navigation, a category strip, or any layout built from the taxonomy.
+             *
              * **Store lifecycle & configuration:** `store.updated` (the store's name,
              * logo, branding, contact, or base currency changed — carries a
              * `changed_fields` list), `payment_provider.connected` (a payment provider was
@@ -297,7 +323,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted';
         },
     }): CancelablePromise<{
         success?: boolean;

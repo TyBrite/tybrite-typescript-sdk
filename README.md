@@ -112,7 +112,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Products, collections, specs, **brands** (`client.products.*`) | `pk` or `sk` |
 | Categories & subcategories (`client.taxonomy.*`) | `pk` or `sk` |
 | Prices (`client.pricing.*`) | `pk` or `sk` |
-| Search — text & semantic (`client.search.*`) | `pk` or `sk` |
+| Search — text, typo-tolerant, autocomplete & semantic (`client.search.*`) | `pk` or `sk` |
 | Tax preview (`client.tax.previewTax`) | `pk` or `sk` (browser) |
 | **Recommendations** (`client.recommendations.*`) | **`sk` only** |
 | Discovery — most-viewed / carted / converting (`client.discovery.*`) | `pk` or `sk` (browser) |
@@ -176,8 +176,20 @@ const price = await client.pricing.getProductPrice({ id: 'product-uuid', quantit
 
 ```typescript
 const results = await client.search.searchProducts({ q: 'wireless headphones', limit: 10 });
-// → { query, results: [{ productId, score }], totalResults }
+// → { query, results: [{ productId, score, matchReason }], totalResults }
 // Natural-language? Use client.search.semanticSearch({ requestBody: { query, limit } }).
+
+// Misspellings still find the product. When exact matching returns nothing the query is retried
+// against a similarity match, so 'snoboard' reaches the snowboards. Those results carry a
+// matchReason of 'Similar name' or 'Similar brand' rather than 'Text match', so you can label them
+// ("showing results for …") instead of presenting an approximate match as an exact one.
+const fuzzy = await client.search.searchProducts({ q: 'snoboard' });
+// → results[0].matchReason === 'Similar name'
+
+// Type-ahead: call on each keystroke from the second character. Returns terms to suggest, not
+// products — run searchProducts once the shopper picks one.
+const ac = await client.search.autocompleteSearch({ q: 'sno', limit: 5 });
+// → { query, suggestions: [{ suggestion, kind: 'product' | 'brand' | 'subcategory', score }] }
 ```
 
 ### recommendations

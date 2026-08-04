@@ -21,6 +21,14 @@ export class SearchService {
      * cancellation"), use the semantic `POST /v1/search` (`semanticSearch`) instead, which scores
      * by meaning rather than literal terms.
      *
+     * **Typo tolerance.** When exact matching finds nothing, the query is retried against a
+     * similarity match over product names and brands, so a misspelling still reaches the product
+     * — "snoboard" finds the snowboards. Those results carry a `matchReason` of `Similar name` or
+     * `Similar brand` rather than `Text match`, so a storefront can label them ("showing results
+     * for …") instead of presenting an approximate match as an exact one. Exact matches always
+     * rank first: the fallback only runs when there were none, so a query that already worked is
+     * unaffected.
+     *
      * **Marketplace:** when called with a marketplace operator key, searches products across all
      * merchants in the marketplace; pass `?store_id=<merchant>` to narrow results to a single
      * merchant.
@@ -152,6 +160,80 @@ export class SearchService {
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Type-ahead suggestions
+     * Suggestions for a partial query, for a search box that completes as the shopper types.
+     *
+     * Suggestions are drawn from what the store actually sells — product names, brands, and the
+     * merchant's own subcategories — so there is no keyword list to configure and nothing that can
+     * drift from the catalogue. Each suggestion carries a `kind` (`product`, `brand`, or
+     * `subcategory`) so a storefront can group or badge them, and a `score` for ordering.
+     *
+     * Prefixes match first, with similarity as a fallback, so a suggestion still appears when the
+     * first characters are already mistyped.
+     *
+     * **Auth:** accepts a publishable (`tybrite_pk_*`) key, so it is safe to call from client-side
+     * storefront code on every keystroke. Requires a store-scoped key — marketplace operator keys
+     * are rejected.
+     *
+     * **Fewer than two characters** returns an empty `suggestions` array with a `200`, not an
+     * error: a shopper mid-word has not done anything wrong.
+     *
+     * @returns any Suggestions for the partial query
+     * @throws ApiError
+     */
+    public autocompleteSearch({
+        q,
+        prefix,
+        limit = 8,
+    }: {
+        /**
+         * The partial query typed so far. Either `q` or `prefix` is required.
+         */
+        q?: string,
+        /**
+         * Alternative spelling of `q`; use whichever reads better in your client.
+         */
+        prefix?: string,
+        /**
+         * Maximum suggestions to return.
+         */
+        limit?: number,
+    }): CancelablePromise<{
+        /**
+         * The prefix that was searched.
+         */
+        query?: string;
+        suggestions?: Array<{
+            /**
+             * The completed term to offer the shopper.
+             */
+            suggestion?: string;
+            /**
+             * What the suggestion refers to.
+             */
+            kind?: 'product' | 'brand' | 'subcategory';
+            /**
+             * Relevance, highest first.
+             */
+            score?: number;
+        }>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/search/autocomplete',
+            query: {
+                'q': q,
+                'prefix': prefix,
+                'limit': limit,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
     }
