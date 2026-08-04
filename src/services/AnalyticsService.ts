@@ -50,8 +50,15 @@ export class AnalyticsService {
              * their catalogue answers badly. The term is normalised before it is stored, and a
              * search event is never associated with a customer.
              *
+             * `search_result_click` records which result the shopper clicked. Send it with the
+             * same `search_query`, the `search_result_product_id` they clicked, and its
+             * `search_result_position` in the list as shown. This is what makes merchandising
+             * measurable: without it, a rule can only be judged by whether searches matching it
+             * happened to convert, which counts a shopper who ignored the featured product
+             * exactly the same as one who clicked it.
+             *
              */
-            event_type: 'page_view' | 'session_start' | 'page_close' | 'post_view' | 'lookbook_view' | 'content_click' | 'search';
+            event_type: 'page_view' | 'session_start' | 'page_close' | 'post_view' | 'lookbook_view' | 'content_click' | 'search' | 'search_result_click';
             /**
              * The shopper's search term. Required when `event_type` is `search`, ignored
              * otherwise. Leading, trailing and repeated whitespace is collapsed and the term is
@@ -66,6 +73,19 @@ export class AnalyticsService {
              *
              */
             'q'?: string;
+            /**
+             * The product the shopper clicked. Required when `event_type` is
+             * `search_result_click` — a click with no product cannot be attributed to anything.
+             *
+             */
+            search_result_product_id?: string;
+            /**
+             * Its 1-based position in the results as they were shown. Optional, but worth
+             * sending: it is what distinguishes a product that was clicked because it was
+             * featured from one that would have been found anyway.
+             *
+             */
+            search_result_position?: number;
             /**
              * How many results the search returned. Send `0` when it returned none — that is the
              * signal a merchant most needs, marking a search the catalogue could not answer at
