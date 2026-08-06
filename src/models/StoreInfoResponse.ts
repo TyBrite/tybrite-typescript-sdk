@@ -66,6 +66,15 @@ export type StoreInfoResponse = {
          * flow instead of an add-to-cart checkout.
          */
         commerce_model: StoreInfoResponse.commerce_model;
+        /**
+         * Where a wholesale store sits in the supply chain, listed upstream to downstream. This is the store's position; `commerce_model` is how it sells.
+         * - `supplier` — supplies raw materials, components, or unbranded goods to other producers.
+         * - `manufacturer` — makes the finished products it sells.
+         * - `distributor` — an authorised reseller for a brand or manufacturer, usually in set regions.
+         * - `wholesaler` — buys in bulk and resells to other businesses.
+         * `null` on a retail store, and on a wholesale store that has not stated a position. A buyer uses this to find the right tier of seller — buying direct from a manufacturer and buying from a wholesaler differ in price, minimum order quantity, and lead time.
+         */
+        vendor_type?: StoreInfoResponse.vendor_type;
     };
     /**
      * Catalog overview (optional, included when requested)
@@ -344,6 +353,20 @@ export namespace StoreInfoResponse {
     export enum commerce_model {
         RETAIL = 'retail',
         WHOLESALE = 'wholesale',
+    }
+    /**
+     * Where a wholesale store sits in the supply chain, listed upstream to downstream. This is the store's position; `commerce_model` is how it sells.
+     * - `supplier` — supplies raw materials, components, or unbranded goods to other producers.
+     * - `manufacturer` — makes the finished products it sells.
+     * - `distributor` — an authorised reseller for a brand or manufacturer, usually in set regions.
+     * - `wholesaler` — buys in bulk and resells to other businesses.
+     * `null` on a retail store, and on a wholesale store that has not stated a position. A buyer uses this to find the right tier of seller — buying direct from a manufacturer and buying from a wholesaler differ in price, minimum order quantity, and lead time.
+     */
+    export enum vendor_type {
+        SUPPLIER = 'supplier',
+        MANUFACTURER = 'manufacturer',
+        DISTRIBUTOR = 'distributor',
+        WHOLESALER = 'wholesaler',
     }
     /**
      * The deployment kind this store runs in — `standard` (a store on its own), `marketplace` (inside a marketplace), or `supplier` (a B2B/wholesale deployment).
