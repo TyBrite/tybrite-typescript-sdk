@@ -60,10 +60,13 @@ export type StoreInfoResponse = {
          * - `retail` — a standard consumer storefront: browse the catalog, add to cart, and pay now
          * at checkout.
          *
-         * - `wholesale` — the store sells to business buyers on payment terms. There is no direct
-         * pay-now checkout; buyers request a quote, receive a quote, place a purchase order, and
-         * are billed on a terms invoice. A wholesale storefront should surface the request-for-quote
-         * flow instead of an add-to-cart checkout.
+         * - `wholesale` — the store sells to business buyers, often on payment terms. A wholesale
+         * storefront supports two buying flows: direct checkout, for an approved buyer reordering
+         * routine items, and request-for-quote, for negotiated or bespoke orders. Placing a direct
+         * order returns a `settlement` — `terms` (a terms invoice was issued and is paid against the
+         * invoice) or `pay_now` (complete payment against the returned `order_id`, exactly like a
+         * retail order). The server decides which from the buyer's own terms, so a wholesale
+         * storefront builds both flows and branches on that response rather than on this field.
          */
         commerce_model: StoreInfoResponse.commerce_model;
         /**
@@ -345,10 +348,13 @@ export namespace StoreInfoResponse {
      * - `retail` — a standard consumer storefront: browse the catalog, add to cart, and pay now
      * at checkout.
      *
-     * - `wholesale` — the store sells to business buyers on payment terms. There is no direct
-     * pay-now checkout; buyers request a quote, receive a quote, place a purchase order, and
-     * are billed on a terms invoice. A wholesale storefront should surface the request-for-quote
-     * flow instead of an add-to-cart checkout.
+     * - `wholesale` — the store sells to business buyers, often on payment terms. A wholesale
+     * storefront supports two buying flows: direct checkout, for an approved buyer reordering
+     * routine items, and request-for-quote, for negotiated or bespoke orders. Placing a direct
+     * order returns a `settlement` — `terms` (a terms invoice was issued and is paid against the
+     * invoice) or `pay_now` (complete payment against the returned `order_id`, exactly like a
+     * retail order). The server decides which from the buyer's own terms, so a wholesale
+     * storefront builds both flows and branches on that response rather than on this field.
      */
     export enum commerce_model {
         RETAIL = 'retail',
