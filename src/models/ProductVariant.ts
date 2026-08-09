@@ -21,15 +21,15 @@ export type ProductVariant = {
      */
     sku?: string;
     /**
-     * Base price in cents
+     * Base price in major currency units (369.99 = $369.99), not minor units
      */
     price?: number;
     /**
-     * Sale price in cents (null if not on sale)
+     * Sale price in major currency units (369.99 = $369.99); null if not on sale
      */
     sale_price?: number | null;
     /**
-     * Actual customer-facing price in cents (considers sale_price)
+     * Actual customer-facing price in major currency units (considers sale_price)
      */
     selling_price?: number;
     /**

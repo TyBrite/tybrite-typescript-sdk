@@ -144,7 +144,7 @@ export class TaxonomyService {
          */
         rootOnly?: boolean,
         /**
-         * When true, return subcategories as a nested hierarchy: each subcategory includes a children array of its nested subcategories. The response is not paginated in this mode — the full tree is returned in one call.
+         * When true, return subcategories as a nested hierarchy: each subcategory includes a children array of its nested subcategories. The response is not paginated in this mode — the full forest is returned in one call, and carries `tree: true` so a client can confirm it received a hierarchy rather than the first page of a flat list.
          */
         tree?: boolean,
         /**
@@ -212,7 +212,7 @@ export class TaxonomyService {
     }: {
         id: string,
         /**
-         * Comma-separated list of related data to nest on the response. Supported values: children (the subcategory's direct, one-level-down child subcategories, as a children array) and ancestors (the breadcrumb chain from the top-level subcategory down to the immediate parent, as an ancestors array ordered root-first; empty for a top-level subcategory). Combine them, e.g. include=ancestors,children. Omit for a flat subcategory object.
+         * Comma-separated list of related data to nest on the response. Supported values: children (the subcategory's direct, one-level-down child subcategories, as a children array) and ancestors (the breadcrumb chain as an ancestors array ordered root-first). The trail begins with the owning category and continues down to the immediate parent, so a top-level subcategory returns a single entry: its category. Each entry carries a `type` of `category` or `subcategory`, because the two are different resources — a category is addressed on /v1/categories and a subcategory on /v1/subcategories — and a client linking a crumb needs to know which it holds. Combine them, e.g. include=ancestors,children. Omit for a flat subcategory object.
          */
         include?: string,
         /**

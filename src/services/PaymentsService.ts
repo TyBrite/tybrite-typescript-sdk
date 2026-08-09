@@ -171,11 +171,21 @@ export class PaymentsService {
              */
             provider: string;
             /**
-             * Payment amount (must be greater than 0)
+             * Payment amount in MAJOR currency units — `100.00` is one hundred dollars, not one
+             * dollar. This matches every other amount in the API: catalog prices, order totals
+             * and refunds are all major units. Conversion to a processor's minor units (Stripe
+             * cents, Paystack kobo) happens server-side; never send minor units here.
+             *
+             * When `order_id` is supplied the amount must equal that order's total to the cent,
+             * or the request is rejected with `amount_mismatch`. Sending `10000` for a `100.00`
+             * order fails that check rather than charging a hundred times over.
+             *
              */
             amount: number;
             /**
-             * Currency code (ISO 4217). Required for Stripe and Paystack.
+             * Currency code (ISO 4217). Case-insensitive — it is normalised to whatever the
+             * chosen processor expects, so `usd` and `USD` behave identically.
+             * Required for Stripe and Paystack.
              * - Stripe: Defaults to store's default currency
              * - PayPal: Defaults to store's default currency
              * - Paystack: Must be one of NGN, GHS, ZAR, KES, USD

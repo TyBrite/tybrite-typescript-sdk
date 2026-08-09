@@ -129,11 +129,11 @@ export type Product = {
      */
     sku?: string | null;
     /**
-     * Base price in cents (only present for simple products or list endpoint)
+     * Base price in major currency units (369.99 = $369.99), not minor units. Only present for simple products or the list endpoint.
      */
     price?: number | null;
     /**
-     * Sale price in cents if on sale
+     * Sale price in major currency units (369.99 = $369.99) if on sale
      */
     sale_price?: number | null;
     /**

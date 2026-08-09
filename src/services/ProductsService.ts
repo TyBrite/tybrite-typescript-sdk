@@ -85,16 +85,21 @@ export class ProductsService {
         /**
          * Filter products by category UUID. Use this to build category-specific product pages.
          *
+         * **Covers descendants.** A category matches products filed directly against it AND
+         * products filed under any of its subcategories, at any depth, so a category page shows
+         * everything beneath it rather than only what was filed at the top level.
+         *
+         * **Accepts several ids.** Repeat the parameter (`category_id=a&category_id=b`), bracket
+         * it (`category_id[]=a&category_id[]=b`), or comma-separate it (`category_id=a,b`).
+         * Passing several ids in one request keeps a single pagination cursor valid across the
+         * whole set; issuing one request per category gives separate cursors that cannot be
+         * combined into a coherent page 2.
+         *
          * **Validation:**
-         * - Must be a valid UUID format
-         * - Category must exist in your store
+         * - Each value must be a valid UUID
+         * - An id that matches nothing returns an empty result rather than an error
          *
-         * **Use Cases:**
-         * - Category navigation pages
-         * - Category-specific product grids
-         * - Filtered product listings
-         *
-         * **Combine with subcategory_id** for hierarchical filtering:
+         * **Combine with subcategory_id** to narrow further — both filters must match.
          *
          * **Related:** Use `GET /v1/categories` to retrieve available categories.
          *
@@ -103,17 +108,21 @@ export class ProductsService {
         /**
          * Filter products by subcategory UUID for more granular filtering.
          *
+         * **Covers descendants.** A subcategory matches products filed against it and against
+         * every nested subcategory beneath it, so browsing a parent surfaces its children's
+         * products too.
+         *
+         * **Accepts several ids**, in the same three forms as `category_id`.
+         *
          * **Validation:**
-         * - Must be a valid UUID format
-         * - Subcategory must exist in your store
+         * - Each value must be a valid UUID
+         * - An id that matches nothing returns an empty result rather than an error
          *
          * **Hierarchical Filtering:**
          * - Can be used alone or combined with category_id
          * - When combined, both filters must match
          *
-         * **Example:**
-         *
-         * **Related:** Use `GET /v1/categories/{id}/subcategories` to retrieve subcategories for a category.
+         * **Related:** Use `GET /v1/subcategories?category_id=...` to retrieve the subcategories of a category.
          *
          */
         subcategoryId?: string,

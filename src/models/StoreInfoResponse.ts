@@ -133,7 +133,14 @@ export type StoreInfoResponse = {
                      * Category image URL, if the merchant set one.
                      */
                     image?: string | null;
+                    /**
+                     * Products filed DIRECTLY against this category. Excludes products filed under its subcategories, so a category whose products all sit in subcategories reads 0 here.
+                     */
                     product_count?: number;
+                    /**
+                     * Products under this category at any depth, including those filed under its subcategories. This is the figure that matches what `GET /v1/products?category_id=...` returns.
+                     */
+                    product_count_including_descendants?: number;
                 }>;
             };
             subcategories?: {
@@ -162,7 +169,14 @@ export type StoreInfoResponse = {
                      * Ids of this subcategory's direct (one-level-down) child subcategories.
                      */
                     children?: Array<string>;
+                    /**
+                     * Products filed DIRECTLY against this subcategory, excluding those under its nested children.
+                     */
                     product_count?: number;
+                    /**
+                     * Products under this subcategory at any depth. This is the figure that matches what `GET /v1/products?subcategory_id=...` returns.
+                     */
+                    product_count_including_descendants?: number;
                 }>;
             };
         };

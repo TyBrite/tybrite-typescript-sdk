@@ -10,6 +10,10 @@ export type Subcategory = {
      */
     parent_id?: string | null;
     name?: string;
+    /**
+     * URL-safe identifier for the subcategory, stable across renames. Unique within its store, category and parent; where two names in that scope would produce the same slug, a numeric suffix is appended.
+     */
+    slug?: string;
     description?: string;
     /**
      * URL of the subcategory image
@@ -24,10 +28,23 @@ export type Subcategory = {
      */
     children?: Array<Subcategory>;
     /**
-     * Ancestor breadcrumb chain, ordered from the top-level subcategory down to the immediate parent (root-first). Only included when fetching a single subcategory with include=ancestors; empty for a top-level subcategory, omitted otherwise.
+     * Ancestor breadcrumb chain, ordered root-first. Begins with the owning category and continues down to the immediate parent, so a top-level subcategory returns one entry: its category. Each entry carries a `type` of `category` or `subcategory` — the two are addressed on different endpoints, so a client linking a crumb needs to know which it holds. Only included when fetching a single subcategory with include=ancestors.
      */
     ancestors?: Array<Subcategory>;
+    /**
+     * Which level of the taxonomy this entry is. Present on entries of an ancestors chain, where both levels appear; omitted on an ordinary subcategory object.
+     */
+    type?: Subcategory.type;
     created_at?: string;
     updated_at?: string;
 };
+export namespace Subcategory {
+    /**
+     * Which level of the taxonomy this entry is. Present on entries of an ancestors chain, where both levels appear; omitted on an ordinary subcategory object.
+     */
+    export enum type {
+        CATEGORY = 'category',
+        SUBCATEGORY = 'subcategory',
+    }
+}
 

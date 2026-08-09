@@ -81,7 +81,7 @@ export type { ShippingCalculationByPlace } from './models/ShippingCalculationByP
 export type { ShippingCalculationRequest } from './models/ShippingCalculationRequest';
 export type { ShippingParcelInput } from './models/ShippingParcelInput';
 export { StoreInfoResponse } from './models/StoreInfoResponse';
-export type { Subcategory } from './models/Subcategory';
+export { Subcategory } from './models/Subcategory';
 export { Thread } from './models/Thread';
 export type { UnifiedCustomerProfile } from './models/UnifiedCustomerProfile';
 export type { User } from './models/User';
