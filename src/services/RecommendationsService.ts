@@ -19,7 +19,9 @@ export class RecommendationsService {
      * back to also-bought, then trending, when there is no session signal.
      * - **trending**: Currently trending products
      * - **new**: Recently added products
-     * - **personalized**: Based on a customer's preferences
+     * - **personalized**: Based on the signed-in shopper's preferences. Identify the shopper with an
+     * `x-auth-token`, `x-external-auth`, or `x-idp-token` credential header; with no valid credential
+     * the response falls back to trending.
      * - **bundle**: Bundle suggestions. Items that complement the product are surfaced ahead of
      * alternatives.
      *
@@ -48,6 +50,9 @@ export class RecommendationsService {
      */
     public getRecommendations({
         requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         requestBody: {
             type: 'similar' | 'also-bought' | 'next' | 'trending' | 'new' | 'personalized' | 'bundle';
@@ -59,16 +64,32 @@ export class RecommendationsService {
              * Used with type `next`. The shopper's current session identifier; the most recent product viewed/added in that session is used as the anchor when `productId` is not supplied.
              */
             sessionId?: string;
-            /**
-             * Optional for `personalized`. When omitted, the response falls back to trending recommendations.
-             */
-            customerId?: string;
             limit?: number;
         },
+        /**
+         * Session token of a customer signed in through Galactic Core. Used only when `type` is `personalized`, to identify the shopper the recommendations are for. Personalization is keyed to whoever this credential resolves to — a customer id in the request body is not accepted for this. An absent or invalid credential simply falls back to trending recommendations rather than returning an error.
+         *
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth signed assertion identifying the shopper. Serves the same purpose as `x-auth-token` for `personalized`; send whichever matches how the shopper signed in.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * An identity token from the store's own configured Auth verifier, identifying the shopper. Serves the same purpose as `x-auth-token` for `personalized`.
+         *
+         */
+        xIdpToken?: string,
     }): CancelablePromise<RecommendationResponse> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/recommendations',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
