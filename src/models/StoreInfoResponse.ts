@@ -20,6 +20,19 @@ export type StoreInfoResponse = {
          */
         logo_url?: string | null;
         /**
+         * The same brand in the forms a storefront needs, keyed by the placement each mark is drawn for. A full-colour lockup is unreadable at favicon size and a dark-ink wordmark disappears on a dark header, so rendering one file everywhere means recolouring or shrinking it. Every variant is optional: this is an empty object when the merchant has supplied none, so it can be indexed without a guard, and `logo_url` remains the primary mark either way. Fall back to `logo_url` for any placement that is absent.
+         */
+        logo_variants?: Record<string, {
+            /**
+             * URL of this mark.
+             */
+            url: string;
+            /**
+             * The merchant's own guidance for this mark — clear space, backgrounds to avoid — or null if they gave none.
+             */
+            usage_note?: string | null;
+        }>;
+        /**
          * Short description of the store, or null if not set.
          */
         description?: string | null;
@@ -325,6 +338,10 @@ export type StoreInfoResponse = {
          * The store accepts customer-lodged returns (Settings → General → Returns).
          */
         returns?: boolean;
+        /**
+         * How many days after delivery a shopper may start a return, counted from the delivery date where the store records one and from the order date otherwise (an in-store sale counts from the day of sale). **`null` means the merchant has stated no period** — say that returns are accepted without naming a window rather than assuming a common default, since no such default exists. Only meaningful while `returns` is true. The window is enforced when a return is lodged, not merely advertised: a request after it is rejected with the date the window closed, so a storefront can show this figure knowing the API agrees with it.
+         */
+        returns_window_days?: number | null;
         /**
          * The store has at least one customer conversation thread (data-presence; every plan).
          */

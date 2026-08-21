@@ -17,6 +17,10 @@ export class IngestionService {
      * **JSON, XML, or CSV** — declare the format with the `Content-Type` header
      * (`application/json`, `application/xml`, `text/csv`) or the `?format=` query parameter.
      *
+     * **Batch size.** A request carries at most **12 products**; a larger batch is rejected with
+     * `400` rather than applied in part. Send a large catalog as a sequence of batches, or
+     * configure a scheduled feed pull, which is built for whole-catalog sync.
+     *
      * **Upsert by SKU.** A product whose `sku` already exists in your store is **updated**;
      * a new `sku` is **created**. Pass `?strategy=create_only` to skip existing SKUs instead
      * of updating them.

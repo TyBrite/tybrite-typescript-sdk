@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CustomFieldValue } from '../models/CustomFieldValue';
 import type { Product } from '../models/Product';
 import type { ProductCollection } from '../models/ProductCollection';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -658,6 +659,52 @@ export class ProductsService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 404: `No specifications found for this product`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get a product's custom fields
+     * Returns the merchant's own custom fields for a single product, with their values.
+     *
+     * A merchant can define fields that Galactic Core does not have — a care instruction, a country of
+     * origin, a fabric composition — and fill them per product. Each definition carries a type, so a
+     * number arrives as a number and a multi-select as an array rather than as text.
+     *
+     * **Only fields the merchant published are returned.** A custom field can hold a cost, a margin note
+     * or an internal reference, so a field is private unless the merchant marks it public; private fields
+     * are absent from this response rather than empty. A product with no published fields returns an empty
+     * array, which is not an error.
+     *
+     * Because the merchant controls both the field names and how many exist, treat the array as data to
+     * render rather than a fixed shape: read `field_label` for a heading and `field_type` to decide how to
+     * display `value`.
+     *
+     * Read access — works with a publishable or secret key.
+     *
+     * @returns any Successfully retrieved the product's published custom fields
+     * @throws ApiError
+     */
+    public getProductCustomFields({
+        id,
+    }: {
+        /**
+         * The product UUID whose custom fields to fetch.
+         */
+        id: string,
+    }): CancelablePromise<{
+        custom_fields?: Array<CustomFieldValue>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/products/{id}/custom-fields',
+            path: {
+                'id': id,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

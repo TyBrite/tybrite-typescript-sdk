@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CustomFieldValue } from './CustomFieldValue';
 export type Customer = {
     id?: string;
     name?: string;
@@ -12,6 +13,13 @@ export type Customer = {
      */
     address?: string | null;
     status?: Customer.status;
+    /**
+     * The merchant's own fields on this record, with their values. Only fields the merchant published
+     * appear here. The merchant controls the names and how many exist, so render the array rather than
+     * reading fixed keys.
+     *
+     */
+    custom_fields?: Array<CustomFieldValue>;
     /**
      * The customer's loyalty/spend tier, derived from their purchase history. New
      * customers start at `bronze`.

@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Address } from './Address';
+import type { CustomFieldValue } from './CustomFieldValue';
 import type { OrderItem } from './OrderItem';
 import type { OrderStatusNote } from './OrderStatusNote';
 export type Order = {
@@ -42,6 +43,16 @@ export type Order = {
      *
      */
     status_notes?: Array<OrderStatusNote>;
+    /**
+     * The merchant's own fields on this order, with their values — a buyer's purchase-order number, a
+     * cost centre, whatever the merchant defined. Only fields the merchant published appear here; one
+     * holding an internal note or a cost stays in the admin. Empty when the merchant has defined none.
+     *
+     * The merchant controls the names and how many exist, so render the array rather than reading fixed
+     * keys: `field_label` is the heading to show, and `field_type` gives the shape of `value`.
+     *
+     */
+    custom_fields?: Array<CustomFieldValue>;
     notes?: string;
     tracking_number?: string;
     estimated_delivery?: string;

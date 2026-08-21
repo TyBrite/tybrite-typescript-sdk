@@ -291,6 +291,20 @@ export class OrdersService {
              */
             payment_reference?: string;
             /**
+             * Values for the merchant's own custom fields on this order, as
+             * `{ field_name: value }`. Use this to carry a reference the merchant asked for at
+             * checkout — a buyer's purchase-order number, a cost centre, a delivery instruction.
+             *
+             * Each value is validated against the merchant's definition: a name that is not defined,
+             * a value outside a `select` field's options, or a number that will not parse is
+             * **rejected**. A rejected field does **not** fail the order — the order is created and
+             * the reason is returned in `post_processing_warnings`, because the payment has already
+             * been taken by that point. Read `GET /v1/products/{id}/custom-fields` or the order
+             * response's `custom_fields` to discover which fields a merchant has defined.
+             *
+             */
+            custom_fields?: any | null;
+            /**
              * Shipping calculation details from /v1/shipping/calculate for audit trail
              */
             shipping_metadata?: any | null;

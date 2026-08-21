@@ -2,9 +2,16 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CustomFieldValue } from './CustomFieldValue';
 import type { ReturnItem } from './ReturnItem';
 export type Return = {
     id: string;
+    /**
+     * The merchant's own fields on this return — an RMA number, a carrier reference. Only fields the merchant published appear here; the merchant controls the names and how many
+     * exist, so render the array rather than reading fixed keys.
+     *
+     */
+    custom_fields?: Array<CustomFieldValue>;
     /**
      * Human-readable reference for the return.
      */

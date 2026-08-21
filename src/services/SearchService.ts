@@ -29,6 +29,19 @@ export class SearchService {
      * rank first: the fallback only runs when there were none, so a query that already worked is
      * unaffected.
      *
+     *
+     * **Merchandising.** A merchant can place results deliberately from their admin, for a query or a
+     * family of queries: **pin** a product to the top, **bury** one to the bottom, or **boost** one so
+     * it lifts past near neighbours without jumping the queue. Rules can run between dates, and a
+     * higher-priority rule wins where two overlap.
+     *
+     * Rules apply **after** ranking and only reorder — they never introduce a product the query did not
+     * match, and a pinned product that is deleted, offline or otherwise not sellable does not appear.
+     * Pinned and boosted results carry a `matchReason` of `Featured by the store`, so a storefront can
+     * label a deliberate placement rather than presenting it as an earned one. Nothing needs to be
+     * requested or configured on the client: the ordering already reflects the rules, and a store with
+     * none behaves exactly as before.
+     *
      * **Marketplace:** when called with a marketplace operator key, searches products across all
      * merchants in the marketplace; pass `?store_id=<merchant>` to narrow results to a single
      * merchant.
@@ -86,6 +99,19 @@ export class SearchService {
      * **Auth:** works with both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      * Despite using `POST` (to carry the structured request body), this is a **read-only** operation,
      * so publishable keys are allowed for client-side storefront search.
+     *
+     *
+     * **Merchandising.** A merchant can place results deliberately from their admin, for a query or a
+     * family of queries: **pin** a product to the top, **bury** one to the bottom, or **boost** one so
+     * it lifts past near neighbours without jumping the queue. Rules can run between dates, and a
+     * higher-priority rule wins where two overlap.
+     *
+     * Rules apply **after** ranking and only reorder — they never introduce a product the query did not
+     * match, and a pinned product that is deleted, offline or otherwise not sellable does not appear.
+     * Pinned and boosted results carry a `matchReason` of `Featured by the store`, so a storefront can
+     * label a deliberate placement rather than presenting it as an earned one. Nothing needs to be
+     * requested or configured on the client: the ordering already reflects the rules, and a store with
+     * none behaves exactly as before.
      *
      * **When to use:** prefer this over the text `GET /v1/search` (`searchProducts`) when the query
      * is conversational or descriptive. Two tuning options:

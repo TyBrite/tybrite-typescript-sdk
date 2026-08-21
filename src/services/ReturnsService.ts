@@ -34,6 +34,100 @@ export class ReturnsService {
         });
     }
     /**
+     * Check whether an order can still be returned
+     * Answers the order-level question — *can this order still be returned, and until when?* —
+     * before a shopper is shown a return form.
+     *
+     * This is the companion to `features.returns_window_days` on `getStoreInfo`, and the two are
+     * deliberately different. That field is the store's **policy** ("30 days"), a store-level fact you
+     * render on a product page. This is the **verdict for one order**, which depends on when that
+     * particular parcel was delivered and therefore cannot be cached alongside the policy.
+     *
+     * Use it so a storefront never offers a return the API will refuse. The same window is enforced
+     * when the return is lodged, so this reads the rule ahead of time rather than duplicating it: a
+     * request made after the window is rejected with the date it closed.
+     *
+     * **When `window_days` is `null`** the merchant has stated no period, `eligible` is `true`, and
+     * `closes_at` is `null` — say returns are accepted without naming a deadline.
+     *
+     * **Customer session required** — the order must belong to the signed-in shopper, so this can
+     * never be used to probe whether an arbitrary order id exists on the store.
+     *
+     * @returns any Eligibility resolved
+     * @throws ApiError
+     */
+    public checkReturnEligibility({
+        orderId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The online order to check. Must belong to the authenticated customer.
+         */
+        orderId: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or
+         * `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of
+         * `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            /**
+             * Whether a return can be started for this order right now.
+             */
+            eligible: boolean;
+            /**
+             * Why not, when `eligible` is false. `window_closed` (the period has passed) or `returns_disabled` (the store does not accept returns). Null when eligible.
+             */
+            reason?: 'window_closed' | 'returns_disabled';
+            /**
+             * The store's return window, or null when it has stated none.
+             */
+            window_days?: number | null;
+            /**
+             * When the window closes for THIS order, measured from delivery where the store records it and from the order date otherwise. Null when there is no window.
+             */
+            closes_at?: string | null;
+            /**
+             * Whole days left, 0 once closed and null when there is no window.
+             */
+            days_remaining?: number | null;
+        };
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/returns/eligibility',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            query: {
+                'order_id': orderId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `No such order for this customer.`,
+            },
+        });
+    }
+    /**
      * Get the customer's store credit balance
      * Returns the authenticated customer's total redeemable store credit balance.
      * Store credit is issued when a customer accepts a store-credit offer on a
