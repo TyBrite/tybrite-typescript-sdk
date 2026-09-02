@@ -14,6 +14,20 @@ export type DiscoveryResponse = {
      * The time window the ranking covers, in hours.
      */
     window_hours?: number;
+    /**
+     * Whether any entry in `products` is padding rather than a measured signal.
+     *
+     * A store with little or no activity in the window would otherwise return an empty or
+     * one-item shelf, so the list is topped up from featured and recently-added products. Those
+     * entries are real, purchasable products and are safe to display — but they were not ranked
+     * by the requested metric, and their `score` is a ranking weight rather than a view count or
+     * conversion ratio.
+     *
+     * `true` is common on a new store or a short window; it is not an error. Label the shelf
+     * generically ("Popular picks") or hide it, rather than presenting padding as the metric.
+     *
+     */
+    backfilled?: boolean;
     products?: Array<{
         product_id?: string;
         /**
@@ -25,6 +39,10 @@ export type DiscoveryResponse = {
          * e.g. `1.7333` means more units sold than views recorded, `0.375` = ~3 buys per 8 views).
          * Counts scale with your store's traffic; the ratio is a small decimal that can exceed 1.
          * Use `score` only to sort/rank (results are already returned highest-first).
+         *
+         * When `backfilled` is `true` the score is NOT the signal described above — it is a
+         * small ranking weight for a padded entry. Read `backfilled` before presenting a score
+         * as a measurement.
          *
          */
         score?: number;

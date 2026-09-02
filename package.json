@@ -1,7 +1,7 @@
 {
   "name": "@tybrite-labs/sdk",
-  "version": "1.0.11",
-  "description": "TypeScript SDK for Galactic Core — a headless commerce API for catalog, cart, checkout, orders, payments, customers, search, recommendations, promotions, gift cards, returns and webhooks.",
+  "version": "1.0.12",
+  "description": "TypeScript SDK for Galactic Core \u2014 a headless commerce API for catalog, cart, checkout, orders, payments, customers, search, recommendations, promotions, gift cards, returns and webhooks.",
   "homepage": "https://gc.tybritelabs.com",
   "bugs": {
     "url": "https://docs.tybritelabs.com"

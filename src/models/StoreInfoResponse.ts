@@ -289,16 +289,15 @@ export type StoreInfoResponse = {
      * **What `true` / `false` mean.** A flag is `true` only when the capability is BOTH available to the store AND has data/config to surface. `false` is deliberately broad — it can mean any of: the store's plan doesn't include the feature, the plan includes it but it isn't set up/has no data yet, or both. A `false` flag therefore does NOT tell you *why* it's off; treat it simply as "don't render this yet."
      *
      * **Two kinds of flag:**
-     * - **Plan-gated** — `ai_recommendations`, `semantic_search`, `multi_currency`,
-     * `dynamic_pricing`, `cms`, `lookbooks`, `returns`. `true` requires the store's plan to
-     * include the feature AND it to be configured. By plan: Starter includes none of these;
-     * Growth adds content pages/lookbooks (`cms`, `lookbooks`) and `returns`; Premium and
-     * Enterprise add smart search & recommendations (`ai_recommendations`, `semantic_search`),
-     * `dynamic_pricing`, and `multi_currency`.
+     * - **Plan-gated** — `ai_recommendations`, `semantic_search`, `dynamic_pricing`, `cms`,
+     * `lookbooks`, `returns`. `true` requires the store's plan to include the feature AND it to
+     * be configured. By plan: Starter includes none of these; Growth adds content
+     * pages/lookbooks (`cms`, `lookbooks`) and `returns`; Premium and Enterprise add smart
+     * search & recommendations (`ai_recommendations`, `semantic_search`) and `dynamic_pricing`.
      *
-     * - **Data-presence (every plan)** — `gift_cards`, `promotions`, `messaging`,
-     * `specifications`, `collections`. Not plan-gated at all; `true` simply means the store
-     * currently has at least one of that item (e.g. `gift_cards: true` = the store has issued
+     * - **Data-presence (every plan)** — `multi_currency`, `gift_cards`, `promotions`,
+     * `messaging`, `specifications`, `collections`. Not plan-gated at all; `true` simply means
+     * the store currently has at least one of that item (e.g. `gift_cards: true` = the store has issued
      * one or more gift cards). `false` means none exist yet, not that the feature is forbidden.
      */
     features?: {
@@ -311,7 +310,7 @@ export type StoreInfoResponse = {
          */
         semantic_search?: boolean;
         /**
-         * Selling in multiple currencies is available (plan-dependent and configured).
+         * The store sells in more than one currency (it has a second active currency configured).
          */
         multi_currency?: boolean;
         /**
