@@ -74,6 +74,14 @@ export type Promotion = {
      */
     bogo_free_products_resolved?: Array<ResolvedPromotionProduct>;
     /**
+     * ISO 3166-1 alpha-2 codes this promotion applies in. An EMPTY array means it applies everywhere, which is the default. When codes are present the promotion is only applied to shoppers in those markets, and is refused when the shopper's location cannot be determined — applying a market-limited offer to an unknown visitor would give it to everyone.
+     */
+    target_countries?: Array<string>;
+    /**
+     * Region or state names this promotion applies in, matched case-insensitively. Empty means everywhere. Use alongside `target_countries` to narrow within a market.
+     */
+    target_regions?: Array<string>;
+    /**
      * Whether the promotion only applies during specific times/days.
      */
     has_time_restrictions?: boolean;

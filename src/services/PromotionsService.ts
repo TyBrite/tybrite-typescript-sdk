@@ -191,6 +191,14 @@ export class PromotionsService {
              */
             cart: Array<PromotionCartItem>;
             /**
+             * The shopper's country as an ISO 3166-1 alpha-2 code, used to decide whether a market-targeted promotion applies. Optional: when omitted the country is taken from the request's own network origin, so a storefront served through Galactic Core needs to send nothing. Pass it explicitly when your storefront resolves the destination itself, or to preview another market.
+             */
+            country?: string;
+            /**
+             * The shopper's region or state, for a promotion narrowed within a market. Optional, and taken from the request's origin when omitted.
+             */
+            region?: string;
+            /**
              * Alias of `cart`. Send one or the other, not both.
              */
             items?: Array<PromotionCartItem>;
@@ -251,6 +259,14 @@ export class PromotionsService {
              * The cart lines to evaluate promotions against. Also accepted under the name `items`, which behaves identically; send whichever matches your storefront's own cart shape, and `cart` when both are present.
              */
             cart: Array<PromotionCartItem>;
+            /**
+             * The shopper's country as an ISO 3166-1 alpha-2 code, used to decide whether a market-targeted promotion applies. Optional: when omitted the country is taken from the request's own network origin, so a storefront served through Galactic Core needs to send nothing. Pass it explicitly when your storefront resolves the destination itself, or to preview another market.
+             */
+            country?: string;
+            /**
+             * The shopper's region or state, for a promotion narrowed within a market. Optional, and taken from the request's origin when omitted.
+             */
+            region?: string;
             /**
              * Alias of `cart`. Send one or the other, not both.
              */
