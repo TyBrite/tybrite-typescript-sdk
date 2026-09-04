@@ -8,6 +8,7 @@ import { FetchHttpRequest } from './core/FetchHttpRequest';
 import { AnalyticsService } from './services/AnalyticsService';
 import { AuthenticationService } from './services/AuthenticationService';
 import { B2BService } from './services/B2BService';
+import { CampaignsService } from './services/CampaignsService';
 import { CartWishlistService } from './services/CartWishlistService';
 import { CmsService } from './services/CmsService';
 import { CustomersService } from './services/CustomersService';
@@ -39,6 +40,7 @@ export class Tybrite {
     public readonly analytics: AnalyticsService;
     public readonly authentication: AuthenticationService;
     public readonly b2B: B2BService;
+    public readonly campaigns: CampaignsService;
     public readonly cartWishlist: CartWishlistService;
     public readonly cms: CmsService;
     public readonly customers: CustomersService;
@@ -81,6 +83,7 @@ export class Tybrite {
         this.analytics = new AnalyticsService(this.request);
         this.authentication = new AuthenticationService(this.request);
         this.b2B = new B2BService(this.request);
+        this.campaigns = new CampaignsService(this.request);
         this.cartWishlist = new CartWishlistService(this.request);
         this.cms = new CmsService(this.request);
         this.customers = new CustomersService(this.request);

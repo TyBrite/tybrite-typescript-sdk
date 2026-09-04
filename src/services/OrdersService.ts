@@ -317,6 +317,14 @@ export class OrdersService {
              */
             promotion_usages?: any[] | null;
             /**
+             * Campaigns to apply to this order, by id. The discount each one grants is computed
+             * server-side against the campaign's own rules and its remaining budget, so a
+             * campaign that has spent its budget adds nothing. Once the order is paid, what
+             * each campaign granted is drawn from its budget.
+             *
+             */
+            campaign_ids?: any[] | null;
+            /**
              * Apply the customer's redeemable store credit to this order. When
              * true (and the order has a `customer_id`), store credit is spent
              * against the order total, capped at the total. The amount actually
