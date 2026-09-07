@@ -2,6 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { SandboxCampaign } from '../models/SandboxCampaign';
+import type { SandboxGiftCard } from '../models/SandboxGiftCard';
+import type { SandboxPromotion } from '../models/SandboxPromotion';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class SandboxService {
@@ -139,6 +142,191 @@ export class SandboxService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Create a sandbox promotion
+     * Creates a promotion in your **sandbox** so you can apply a discount to a sandbox order.
+     *
+     * Promotions are environment-scoped: a test key resolves only sandbox promotions and a live key
+     * only real ones. Because promotions are otherwise created by the merchant in their admin — which
+     * always writes production — this endpoint is how a promotion comes to exist in your sandbox at
+     * all.
+     *
+     * Every field is optional; the defaults produce an active percentage promotion that starts today
+     * and runs for 30 days. The environment is always set to `sandbox` by Galactic Core and is never
+     * read from the request body.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`). Publishable keys and live keys are
+     * rejected.
+     *
+     * @returns any Sandbox promotion created.
+     * @throws ApiError
+     */
+    public seedSandboxPromotion({
+        requestBody,
+    }: {
+        requestBody?: {
+            /**
+             * Display name. Defaults to a generated `Sandbox promotion …` name.
+             */
+            name?: string;
+            /**
+             * `percentage` and `fixed` discount the whole cart. `bogo` and `bundle` carry product
+             * lists and are configured by the merchant.
+             *
+             */
+            type?: 'percentage' | 'fixed' | 'bogo' | 'bundle';
+            /**
+             * Percentage points for `percentage`, else a cash amount.
+             */
+            value?: number;
+            /**
+             * Cart subtotal required before the promotion applies.
+             */
+            min_purchase?: number;
+            /**
+             * Defaults to today. Cannot be in the past.
+             */
+            start_date?: string;
+            /**
+             * Defaults to 30 days from today.
+             */
+            end_date?: string;
+            status?: string;
+        },
+    }): CancelablePromise<{
+        promotion?: SandboxPromotion;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/sandbox/seed/promotion',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Create a sandbox gift card
+     * Creates a gift card in your **sandbox**, so a sandbox order can be paid for with one and gift
+     * card redemption can be exercised end to end.
+     *
+     * Gift cards are environment-scoped: the same code is valid for a test key and unknown to a live
+     * key. Every field is optional; the defaults issue an active 50.00 digital card expiring in a
+     * year, with a generated `SBX-…` code.
+     *
+     * The environment is always set to `sandbox` by Galactic Core and is never read from the request
+     * body. **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any Sandbox gift card created.
+     * @throws ApiError
+     */
+    public seedSandboxGiftCard({
+        requestBody,
+    }: {
+        requestBody?: {
+            /**
+             * Redemption code. Defaults to a generated `SBX-…` code.
+             */
+            code?: string;
+            /**
+             * Face value; the opening balance matches it. Must be greater than zero.
+             */
+            value?: number;
+            type?: string;
+            /**
+             * Defaults to one year from today.
+             */
+            expiry_date?: string;
+        },
+    }): CancelablePromise<{
+        gift_card?: SandboxGiftCard;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/sandbox/seed/gift-card',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Create a sandbox campaign
+     * Creates a marketing campaign in your **sandbox**. A campaign is a budget with a discount
+     * attached: it discounts an order like a promotion, but stops once its budget is spent, so this
+     * is how budget exhaustion is exercised without spending a real one.
+     *
+     * Use `applies_to` to scope where the campaign applies — `online` for storefront orders, `pos`
+     * for in-store, or `all` for both. A campaign scoped to one channel does not discount the other.
+     *
+     * Every field is optional; the defaults create an active campaign with a 1000.00 budget and a 10%
+     * discount, starting today and running for 30 days. The environment is always set to `sandbox` by
+     * Galactic Core and is never read from the request body.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any Sandbox campaign created.
+     * @throws ApiError
+     */
+    public seedSandboxCampaign({
+        requestBody,
+    }: {
+        requestBody?: {
+            /**
+             * Defaults to a generated `Sandbox campaign …` name.
+             */
+            name?: string;
+            type?: string;
+            /**
+             * Total spend the campaign may draw down. Must be greater than zero.
+             */
+            budget?: number;
+            discount_type?: 'percentage' | 'fixed_amount';
+            /**
+             * Must be greater than zero.
+             */
+            discount_value?: number;
+            /**
+             * Which sales channel the campaign discounts.
+             */
+            applies_to?: 'all' | 'online' | 'pos';
+            /**
+             * Defaults to today. Cannot be in the past.
+             */
+            start_date?: string;
+            /**
+             * Defaults to 30 days from today.
+             */
+            end_date?: string;
+            status?: string;
+        },
+    }): CancelablePromise<{
+        campaign?: SandboxCampaign;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/sandbox/seed/campaign',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
