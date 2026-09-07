@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { SandboxB2bBuyerAccount } from '../models/SandboxB2bBuyerAccount';
 import type { SandboxCampaign } from '../models/SandboxCampaign';
 import type { SandboxGiftCard } from '../models/SandboxGiftCard';
 import type { SandboxPromotion } from '../models/SandboxPromotion';
@@ -327,6 +328,65 @@ export class SandboxService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Create a sandbox B2B buyer account
+     * Creates a B2B buyer account in your **sandbox**, which is what makes the `/v1/b2b*` endpoints
+     * reachable with a test key.
+     *
+     * Every B2B endpoint resolves a buyer account for the calling customer before it does anything
+     * else, and returns `403` when there isn't one. Buyer accounts are otherwise created by the
+     * merchant in their admin, which always writes production — so without this, a test key is
+     * refused across the whole B2B surface.
+     *
+     * Pass the `customer_id` of a customer you created with a test key. A production customer is
+     * refused, so a sandbox buyer account can never attach to one of the merchant's real customers.
+     *
+     * A store still has to have B2B enabled: if it does not, every B2B endpoint keeps returning
+     * `404`, and seeding a buyer account does not change that.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any Sandbox B2B buyer account created.
+     * @throws ApiError
+     */
+    public seedSandboxB2BBuyerAccount({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * A sandbox customer of your store. Must already exist.
+             */
+            customer_id: string;
+            payment_terms?: 'prepaid' | 'net15' | 'net30' | 'net60';
+            /**
+             * Credit the buyer may draw on. Zero or greater.
+             */
+            credit_limit?: number;
+            tax_exempt?: boolean;
+            /**
+             * How this buyer checks out. Left unset by default.
+             */
+            checkout_policy?: 'pay_now' | 'terms' | 'upfront_then_terms';
+        },
+    }): CancelablePromise<{
+        buyer_account?: SandboxB2bBuyerAccount;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/sandbox/seed/b2b-buyer-account',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `No sandbox customer with that id in this store.`,
+                409: `This sandbox customer already has a B2B buyer account.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

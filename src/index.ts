@@ -74,6 +74,7 @@ export { ReturnItem } from './models/ReturnItem';
 export { ReturnReason } from './models/ReturnReason';
 export { Review } from './models/Review';
 export type { ReviewSummary } from './models/ReviewSummary';
+export { SandboxB2bBuyerAccount } from './models/SandboxB2bBuyerAccount';
 export { SandboxCampaign } from './models/SandboxCampaign';
 export { SandboxGiftCard } from './models/SandboxGiftCard';
 export { SandboxPromotion } from './models/SandboxPromotion';
