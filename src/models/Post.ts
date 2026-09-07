@@ -21,7 +21,17 @@ export type Post = {
     product_count?: number;
     seo_title?: string;
     seo_description?: string;
+    /**
+     * When the post was first created.
+     */
     created_at?: string;
+    /**
+     * When the post was last edited, in any way and by anyone — the merchant in their admin, or an
+     * automated change such as a regenerated cover image. Use it to show a "last updated" date on
+     * an article; it is always set, and on a post that has never been revised it matches
+     * `created_at`.
+     *
+     */
     updated_at?: string;
     /**
      * Products embedded in the post body, in the order the author placed them. `block_id` ties an embed to the content block it belongs beside, and `display_type` is how the author chose to show it. Each entry arrives with the product already resolved, and an embed whose product is no longer available is omitted, so a post can return fewer products than were authored.

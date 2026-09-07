@@ -17,7 +17,17 @@ export type Lookbook = {
      */
     collection_id?: string | null;
     published_at?: string;
+    /**
+     * When the lookbook was first created.
+     */
     created_at?: string;
+    /**
+     * When the lookbook was last edited, in any way and by anyone. Use it to show a "last updated"
+     * date; it is always set, and on a lookbook that has never been revised it matches
+     * `created_at`.
+     *
+     */
+    updated_at?: string;
     /**
      * Ordered gallery images. Each image may carry shoppable `hotspots`.
      */
