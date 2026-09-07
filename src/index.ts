@@ -77,6 +77,7 @@ export type { ReviewSummary } from './models/ReviewSummary';
 export { SandboxB2bBuyerAccount } from './models/SandboxB2bBuyerAccount';
 export { SandboxCampaign } from './models/SandboxCampaign';
 export { SandboxGiftCard } from './models/SandboxGiftCard';
+export { SandboxPricingRule } from './models/SandboxPricingRule';
 export { SandboxPromotion } from './models/SandboxPromotion';
 export type { SearchResponse } from './models/SearchResponse';
 export type { SearchResult } from './models/SearchResult';

@@ -5,6 +5,7 @@
 import type { SandboxB2bBuyerAccount } from '../models/SandboxB2bBuyerAccount';
 import type { SandboxCampaign } from '../models/SandboxCampaign';
 import type { SandboxGiftCard } from '../models/SandboxGiftCard';
+import type { SandboxPricingRule } from '../models/SandboxPricingRule';
 import type { SandboxPromotion } from '../models/SandboxPromotion';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
@@ -387,6 +388,82 @@ export class SandboxService {
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `No sandbox customer with that id in this store.`,
                 409: `This sandbox customer already has a B2B buyer account.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Create a sandbox dynamic-pricing rule
+     * Creates a dynamic-pricing rule in your **sandbox**, so `/v1/prices*` returns a rule-adjusted
+     * price you can build against.
+     *
+     * Pricing rules are environment-scoped: a test key resolves only the rules you seed, and a live
+     * key only the merchant's real ones. Rules are otherwise created by the merchant in their admin,
+     * which always writes production, so this is how a rule comes to exist in your sandbox.
+     *
+     * Every field is optional; the defaults create an active rule taking 10% off every product,
+     * starting today and running for 30 days. A rule scoped with `applies_to` other than `all`
+     * requires `target_ids`, since a scoped rule with no targets matches nothing.
+     *
+     * The environment is set by Galactic Core and is never read from the request body. Seeding also
+     * refreshes your sandbox pricing cache, so the new rule takes effect on the next request rather
+     * than when the cache expires.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any Sandbox pricing rule created.
+     * @throws ApiError
+     */
+    public seedSandboxPricingRule({
+        requestBody,
+    }: {
+        requestBody?: {
+            /**
+             * Defaults to a generated `Sandbox pricing rule …` name.
+             */
+            name?: string;
+            /**
+             * `percentage` takes a share off, `fixed_amount` a flat amount, `fixed_price` sets
+             * the price outright, and `markup` adds to it.
+             *
+             */
+            rule_type?: 'percentage' | 'fixed_amount' | 'fixed_price' | 'markup';
+            /**
+             * Percentage points for `percentage` and `markup`, else an amount. Must be greater than zero.
+             */
+            discount_value?: number;
+            applies_to?: 'all' | 'category' | 'product' | 'collection';
+            /**
+             * Required and non-empty when `applies_to` is not `all`.
+             */
+            target_ids?: Array<string>;
+            /**
+             * Lower runs first when several rules match.
+             */
+            priority?: number;
+            /**
+             * Defaults to today. Cannot be in the past.
+             */
+            start_date?: string;
+            /**
+             * Defaults to 30 days from today.
+             */
+            end_date?: string;
+            is_active?: boolean;
+        },
+    }): CancelablePromise<{
+        pricing_rule?: SandboxPricingRule;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/sandbox/seed/pricing-rule',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
