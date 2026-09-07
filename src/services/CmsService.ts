@@ -44,11 +44,14 @@ export class CmsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `title`, `slug`, `excerpt`, `content`, `featured_image`
+         * - `id`, `title`, `slug`, `excerpt`, `featured_image`
          * - `category_id`, `category_name`, `category_slug`, `category_icon`
          * - `author_name`, `author_avatar`, `status`, `published_at`
          * - `view_count`, `product_count`, `seo_title`, `seo_description`
-         * - `created_at`, `updated_at`, `products`, `lookbooks`
+         * - `created_at`, `updated_at`
+         *
+         * The article body (`content`) and its embedded `products` and `lookbooks` are returned by
+         * `GET /v1/posts/{slug}`, not here — requesting one of them on the listing is a `400`.
          *
          */
         fields?: string,
@@ -177,7 +180,10 @@ export class CmsService {
          *
          * **Allowed Fields:**
          * - `id`, `title`, `slug`, `description`, `featured_image`
-         * - `collection_id`, `published_at`, `created_at`, `images`
+         * - `status`, `published_at`, `created_at`, `updated_at`
+         *
+         * The gallery (`images`, with its shoppable hotspots) and `collection_id` are returned by
+         * `GET /v1/lookbooks/{slug}`, not here — requesting one on the listing is a `400`.
          *
          */
         fields?: string,

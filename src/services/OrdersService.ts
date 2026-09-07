@@ -53,8 +53,10 @@ export class OrdersService {
          */
         customerId?: string,
         /**
-         * Comma-separated list of fields to include per order. Same allowed fields
-         * as `GET /v1/orders/{id}` (excluding `items`, which is not returned in list view).
+         * Comma-separated list of fields to include per order. The same allowed fields as
+         * `GET /v1/orders/{id}`, minus the ones fetched per order rather than read from the order
+         * row: `items`, `status_notes` and `custom_fields` are returned by the detail endpoint, and
+         * requesting one of them here is a `400`.
          *
          */
         fields?: string,
