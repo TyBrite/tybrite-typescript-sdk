@@ -19,6 +19,14 @@
  * - Nested filtering: Filter specific variant fields using dot notation
  * - Example: fields=name,price_range,variants.sku,variants.selling_price,variants.stock
  *
+ * **Channel and logistics fields:**
+ * `condition`, `gtin`, `mpn`, `weight_grams` and `dimensions_cm` describe an
+ * individual item for sales channels and shipping, so they belong to the
+ * variant: two sizes of one shirt carry different codes and weights.
+ * `google_product_category`, `meta_product_category` and `tags` classify the
+ * listing as a whole and belong to the product. All of them are returned on
+ * the list endpoint and on detail, and any of them can be named in `fields=`.
+ *
  */
 export type Product = {
     /**
@@ -101,6 +109,14 @@ export type Product = {
      */
     tags?: any[] | null;
     /**
+     * The product's category in the Google Shopping taxonomy, as the merchant assigned it. Sales channels use this to file the listing; it is independent of `category_name`, which is the store's own taxonomy.
+     */
+    google_product_category?: string | null;
+    /**
+     * The product's category in the Meta commerce taxonomy. The Meta counterpart of `google_product_category`, set separately because the two taxonomies do not share category names.
+     */
+    meta_product_category?: string | null;
+    /**
      * Product-level attributes (not variant-specific)
      */
     attributes?: any | null;
@@ -161,6 +177,26 @@ export type Product = {
      */
     is_default?: boolean | null;
     /**
+     * The condition the item is sold in. Sales channels require this on a listing and reject a value outside the three. Defaults to `new`.
+     */
+    condition?: Product.condition;
+    /**
+     * The manufacturer's Global Trade Item Number (UPC, EAN, or ISBN). Sales channels match a listing against this to identify the product. It is not the same as the barcode the merchant scans in store, which may be an internal label and is never returned by this API.
+     */
+    gtin?: string | null;
+    /**
+     * Manufacturer part number. Identifies the item for products that carry no `gtin`, which is common for made-to-order and own-brand goods.
+     */
+    mpn?: string | null;
+    /**
+     * Shipped weight of the item in grams.
+     */
+    weight_grams?: number | null;
+    /**
+     * Packed dimensions in centimetres as free text, in the merchant's own format. Parse defensively rather than assuming a fixed shape.
+     */
+    dimensions_cm?: string | null;
+    /**
      * Sum of stock across all variants (only present for multi-variant products)
      */
     total_stock?: number | null;
@@ -189,4 +225,14 @@ export type Product = {
      */
     variants?: any[] | null;
 };
+export namespace Product {
+    /**
+     * The condition the item is sold in. Sales channels require this on a listing and reject a value outside the three. Defaults to `new`.
+     */
+    export enum condition {
+        NEW = 'new',
+        REFURBISHED = 'refurbished',
+        USED = 'used',
+    }
+}
 

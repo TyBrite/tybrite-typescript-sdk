@@ -60,7 +60,7 @@ export type { Pagination } from './models/Pagination';
 export type { PaymentInitializeResponse } from './models/PaymentInitializeResponse';
 export { PaymentMethod } from './models/PaymentMethod';
 export { Post } from './models/Post';
-export type { Product } from './models/Product';
+export { Product } from './models/Product';
 export { ProductCollection } from './models/ProductCollection';
 export type { ProductVariant } from './models/ProductVariant';
 export { Promotion } from './models/Promotion';
