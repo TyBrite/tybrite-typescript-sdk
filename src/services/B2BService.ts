@@ -588,6 +588,9 @@ export class B2BService {
      * ignored. An item with no wholesale price for this buyer, or a quantity below its minimum
      * order quantity, is rejected with a clear reason.
      *
+     * The currency comes from the price list the buyer is on and cannot be chosen per order, so a
+     * buyer on a list priced in one currency is always billed in it.
+     *
      * How the order settles depends on the supplier's policy for this buyer:
      * - **On terms** — the order is confirmed and a terms invoice is issued (subject to the buyer's
      * credit limit). The response carries the invoice and its due date.
@@ -655,10 +658,6 @@ export class B2BService {
                 country?: string;
                 postal_code?: string;
             };
-            /**
-             * The order currency, e.g. USD.
-             */
-            currency?: string;
         },
         /**
          * Buyer session token (GC-native). Provide this or x-external-auth.

@@ -54,6 +54,7 @@ export class SearchService {
         q,
         query,
         limit = 20,
+        b2B,
     }: {
         /**
          * Marketplace operator key only. Narrow the marketplace search to a single merchant's products. Ignored when using a single-store key.
@@ -71,6 +72,18 @@ export class SearchService {
          * Maximum number of results to return
          */
         limit?: number,
+        /**
+         * Marks the request as coming from a wholesale buyer (identify them with any of
+         * `x-auth-token`, `x-external-auth`, or `x-idp-token`).
+         *
+         * A search result is a reference to a product — an id, a score and a match reason — and
+         * carries no price, so this does **not** price results. What it does is keep the response out
+         * of the caches, because a buyer's results can be narrowed to the range they may order from
+         * and a narrowed set must not be served to anyone else. Fetch the priced page from
+         * `GET /v1/products?b2b=true`, which prices against that buyer's own agreement.
+         *
+         */
+        b2B?: boolean,
     }): CancelablePromise<SearchResponse> {
         return this.httpRequest.request({
             method: 'GET',
@@ -80,6 +93,7 @@ export class SearchService {
                 'q': q,
                 'query': query,
                 'limit': limit,
+                'b2b': b2B,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,

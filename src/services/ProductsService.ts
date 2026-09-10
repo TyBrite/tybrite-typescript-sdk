@@ -58,6 +58,7 @@ export class ProductsService {
         full,
         storeId,
         personalize,
+        b2B,
     }: {
         /**
          * Search products by name or SKU using case-insensitive partial matching.
@@ -237,6 +238,26 @@ export class ProductsService {
          *
          */
         personalize?: boolean,
+        /**
+         * When `true` and the request is made on behalf of a signed-in wholesale buyer (identify
+         * them with any of `x-auth-token`, `x-external-auth`, or `x-idp-token`), each product is
+         * priced against that buyer's own agreement rather than at the shelf price, and the page is
+         * narrowed to the range they are allowed to order from.
+         *
+         * Each priced item carries `price`, `currency`, `moq` (the minimum quantity that may be
+         * ordered), `pack_size`, and `price_source` — which of the buyer's arrangements set the
+         * price: `assigned` (a list assigned to them), `group` (their customer tier), `default`
+         * (the store's standard wholesale list), or `retail_fallback` (nothing wholesale was agreed
+         * for that line, so the shelf price applies).
+         *
+         * A request without a buyer credential, or from a customer who is not a wholesale buyer on
+         * this store, returns the ordinary retail page — this never fails the request.
+         *
+         * Responses on this path are not cached, because they are specific to one buyer. Ordinary
+         * retail reads are unaffected.
+         *
+         */
+        b2B?: boolean,
     }): CancelablePromise<{
         products?: Array<Product>;
         pagination?: {
@@ -268,6 +289,7 @@ export class ProductsService {
                 'full': full,
                 'store_id': storeId,
                 'personalize': personalize,
+                'b2b': b2B,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
