@@ -118,10 +118,24 @@ export class WebhooksService {
              * `channel.sync.completed` (a sales-channel push to Google/Meta/… finished —
              * carries pushed/rejected counts)
              *
-             * **Wholesale (B2B):** for stores with wholesale enabled — `b2b.rfq.created`,
-             * `b2b.quote.sent`, `b2b.quote.accepted`, `b2b.quote.rejected`,
+             * **Wholesale (B2B):** for stores with wholesale enabled — the trade itself:
+             * `b2b.rfq.created`, `b2b.quote.sent`, `b2b.quote.accepted`, `b2b.quote.rejected`,
              * `b2b.po.issued`, `b2b.po.confirmed`, `b2b.po.fulfilled`,
              * `b2b.invoice.issued`, `b2b.invoice.paid`, `b2b.invoice.overdue`
+             *
+             * **Wholesale credit and approvals:** `b2b.credit.threshold_reached` and
+             * `b2b.credit.exhausted` fire when a buyer crosses a share of their credit limit,
+             * and `b2b.buyer.on_hold` / `b2b.buyer.released` when they are stopped or let go
+             * again. Each fires on the CROSSING, not the level, so a buyer who stays above a
+             * threshold produces one event rather than one per order. `b2b.approval.requested`,
+             * `b2b.approval.approved` and `b2b.approval.rejected` follow an order the buying
+             * organisation routes for internal sign-off before it reaches the supplier.
+             *
+             * **Wholesale replenishment:** `b2b.replenishment.needed` fires when stock falls to
+             * its reorder point, and is the one wholesale event that fires in the BUYER's own
+             * store about their own stock rather than in the supplier's. It carries the supplier
+             * that line was last bought from, so an automation can raise the reorder rather than
+             * only report the need.
              *
              * The store-lifecycle, content, and feature-availability events are designed
              * for automation tools that keep a storefront in step with the store as it
@@ -323,7 +337,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted';
         },
     }): CancelablePromise<{
         success?: boolean;

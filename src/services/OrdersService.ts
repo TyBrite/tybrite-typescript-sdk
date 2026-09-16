@@ -370,11 +370,11 @@ export class OrdersService {
              */
             attribution?: any | null;
             /**
-             * Google ad click id, when the shopper arrived from a Google ad. On a paid order this lets the merchant's Google advertising get credit for the sale. Forward the true captured value; omit if not present.
+             * Google ad click id, when the shopper arrived from a Google ad. On a paid order this lets the merchant's Google advertising get credit for the sale, and is kept on the order so the merchant's own reports can attribute revenue and profit to the ad that earned it rather than relying on the ad platform's account. Forward the true captured value; omit if not present.
              */
             gclid?: string | null;
             /**
-             * Meta (Facebook & Instagram) ad click id, when the shopper arrived from a Meta ad. On a paid order this lets the merchant's Meta advertising get credit for the sale. The conversion is sent server-side (Conversions API) and de-duplicated against the storefront's Meta Pixel by the order id, so it counts even when the browser blocks the Pixel. Forward the true captured value; omit if not present.
+             * Meta (Facebook & Instagram) ad click id, when the shopper arrived from a Meta ad. On a paid order this lets the merchant's Meta advertising get credit for the sale. The conversion is sent server-side (Conversions API) and de-duplicated against the storefront's Meta Pixel by the order id, so it counts even when the browser blocks the Pixel. It is kept on the order so the merchant's own reports can attribute revenue and profit to the ad that earned it. Forward the true captured value; omit if not present.
              */
             fbclid?: string | null;
             /**
