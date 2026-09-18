@@ -42,6 +42,15 @@ export class WebhooksService {
              * **Order lifecycle:** `order.created`, `order.paid`, `order.fulfilled`,
              * `order.shipped`, `order.cancelled`, `order.refunded`, `order.updated`
              *
+             * **In-store sales:** `sale.completed`, `sale.refunded` — a sale rung up at the
+             * point of sale rather than online. Subscribe to these alongside the order events
+             * to receive every sale a store makes, whichever channel it came through.
+             *
+             * **Your connection:** `connection.revoked` — the key pair your application holds
+             * for this store was revoked, rotated, deactivated or expired. Only reaches
+             * applications connected through Login with GC, and carries `pair_id` so you revoke
+             * the affected connection rather than every one you hold for the store.
+             *
              * **Payment lifecycle:** `payment.succeeded`, `payment.failed`, `payment.refunded`
              *
              * **Customer lifecycle:** `customer.created`, `customer.updated`, `customer.deleted`
@@ -49,7 +58,7 @@ export class WebhooksService {
              * **Inventory & catalog:** `product.created`, `product.updated`,
              * `product.stock_low`, `product.out_of_stock`
              *
-             * **Cart & checkout:** `cart.created`, `cart.updated`, `cart.abandoned`
+             * **Cart & checkout:** `cart.created`, `cart.updated`, `cart.abandoned`, `checkout.abandoned`, `wishlist.added`
              *
              * **Gift cards:** `gift_card.issued`, `gift_card.redeemed`, `gift_card.expired`
              *
@@ -337,7 +346,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked';
         },
     }): CancelablePromise<{
         success?: boolean;
