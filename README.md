@@ -326,6 +326,13 @@ const unsubscribe = subscribeToThread({
 const { posts } = await client.cms.listPosts({ limit: 10 });
 // → published blog posts (shoppable). Lookbooks: client.cms.listLookbooks(...).
 
+// What to read next, ranked server-side. Render `reason`, not `score` — the list is ordered by a
+// rank that nudges a different category up, so the scores are not always decreasing.
+const { related } = await client.cms.getRelatedPosts({ slug: 'best-tech-gifts-2026', limit: 4 });
+
+// Most read, over a window that widens until enough posts qualify. `window_days` says which.
+const { posts: mostRead, window_days } = await client.cms.getTrendingPosts({ limit: 6 });
+
 // Capture a newsletter signup from the storefront (email-keyed, idempotent):
 await client.cms.subscribeNewsletter({ requestBody: { email: 'shopper@tybritelabs.com', source: 'footer' } });
 ```

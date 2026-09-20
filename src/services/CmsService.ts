@@ -160,6 +160,122 @@ export class CmsService {
         });
     }
     /**
+     * Most-read blog posts
+     * The posts being read most, ranked by reads per day over a recent window. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
+     *
+     * The window widens — 7, then 21, 45 and 90 days — until enough posts qualify, and the one that was used is returned as `window_days`. A blog that publishes occasionally has quiet weeks, and a shelf that is empty half the time is worse than one that describes a longer period honestly. Render the period beside the list rather than claiming "this week" for all of them.
+     *
+     * `reads_per_day` is normalised by the window, so the figure stays comparable as the window widens. It ranks the list; it is not a view counter and is not intended to be shown as one.
+     * @returns any Ranked posts, and the window they were ranked over.
+     * @throws ApiError
+     */
+    public getTrendingPosts({
+        limit = 6,
+    }: {
+        /**
+         * How many posts to return.
+         */
+        limit?: number,
+    }): CancelablePromise<{
+        posts?: Array<{
+            id?: string;
+            title?: string;
+            slug?: string;
+            excerpt?: string | null;
+            featured_image?: string | null;
+            published_at?: string | null;
+            reads_per_day?: number;
+        }>;
+        /**
+         * The window these rankings cover, in days.
+         */
+        window_days?: number;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/posts/trending',
+            query: {
+                'limit': limit,
+            },
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Posts related to this one
+     * Posts related to the given one, ranked server-side so a storefront does not compute similarity in the browser. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
+     *
+     * Ranking combines what the writing is about with the topics two posts share and how recent each one is, and nudges a post from a different category up between otherwise equal results.
+     *
+     * **`score` is diagnostic — render `reason` instead.** The list is ordered by a rank that includes the category nudge, so the scores are not always decreasing: a post scoring 0.458 can legitimately sit above one scoring 0.511. Shown to a reader that looks like a sorting fault, whereas `reason` ("Closely related subject") is something they can act on.
+     *
+     * The list is topped up to at least three entries when few posts qualify, since a shelf of one reads as a fault rather than a short list. Topped-up entries score strictly below the weakest genuine match and carry the reason "More from this blog".
+     *
+     * `degraded` is true when the post has no stored vector yet — newly published, most often — and the ranking used topics and recency alone. The list is still returned.
+     * @returns any Related posts, most relevant first.
+     * @throws ApiError
+     */
+    public getRelatedPosts({
+        slug,
+        limit = 4,
+    }: {
+        slug: string,
+        /**
+         * How many related posts to return.
+         */
+        limit?: number,
+    }): CancelablePromise<{
+        /**
+         * The post these are related to.
+         */
+        anchor?: {
+            id?: string;
+            slug?: string;
+            title?: string;
+        };
+        related?: Array<{
+            id?: string;
+            title?: string;
+            slug?: string;
+            excerpt?: string | null;
+            featured_image?: string | null;
+            published_at?: string | null;
+            /**
+             * Diagnostic relevance. Not ordered monotonically — render `reason`.
+             */
+            score?: number;
+            /**
+             * Why this post is here, in words fit to show a reader.
+             */
+            reason?: string;
+        }>;
+        /**
+         * True when the post had no stored vector and ranking used topics and recency alone.
+         */
+        degraded?: boolean;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/posts/{slug}/related',
+            path: {
+                'slug': slug,
+            },
+            query: {
+                'limit': limit,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
      * List lookbooks
      * List the store's published shoppable lookbooks (curated, image-led product galleries), newest first, with cursor-based pagination. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      * @returns any Success
