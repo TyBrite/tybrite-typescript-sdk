@@ -359,6 +359,51 @@ export type StoreInfoResponse = {
         feature_status?: Record<string, 'available' | 'awaiting_data' | 'not_in_plan'>;
     };
     /**
+     * The extra fields this merchant has added to their own records (optional, included when requested), grouped by the kind of record each one describes.
+     *
+     * **Why this is here rather than on the record.** Reading a product tells you nothing about which of its fields the merchant defined, and a field you have never seen a value for is invisible until some record happens to carry one. This is the shape of the merchant's records, so a storefront or an agent knows in advance what a product, a customer or an order may carry, and can label and format it correctly.
+     *
+     * **Grouped by entity, because a field is not a store-wide fact.** `fabric` describes a product; `buyer_po` describes an order. A flat list would leave you guessing which records a field applies to.
+     *
+     * **Public fields only.** A merchant may mark a field private, and private is the default — such a field can hold a cost, a margin or an internal note, so it is omitted entirely here, including its name.
+     *
+     * Definitions only. A field's VALUE belongs to a record and is returned with that record.
+     */
+    custom_fields?: {
+        entities?: Array<{
+            /**
+             * The kind of record these fields describe, e.g. `products`, `product_variants`, `customers`, `online_orders`, `returns`, `expenses`.
+             */
+            entity?: string;
+            fields?: Array<{
+                /**
+                 * The key a value is stored under.
+                 */
+                name?: string;
+                /**
+                 * What the merchant called it, for display.
+                 */
+                label?: string;
+                /**
+                 * One of `text`, `textarea`, `number`, `boolean`, `select`, `multiselect`, `date`, `json`, `dimensions`, `weight`.
+                 */
+                type?: string;
+                /**
+                 * The permitted values. Present on choice fields only.
+                 */
+                options?: Array<string>;
+                /**
+                 * The unit a measured field is expressed in. Present when one applies.
+                 */
+                unit?: string;
+            }>;
+        }>;
+        /**
+         * How many public fields the merchant has defined, across every entity.
+         */
+        total_fields?: number;
+    };
+    /**
      * Indicates whether this store is part of a marketplace, so a storefront can adapt its experience accordingly.
      */
     marketplace?: {

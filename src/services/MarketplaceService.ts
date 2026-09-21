@@ -223,7 +223,7 @@ export class MarketplaceService {
          * information to include. Omit to return all sections.
          *
          * **Available sections:** `catalog`, `pricing`, `promotions`, `payments`, `shipping`,
-         * `cms`, `features`. The `store` section is always included.
+         * `cms`, `features`, `custom_fields`. The `store` section is always included.
          *
          */
         sections?: string,
