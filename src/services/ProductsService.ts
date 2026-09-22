@@ -381,7 +381,7 @@ export class ProductsService {
      * - Clean variants array with only variant-specific fields:
      * - variant_id, sku, price, sale_price, selling_price
      * - stock (last_restocked available via fields=variants.last_restocked)
-     * - variant_attributes (color, size, etc.)
+     * - variant_attributes (color + color_hex, size, etc.)
      * - variant_name, is_default
      *
      * **Field Filtering:**
@@ -436,7 +436,9 @@ export class ProductsService {
          * - `variants.sku` - Variant SKU
          * - `variants.selling_price` - Customer-facing price
          * - `variants.stock` - Stock quantity
-         * - `variants.variant_attributes` - Variant attributes (color, size, etc.)
+         * - `variants.variant_attributes` - Variant attributes (color, size, etc.). Where a colour is
+         * set, `color` is its name and `color_hex` the matching `#RRGGBB` value, so a storefront can
+         * render a swatch rather than infer one from the name. Either may be absent.
          * - `variants.variant_name` - Variant display name
          * - `variants.is_default` - Default variant flag
          * - `variants.*` - All variant fields (same as just `variants`)
