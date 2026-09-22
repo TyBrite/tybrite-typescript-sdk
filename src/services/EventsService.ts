@@ -27,6 +27,7 @@ export class EventsService {
      */
     public recordEvent({
         requestBody,
+        xTybriteChannel,
     }: {
         requestBody: {
             event_type: 'view' | 'add_to_cart' | 'add_to_wishlist';
@@ -46,13 +47,24 @@ export class EventsService {
              * The signed-in shopper, when known.
              */
             customer_id?: string;
+            /**
+             * Where the shopper was when this happened. Send `marketplace` from a marketplace storefront so the event is attributed to that marketplace rather than to the seller's own shop; omit it, or send `storefront`, for a seller's own site. The marketplace itself is resolved server-side from the store, so this only says which channel — it cannot name one. May also be sent as the `x-tybrite-channel` header.
+             */
+            channel?: 'storefront' | 'marketplace';
         },
+        /**
+         * Where the shopper was, when it is easier to set a header than to add a body field — `marketplace` from a marketplace storefront, `storefront` (or omitted) for a seller's own site. Equivalent to the `channel` body field; the body wins if both are sent. The marketplace itself is resolved server-side from the store, so this says which channel and cannot name one.
+         */
+        xTybriteChannel?: 'storefront' | 'marketplace',
     }): CancelablePromise<{
         recorded?: boolean;
     }> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/events',
+            headers: {
+                'x-tybrite-channel': xTybriteChannel,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
