@@ -119,6 +119,14 @@ export class DisputesService {
      *
      * A shopper may have only one open dispute per order at a time.
      *
+     * **On a marketplace** (a marketplace key with `store_id`), the order must belong to
+     * a purchase the shopper placed with their credential, or a guest purchase made with
+     * an email address they have verified. The shopper has no customer record with the
+     * merchant; the dispute records the shopper's own credential, and only that
+     * credential can read, message or cancel it. When the operator decides a dispute as
+     * credit, the amount is added to the shopper's marketplace wallet
+     * (`GET /v1/customers/me/wallet`).
+     *
      * **Authentication:** API key in the `Authorization: Bearer` header **and** a
      * customer session — either `x-auth-token` or `x-external-auth`.
      *

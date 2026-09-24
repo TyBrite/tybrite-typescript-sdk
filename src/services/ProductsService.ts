@@ -184,6 +184,7 @@ export class ProductsService {
          * - **Nested:** `attributes.*`, `shipping_info.*`, `variant_attributes.*`
          * - **Timestamps:** `created_at`, `updated_at`
          * - **Flags:** `has_variants`, `is_default`
+         * - **Reviews:** `average_rating`, `review_count` (list only)
          *
          * **Bandwidth Savings:**
          * - Full product: ~2-5KB per product
@@ -211,7 +212,7 @@ export class ProductsService {
         fields?: string,
         /**
          * By default the product **list** returns a lean payload optimized for catalog grids —
-         * identity, price, thumbnail, taxonomy and flags — and omits heavy fields that a list view
+         * identity, price, thumbnail, taxonomy, flags and the review rating — and omits heavy fields that a list view
          * rarely needs: the long-form `description`, the SEO block (`seo_title`/`seo_description`/`seo_keywords`),
          * raw `attributes`/`shipping_info`, and the full `media` arrays. Those are always available on the
          * single-product detail endpoints (`GET /v1/products/{id}`, `GET /v1/products/by-slug/{slug}`),

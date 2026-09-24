@@ -42,6 +42,14 @@ export type Product = {
      */
     name?: string;
     /**
+     * Mean rating of the product's approved reviews, from 1 to 5, to one decimal place. `null` when the product has no approved reviews. Present on product listings so a grid can show a rating under each card without a review request per product.
+     */
+    average_rating?: number | null;
+    /**
+     * Number of approved reviews for the product. `0` when there are none.
+     */
+    review_count?: number;
+    /**
      * Product description
      */
     description?: string;

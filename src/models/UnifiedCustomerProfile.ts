@@ -17,6 +17,10 @@ export type UnifiedCustomerProfile = {
         address?: string | null;
         status?: string | null;
         join_date?: string | null;
+        /**
+         * Whether the shopper has verified their email address. Purchases made as a guest with that address are included only when it is true.
+         */
+        email_verified?: boolean;
     };
     /**
      * The merchants this shopper has a relationship with.

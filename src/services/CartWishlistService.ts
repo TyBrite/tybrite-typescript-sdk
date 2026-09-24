@@ -42,12 +42,17 @@ export class CartWishlistService {
      * @throws ApiError
      */
     public getCart({
+        storeId,
         xAuthToken,
         xExternalAuth,
         xIdpToken,
         customerId,
         xSessionId,
     }: {
+        /**
+         * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+         */
+        storeId?: string,
         /**
          * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
          */
@@ -97,6 +102,7 @@ export class CartWishlistService {
                 'X-Session-Id': xSessionId,
             },
             query: {
+                'store_id': storeId,
                 'customer_id': customerId,
             },
             errors: {
@@ -127,12 +133,17 @@ export class CartWishlistService {
      * @throws ApiError
      */
     public clearCart({
+        storeId,
         xAuthToken,
         xExternalAuth,
         xIdpToken,
         customerId,
         xSessionId,
     }: {
+        /**
+         * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+         */
+        storeId?: string,
         /**
          * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
          */
@@ -173,6 +184,7 @@ export class CartWishlistService {
                 'X-Session-Id': xSessionId,
             },
             query: {
+                'store_id': storeId,
                 'customer_id': customerId,
             },
             errors: {
@@ -242,6 +254,7 @@ export class CartWishlistService {
              */
             public addToCart({
                 requestBody,
+                storeId,
                 xAuthToken,
                 xExternalAuth,
                 xIdpToken,
@@ -261,6 +274,10 @@ export class CartWishlistService {
                      */
                     customer_id?: string;
                 },
+                /**
+                 * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+                 */
+                storeId?: string,
                 /**
                  * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
                  */
@@ -299,6 +316,9 @@ export class CartWishlistService {
                         'x-idp-token': xIdpToken,
                         'X-Session-Id': xSessionId,
                     },
+                    query: {
+                        'store_id': storeId,
+                    },
                     body: requestBody,
                     mediaType: 'application/json',
                     errors: {
@@ -329,6 +349,7 @@ export class CartWishlistService {
             public updateCartItem({
                 id,
                 requestBody,
+                storeId,
                 xAuthToken,
                 xExternalAuth,
                 xIdpToken,
@@ -348,6 +369,10 @@ export class CartWishlistService {
                      */
                     customer_id?: string;
                 },
+                /**
+                 * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+                 */
+                storeId?: string,
                 /**
                  * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
                  */
@@ -389,6 +414,9 @@ export class CartWishlistService {
                         'x-idp-token': xIdpToken,
                         'X-Session-Id': xSessionId,
                     },
+                    query: {
+                        'store_id': storeId,
+                    },
                     body: requestBody,
                     mediaType: 'application/json',
                     errors: {
@@ -419,6 +447,7 @@ export class CartWishlistService {
              */
             public removeCartItem({
                 id,
+                storeId,
                 xAuthToken,
                 xExternalAuth,
                 xIdpToken,
@@ -429,6 +458,10 @@ export class CartWishlistService {
                  * Cart item UUID
                  */
                 id: string,
+                /**
+                 * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+                 */
+                storeId?: string,
                 /**
                  * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
                  */
@@ -472,6 +505,7 @@ export class CartWishlistService {
                         'X-Session-Id': xSessionId,
                     },
                     query: {
+                        'store_id': storeId,
                         'customer_id': customerId,
                     },
                     errors: {

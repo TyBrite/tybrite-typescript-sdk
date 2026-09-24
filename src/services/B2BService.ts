@@ -506,34 +506,22 @@ export class B2BService {
         });
     }
     /**
-     * Pay an invoice
-     * Records a payment against an invoice. Payments settle the outstanding balance
-     * and never exceed it. Requires an Idempotency-Key header (the payment is keyed on
-     * it, so a retry with the same key is safe).
+     * Pay an invoice (not available to buyers)
+     * A terms invoice is settled by the supplier when payment is received; a buyer credential
+     * cannot record an invoice settlement, so this operation always returns `403 not_supported`
+     * for an invoice the buyer owns (and `404` for one they do not). To pay online, place a
+     * prepaid order with `POST /v1/b2b/orders` and pay it through the payments API.
      *
-     * @returns any Payment recorded
+     * @returns void
      * @throws ApiError
      */
     public payInvoice({
-        idempotencyKey,
         id,
-        requestBody,
         xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
-        /**
-         * A unique key so a retried create is not duplicated.
-         */
-        idempotencyKey: string,
         id: string,
-        requestBody: {
-            /**
-             * Payment amount (must not exceed the balance).
-             */
-            amount: number;
-            payment_method?: string;
-        },
         /**
          * Buyer session token (GC-native). Provide this or x-external-auth.
          */
@@ -549,13 +537,7 @@ export class B2BService {
          *
          */
         xIdpToken?: string,
-    }): CancelablePromise<{
-        data?: {
-            payment_id?: string;
-            amount_paid?: number;
-            invoice_status?: string;
-        };
-    }> {
+    }): CancelablePromise<void> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/b2b/invoices/{id}/pay',
@@ -566,12 +548,10 @@ export class B2BService {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
                 'x-idp-token': xIdpToken,
-                'Idempotency-Key': idempotencyKey,
             },
-            body: requestBody,
-            mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                403: `A buyer cannot record an invoice settlement.`,
                 404: `Resource not found`,
                 500: `Internal server error`,
             },

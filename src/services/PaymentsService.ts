@@ -272,9 +272,11 @@ export class PaymentsService {
      * **Provider-Specific Verification:**
      *
      * **Stripe:**
-     * - Queries Stripe Checkout Session API
-     * - Returns payment status: `pending`, `paid`, `failed`, `cancelled`
-     * - Includes payment intent details
+     * - Pass the `reference` returned by initialize, or its `session_id`; a PaymentIntent
+     * id (`pi_...`) or charge id (`ch_...`) from a Stripe event is also accepted
+     * - Returns `success` once the Checkout Session is paid, otherwise Stripe's own
+     * `payment_status` (for example `unpaid`)
+     * - Includes the Checkout Session id, the order it was opened for, and the PaymentIntent
      *
      * **PayPal:**
      * - Pass the PayPal order id as the `reference`

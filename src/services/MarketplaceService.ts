@@ -57,6 +57,24 @@ export class MarketplaceService {
      * payment is created. Holds expire automatically if payment is never completed,
      * returning the stock to availability.
      *
+     * **The shopper.** Send the shopper's credential to tie the purchase to them: a
+     * Galactic Core shopper session in `x-auth-token` (also accepted as
+     * `x-customer-token`), or an assertion signed by the marketplace's own backend in
+     * `x-external-auth`. With neither, the checkout is a guest checkout. The purchase is
+     * recorded against that credential, which is what later lets the shopper see it in
+     * `GET /v1/customers/me`, return it, and dispute it. A guest purchase becomes
+     * visible to an account once that account has verified its email address with a
+     * one-time code.
+     *
+     * **Wallet.** A signed-in shopper can spend their marketplace wallet balance: send
+     * `wallet_amount` to spend up to that much, or `use_wallet: true` to spend as much
+     * as the checkout allows. The balance is held while payment is pending and returned
+     * if the payment fails or is abandoned. The charge never falls below the payment
+     * provider's minimum for the currency, so a wallet cannot pay for a whole basket.
+     * The response reports `wallet_applied`, and `total_amount` is the amount charged
+     * after it. Each merchant is still paid their full net: the marketplace operator
+     * funds the wallet.
+     *
      * Requires the marketplace operator key.
      *
      * @returns MarketplaceCheckoutResponse The multi-merchant order was created and is awaiting payment.
@@ -64,8 +82,9 @@ export class MarketplaceService {
      */
     public marketplaceCheckout({
         requestBody,
-        xCustomerToken,
         xAuthToken,
+        xCustomerToken,
+        xExternalAuth,
     }: {
         requestBody: {
             /**
@@ -89,6 +108,14 @@ export class MarketplaceService {
             currency?: string;
             shipping_address?: Record<string, any>;
             billing_address?: Record<string, any>;
+            /**
+             * Spend up to this much of the signed-in shopper's marketplace wallet on this checkout. Capped by the balance and by the payment provider's minimum charge.
+             */
+            wallet_amount?: number;
+            /**
+             * Spend as much of the signed-in shopper's wallet as the checkout allows.
+             */
+            use_wallet?: boolean;
             /**
              * Optional per-merchant discounts. Each entry applies a merchant's own promotion and/or gift card to that merchant's portion of the basket, reducing only that merchant's subtotal. Marketplace-wide promotions run by the operator apply automatically and are not passed here.
              */
@@ -121,27 +148,34 @@ export class MarketplaceService {
             };
         },
         /**
-         * Session token of a shopper signed in through Galactic Core, tying the checkout to their account rather than treating it as a guest checkout. Optional. Also accepted as `x-auth-token`.
+         * Session token of a shopper signed in through Galactic Core, tying the checkout to their account rather than treating it as a guest checkout. Optional; send at most one shopper credential.
+         */
+        xAuthToken?: string,
+        /**
+         * Alias of `x-auth-token`.
          */
         xCustomerToken?: string,
         /**
-         * Alias of `x-customer-token`.
+         * A shopper assertion signed by the marketplace's own backend with the marketplace's signing secret, for marketplaces that run their own sign-in. The claim carries `external_id`, `iat` and `exp` (at most 300 seconds apart), and optionally `email` with `email_verified: true`. Optional; send at most one shopper credential.
          */
-        xAuthToken?: string,
+        xExternalAuth?: string,
     }): CancelablePromise<MarketplaceCheckoutResponse> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/cart/checkout',
             headers: {
-                'x-customer-token': xCustomerToken,
                 'x-auth-token': xAuthToken,
+                'x-customer-token': xCustomerToken,
+                'x-external-auth': xExternalAuth,
             },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                409: `The marketplace has not finished connecting its payment account, so it cannot take payment yet (\`provider_not_live\`).`,
                 500: `Internal server error`,
                 502: `The payment provider could not be reached or rejected the request.`,
             },
@@ -149,33 +183,134 @@ export class MarketplaceService {
     }
     /**
      * Get the signed-in shopper's unified marketplace profile
-     * Return a marketplace shopper's unified profile, aggregated across every
-     * merchant in the marketplace they have shopped with. The response combines
-     * their identity, the merchants they have a relationship with, and their full
-     * cross-merchant order history.
+     * Return a marketplace shopper's profile and their order history across every
+     * merchant in this marketplace.
      *
-     * Requires the marketplace operator key plus the shopper's session token,
-     * supplied in the `X-Customer-Token` header. Sign the shopper in first, then
-     * pass the token from that response here.
+     * A purchase belongs to the shopper when it was placed with their credential. A
+     * purchase made as a guest belongs to them once they have verified the email address
+     * it was bought with, by verifying a one-time code or following a sign-in link;
+     * registering an account with that address is not enough. `customer.email_verified`
+     * reports which applies. A marketplace shopper holds no customer record with any
+     * merchant, so `customer.ids` is empty.
      *
-     * @returns UnifiedCustomerProfile The shopper's unified marketplace profile.
+     * Requires the marketplace operator key plus exactly one shopper credential:
+     * `x-auth-token` (a Galactic Core shopper session, also accepted as
+     * `X-Customer-Token`) or `x-external-auth` (an assertion signed with the
+     * marketplace's signing secret).
+     *
+     * @returns UnifiedCustomerProfile The shopper's marketplace profile.
      * @throws ApiError
      */
     public getMarketplaceCustomer({
+        xAuthToken,
         xCustomerToken,
+        xExternalAuth,
     }: {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in.
          */
-        xCustomerToken: string,
+        xAuthToken?: string,
+        /**
+         * Alias of `x-auth-token`.
+         */
+        xCustomerToken?: string,
+        /**
+         * A shopper assertion signed by the marketplace's own backend with the marketplace's signing secret: `external_id`, `iat` and `exp` (at most 300 seconds apart), and optionally `email` with `email_verified: true`.
+         */
+        xExternalAuth?: string,
     }): CancelablePromise<UnifiedCustomerProfile> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/customers/me',
             headers: {
+                'x-auth-token': xAuthToken,
                 'X-Customer-Token': xCustomerToken,
+                'x-external-auth': xExternalAuth,
             },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get the signed-in shopper's marketplace wallet
+     * Return the shopper's marketplace wallet: the balance the marketplace has credited
+     * them (for example when a dispute is decided as credit rather than a refund) and the
+     * credits that make it up. The balance is spendable at this marketplace's checkout
+     * with `wallet_amount` or `use_wallet`. It is held by the marketplace, not by any
+     * merchant, and is separate in sandbox and production.
+     *
+     * Requires the marketplace operator key plus exactly one shopper credential, as for
+     * `GET /v1/customers/me`.
+     *
+     * @returns any The shopper's wallet.
+     * @throws ApiError
+     */
+    public getMarketplaceWallet({
+        xAuthToken,
+        xCustomerToken,
+        xExternalAuth,
+    }: {
+        /**
+         * The signed-in shopper's session token.
+         */
+        xAuthToken?: string,
+        /**
+         * Alias of `x-auth-token`.
+         */
+        xCustomerToken?: string,
+        /**
+         * A shopper assertion signed with the marketplace's signing secret.
+         */
+        xExternalAuth?: string,
+    }): CancelablePromise<{
+        data?: {
+            /**
+             * Spendable balance, in `currency`.
+             */
+            balance?: number;
+            /**
+             * The marketplace's settlement currency.
+             */
+            currency?: string | null;
+            /**
+             * The most recent credits, newest first (up to 50).
+             */
+            credits?: Array<{
+                id?: string;
+                /**
+                 * The amount credited.
+                 */
+                amount?: number;
+                /**
+                 * What remains of this credit.
+                 */
+                balance?: number;
+                currency?: string | null;
+                status?: 'active' | 'depleted' | 'expired' | 'void';
+                /**
+                 * Why the credit was issued, for example `dispute`.
+                 */
+                source?: string;
+                expires_at?: string | null;
+                created_at?: string;
+            }>;
+        };
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/customers/me/wallet',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'X-Customer-Token': xCustomerToken,
+                'x-external-auth': xExternalAuth,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,

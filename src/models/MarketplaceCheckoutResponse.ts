@@ -28,7 +28,14 @@ export type MarketplaceCheckoutResponse = {
     client_secret?: string;
     currency?: string;
     subtotal?: number;
+    /**
+     * The amount charged — the basket after every discount, less `wallet_applied`.
+     */
     total_amount?: number;
+    /**
+     * How much of the shopper's marketplace wallet this checkout spends. Held while payment is pending and returned if the payment fails. Funded by the marketplace operator, so each merchant's net is unchanged.
+     */
+    wallet_applied?: number;
     /**
      * Total discount applied across the whole basket — the sum of every merchant's own promotion and gift card discounts plus any marketplace-wide promotion run by the operator.
      */

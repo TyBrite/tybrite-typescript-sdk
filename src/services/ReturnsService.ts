@@ -134,6 +134,9 @@ export class ReturnsService {
      * return, and can be applied at checkout (see `apply_store_credit` on
      * `POST /v1/orders`).
      *
+     * A marketplace shopper holds no store credit with a merchant; on a marketplace key
+     * this answers `400` and the balance is read from `GET /v1/customers/me/wallet`.
+     *
      * **Authentication:** API key in the `Authorization: Bearer` header **and** a
      * customer session — either `x-auth-token` or `x-external-auth`.
      *
@@ -194,6 +197,7 @@ export class ReturnsService {
                 'store_id': storeId,
             },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
@@ -289,6 +293,14 @@ export class ReturnsService {
      * Lodges a return request against one of the authenticated customer's own
      * online orders. The return is created with `status: "pending"` for the
      * merchant to review.
+     *
+     * **On a marketplace** (a marketplace key with `store_id`), the order is one the
+     * shopper bought through the marketplace: it must belong to a purchase placed with
+     * the shopper's credential, or — for a guest purchase — made with an email address
+     * the shopper has verified. The shopper has no customer record with the merchant,
+     * and the return is refund-only: `return_type: "store_credit"` answers `400`. A
+     * marketplace credit is issued to the shopper's marketplace wallet through a
+     * dispute (see `GET /v1/customers/me/wallet`).
      *
      * **Authentication:** API key in the `Authorization: Bearer` header **and** a
      * customer session — either `x-auth-token` or `x-external-auth`.
@@ -494,7 +506,9 @@ export class ReturnsService {
      * and the return is finalized.
      *
      * Only valid while the return has a pending store-credit offer
-     * (`credit_offer.status` is `pending`); otherwise returns `409`.
+     * (`credit_offer.status` is `pending`); otherwise returns `409`. A marketplace
+     * return never carries a store-credit offer, so on a marketplace key this always
+     * answers `409`.
      *
      * **Authentication:** API key in the `Authorization: Bearer` header **and** a
      * customer session — either `x-auth-token` or `x-external-auth`.
