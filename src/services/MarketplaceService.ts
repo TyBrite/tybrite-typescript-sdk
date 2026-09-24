@@ -4,10 +4,13 @@
 /* eslint-disable */
 import type { AdEventResponse } from '../models/AdEventResponse';
 import type { AdSlotResponse } from '../models/AdSlotResponse';
+import type { MarketplaceCheckoutQuote } from '../models/MarketplaceCheckoutQuote';
 import type { MarketplaceCheckoutResponse } from '../models/MarketplaceCheckoutResponse';
 import type { MarketplaceCollectionDetail } from '../models/MarketplaceCollectionDetail';
 import type { MarketplaceCollectionListResponse } from '../models/MarketplaceCollectionListResponse';
 import type { MarketplaceInfoResponse } from '../models/MarketplaceInfoResponse';
+import type { MarketplaceShippingDestination } from '../models/MarketplaceShippingDestination';
+import type { MarketplaceShippingSelection } from '../models/MarketplaceShippingSelection';
 import type { StoreInfoResponse } from '../models/StoreInfoResponse';
 import type { UnifiedCustomerProfile } from '../models/UnifiedCustomerProfile';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -50,6 +53,19 @@ export class MarketplaceService {
      * verbatim to finalize the order after payment succeeds; nothing the client sends
      * after checkout can change what each merchant is paid.
      *
+     * **Shipping.** Each merchant's items are delivered, and priced, separately: one shipping
+     * line per merchant. By default each merchant's own delivery rates price their line, from
+     * the `shipping_destination` (or the `shipping_address`, which is located when no
+     * destination is sent). The marketplace may instead charge a flat rate per merchant, and may
+     * set a free-shipping threshold: a merchant whose items total at least that much ships free.
+     * To offer carrier options, send a street `shipping_address` and a `parcel` per merchant in
+     * `shipping_selections` to `POST /v1/cart/checkout/quote`; to choose one, send its `rate_id`
+     * here. Shipping is paid to whoever ships the items — the merchant, or the marketplace when
+     * it ships on the merchant's behalf. `total_amount` includes shipping, `shipping_total`
+     * reports it, and `shipping_breakdown` lists each merchant's line. A shipping amount is never
+     * read from the request. The same computation runs on `POST /v1/cart/checkout/quote`, so the
+     * shopper can see each line before paying.
+     *
      * Stock is reserved at checkout: the items are held against each merchant's
      * inventory immediately so concurrent shoppers cannot oversell the last units,
      * and the hold becomes a real stock reduction when payment succeeds. If an item
@@ -74,6 +90,11 @@ export class MarketplaceService {
      * The response reports `wallet_applied`, and `total_amount` is the amount charged
      * after it. Each merchant is still paid their full net: the marketplace operator
      * funds the wallet.
+     *
+     * Shipping errors: `400 shipping_destination_required` when a merchant's delivery rate needs
+     * a location and none can be found, `400 shipping_rate_invalid` when a chosen carrier option
+     * is unknown, expired, not in the marketplace's currency, or chosen for items the marketplace
+     * ships itself, and `502 shipping_unavailable` when shipping cannot be priced right now.
      *
      * Requires the marketplace operator key.
      *
@@ -106,7 +127,15 @@ export class MarketplaceService {
              * ISO currency code for the order. Defaults to USD.
              */
             currency?: string;
+            /**
+             * Where the order is going (`line1`, `line2`, `city`, `state`, `postal_code`, `country`). Located to price shipping when `shipping_destination` is omitted.
+             */
             shipping_address?: Record<string, any>;
+            shipping_destination?: MarketplaceShippingDestination;
+            /**
+             * Optional per-merchant shipping choices: a carrier option (`rate_id`) returned by `POST /v1/cart/checkout/quote`. Without one, the merchant's own delivery rate applies.
+             */
+            shipping_selections?: Array<MarketplaceShippingSelection>;
             billing_address?: Record<string, any>;
             /**
              * Spend up to this much of the signed-in shopper's marketplace wallet on this checkout. Capped by the balance and by the payment provider's minimum charge.
@@ -177,7 +206,77 @@ export class MarketplaceService {
                 404: `Resource not found`,
                 409: `The marketplace has not finished connecting its payment account, so it cannot take payment yet (\`provider_not_live\`).`,
                 500: `Internal server error`,
-                502: `The payment provider could not be reached or rejected the request.`,
+                502: `The payment provider could not be reached or rejected the request (\`provider_error\`), or shipping could not be priced (\`shipping_unavailable\`). No order is created.`,
+            },
+        });
+    }
+    /**
+     * Quote a multi-merchant checkout
+     * What `POST /v1/cart/checkout` will charge for this basket, per merchant, before the
+     * shopper pays — including each merchant's shipping line. It takes the same body and runs
+     * the same computation as the checkout, but holds no stock, creates no order and starts no
+     * payment, so it can be called as the shopper edits their basket or their address.
+     *
+     * Each merchant's items are priced for delivery separately: by that merchant's own delivery
+     * rates for the destination, or by the marketplace's flat rate per merchant, and free when
+     * the merchant's items reach the marketplace's free-shipping threshold. When the request
+     * carries a street `shipping_address` and a `parcel` for a merchant in
+     * `shipping_selections`, that merchant's carrier options are listed in `rates`; send the
+     * chosen option's `rate_id` (and `rate_source`) to the checkout. Carrier options are not
+     * offered for items the marketplace ships itself.
+     *
+     * The quote never includes commission or what a merchant is paid.
+     *
+     * Requires the marketplace operator key (a publishable key is enough).
+     *
+     * @returns MarketplaceCheckoutQuote The basket's price, per merchant, including shipping.
+     * @throws ApiError
+     */
+    public marketplaceCheckoutQuote({
+        requestBody,
+    }: {
+        requestBody: {
+            items: Array<{
+                product_id?: string;
+                variant_id: string;
+                merchant_store_id: string;
+                quantity: number;
+            }>;
+            currency?: string;
+            /**
+             * Used as the recipient name on carrier options.
+             */
+            customer_name?: string;
+            /**
+             * Where the order is going (`line1`, `line2`, `city`, `state`, `postal_code`, `country`). Located to price shipping when `shipping_destination` is omitted, and needed for carrier options.
+             */
+            shipping_address?: Record<string, any>;
+            shipping_destination?: MarketplaceShippingDestination;
+            shipping_selections?: Array<MarketplaceShippingSelection>;
+            /**
+             * The same per-merchant discounts the checkout accepts.
+             */
+            discounts?: Array<{
+                merchant_store_id: string;
+                promotion_id?: string;
+                gift_card_code?: string;
+            }>;
+        },
+    }): CancelablePromise<MarketplaceCheckoutQuote> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/cart/checkout/quote',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `The basket is invalid (\`invalid_request\`, \`insufficient_stock\`, \`currency_mismatch\`, \`discount_invalid\`), no location could be found for a merchant priced by location (\`shipping_destination_required\`), or a chosen carrier option cannot be used (\`shipping_rate_invalid\`).`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                409: `The marketplace has not finished connecting its payment account (\`provider_not_live\`).`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+                502: `Shipping could not be priced right now (\`shipping_unavailable\`).`,
             },
         });
     }

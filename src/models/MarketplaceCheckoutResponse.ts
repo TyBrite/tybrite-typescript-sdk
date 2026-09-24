@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { MarketplaceShippingLine } from './MarketplaceShippingLine';
 import type { MerchantBreakdownItem } from './MerchantBreakdownItem';
 /**
  * A created multi-merchant order awaiting payment. Use `client_secret` to
@@ -29,9 +30,17 @@ export type MarketplaceCheckoutResponse = {
     currency?: string;
     subtotal?: number;
     /**
-     * The amount charged — the basket after every discount, less `wallet_applied`.
+     * The amount charged — the basket after every discount, plus shipping, less `wallet_applied`.
      */
     total_amount?: number;
+    /**
+     * Shipping across every merchant, included in `total_amount`.
+     */
+    shipping_total?: number;
+    /**
+     * One shipping line per merchant.
+     */
+    shipping_breakdown?: Array<MarketplaceShippingLine>;
     /**
      * How much of the shopper's marketplace wallet this checkout spends. Held while payment is pending and returned if the payment fails. Funded by the marketplace operator, so each merchant's net is unchanged.
      */
