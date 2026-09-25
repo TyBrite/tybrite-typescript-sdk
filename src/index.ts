@@ -88,6 +88,7 @@ export type { SearchResponse } from './models/SearchResponse';
 export type { SearchResult } from './models/SearchResult';
 export type { Session } from './models/Session';
 export type { ShippingAddressInput } from './models/ShippingAddressInput';
+export type { ShippingCalculationByCarrierAddress } from './models/ShippingCalculationByCarrierAddress';
 export type { ShippingCalculationByCoordinates } from './models/ShippingCalculationByCoordinates';
 export type { ShippingCalculationByPlace } from './models/ShippingCalculationByPlace';
 export type { ShippingCalculationRequest } from './models/ShippingCalculationRequest';

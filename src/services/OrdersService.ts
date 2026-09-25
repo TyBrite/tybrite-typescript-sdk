@@ -128,11 +128,34 @@ export class OrdersService {
      * price, never the value you send.)
      * - **`subtotal`, `tax_amount`, `total_amount`** must reconcile to `subtotal + tax + shipping −
      * discount` over those catalog prices → otherwise **`400 price_mismatch`**.
+     * - **`tax_amount`** is calculated by the server when you omit it: for the `shipping_address` when
+     * the store has automatic tax (the shipping charge is rated as its own line), otherwise at the
+     * store's own rate — on the line totals, plus the shipping charge when the store charges tax on
+     * shipping. At the store's own rate a `tax_amount` you send must match that figure to the cent →
+     * otherwise **`400 price_mismatch`**. When the store's prices include tax, the tax is taken from
+     * what the shopper pays (line totals − discount, plus shipping when taxed) and `subtotal` is the
+     * line totals minus that tax. `POST /v1/tax/preview` returns the same figure before checkout.
      * - **`discount_amount`** is validated against the discount the promotions / gift card you claim
      * actually grant (computed server-side from `promotion_usages` + `gift_card_redemption`). A
      * `discount_amount` greater than that legitimate maximum → **`400 discount_invalid`**. A discount
      * with no real promotion/gift card behind it → max is `0`. (You may apply *less* than the maximum.)
-     * - **`shipping_amount`** may not be negative → **`400 price_mismatch`**.
+     * - **`shipping_amount`** is checked on every order, $0 included, and may not be negative:
+     * - With a carrier option (`shipping_rate_id` + `shipping_rate_source`, or `shippo_rate_id`),
+     * the option is fetched again from its source — the store's carrier account, or its custom
+     * shipping extension re-quoted for `shipping_address` and `shipping_parcel`. An unknown,
+     * expired or foreign option, one in another currency, or a test-mode option on a live order →
+     * **`400 shipping_rate_invalid`**; an amount that differs from the option →
+     * **`400 price_mismatch`**.
+     * - Otherwise, when the store has delivery rates and the destination is known
+     * (`shipping_latitude`/`shipping_longitude`, or a `shipping_address` that can be located), the
+     * amount must equal the store's charge for that address, free-delivery thresholds measured
+     * against the line totals after `discount_amount` → otherwise **`400 price_mismatch`**. A
+     * destination the store does not deliver to → **`400 shipping_not_deliverable`**.
+     * - A store with no delivery rates (it ships through its own arrangements) accepts the amount
+     * sent; so does an order whose destination cannot be located. Such an order is recorded as
+     * not checked.
+     * - When shipping cannot be checked because the service is unreachable →
+     * **`502 shipping_unavailable`**; the order is not created.
      *
      * In short: send the **real catalog prices** and the **actual promotions/gift card** the shopper is
      * entitled to. Don't compute or invent prices/discounts client-side — the server is the authority.
@@ -362,9 +385,32 @@ export class OrdersService {
              */
             shipping_longitude?: number;
             /**
-             * The id of the shipping rate the shopper chose, when rates came from a multi-carrier quote. The rate is re-fetched and validated server-side before it is charged, so a modified or stale rate is rejected rather than honoured.
+             * The id of a carrier option from the store's connected carrier account. Equivalent to `shipping_rate_id` with `shipping_rate_source: shippo`. The option is fetched again and checked before it is charged, so a modified, stale or foreign option is rejected.
              */
             shippo_rate_id?: string;
+            /**
+             * The id of the carrier option the shopper chose, as returned in `rates[]` by `POST /v1/shipping/calculate`. Send with `shipping_rate_source`.
+             */
+            shipping_rate_id?: string;
+            /**
+             * Where the chosen option came from — its `source` in `rates[]`: the store's carrier account (`shippo`) or its custom shipping extension (`custom`).
+             */
+            shipping_rate_source?: 'shippo' | 'custom';
+            /**
+             * The parcel the option was quoted for. Required with `shipping_rate_source: custom`, because the extension is asked for its options again to check the one chosen.
+             */
+            shipping_parcel?: {
+                length?: string;
+                width?: string;
+                height?: string;
+                distance_unit?: string;
+                weight?: string;
+                mass_unit?: string;
+            };
+            /**
+             * The ship-from address the option was quoted with, when one was sent to `POST /v1/shipping/calculate` as `address_from`.
+             */
+            shipping_address_from?: Record<string, any>;
             /**
              * Where this order came from, recorded for the merchant's analytics. Accepts the fields below; the same fields are also read from the top level of the request body if you already send them there. Promotions that actually applied are recorded from the server-validated result, so `promotion_ids` never inflates what a shopper received.
              */
@@ -433,6 +479,7 @@ export class OrdersService {
                 422: `The store runs its own order-validation rule and that rule rejected the order. The \`message\` carries the reason the store gave. No order is created. This is also returned when the store requires validation but the rule could not be reached, so an order is never created unchecked.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
+                502: `Shipping could not be checked right now (\`shipping_unavailable\`). No order is created.`,
             },
         });
     }

@@ -12,6 +12,9 @@ export type MarketplaceShippingLine = {
      * What the shopper pays to deliver this merchant's items.
      */
     amount?: number;
+    /**
+     * What priced the line: the merchant's own delivery rates (`seller_rate`), the marketplace's own delivery rates when the marketplace ships the items (`operator_rate`), a carrier option the shopper chose (`carrier_rate`), the marketplace's flat rate (`flat`), or its free-shipping threshold (`free`).
+     */
     pricing?: MarketplaceShippingLine.pricing;
     /**
      * Who ships these items.
@@ -36,8 +39,12 @@ export type MarketplaceShippingLine = {
     rates?: Array<MarketplaceShippingRate>;
 };
 export namespace MarketplaceShippingLine {
+    /**
+     * What priced the line: the merchant's own delivery rates (`seller_rate`), the marketplace's own delivery rates when the marketplace ships the items (`operator_rate`), a carrier option the shopper chose (`carrier_rate`), the marketplace's flat rate (`flat`), or its free-shipping threshold (`free`).
+     */
     export enum pricing {
         SELLER_RATE = 'seller_rate',
+        OPERATOR_RATE = 'operator_rate',
         CARRIER_RATE = 'carrier_rate',
         FLAT = 'flat',
         FREE = 'free',

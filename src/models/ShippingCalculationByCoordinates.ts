@@ -17,7 +17,7 @@ export type ShippingCalculationByCoordinates = {
      */
     longitude: number;
     /**
-     * Total order value (before shipping)
+     * The order's merchandise after discounts, before tax and shipping. A free-delivery threshold is compared against this figure. Must be a number of zero or more; defaults to 0.
      */
     order_total?: number;
     address_to?: ShippingAddressInput;

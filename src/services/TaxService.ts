@@ -12,14 +12,30 @@ export class TaxService {
      * order**, so a storefront can show the shopper the final, tax-inclusive total before they pay.
      *
      * When the store has automatic tax enabled, the response is calculated for the `ship_to`
-     * address and includes a per-jurisdiction `breakdown`. When automatic tax is not
-     * configured, the response is `{ "tax_source": "fallback" }` and you should apply the store's
-     * own tax rate (the same amount the order endpoint would use). The estimate is never recorded
-     * for filing — it is a quote only.
+     * address and includes a per-jurisdiction `breakdown`. A positive `shipping_amount` is rated as
+     * its own shipping line, so the destination's rules decide whether shipping is taxed.
      *
-     * Publishable keys are accepted, so the call can be made directly from the browser during
-     * checkout. Use the returned `tax_amount` to compute `total_amount` (`subtotal + tax_amount +
-     * shipping − discount`) and pass that same total to `createOrder`.
+     * When automatic tax is not configured, `tax_source` is `fallback` and the response carries the
+     * tax the order endpoint charges at the store's own rate: `tax_amount`, the `rate`, whether the
+     * store's prices already include tax (`prices_include_tax`), and whether the shipping charge was
+     * taxed (`shipping_taxed`, which follows the store's "Charge tax on shipping" setting). A store
+     * with no rate returns a `tax_amount` of `0`.
+     *
+     * The estimate is never recorded for filing — it is a quote only. Publishable keys are accepted,
+     * so the call can be made directly from the browser during checkout.
+     *
+     * **Building the order total from the estimate.** Send the same `shipping_amount` (and, for a
+     * store whose prices include tax, the same `discount_amount`) that the order will carry, so the
+     * estimate matches the order to the cent.
+     *
+     * - Prices exclude tax (`prices_include_tax` false, or any `automatic` response):
+     * `total_amount = subtotal + tax_amount + shipping − discount`, where `subtotal` is the sum of
+     * the line totals.
+     * - Prices include tax (`prices_include_tax` true): the tax is already inside the line totals, so
+     * `total_amount = line totals + shipping − discount` and `subtotal = line totals − tax_amount`.
+     *
+     * Pass that `total_amount` to `createOrder`; `tax_amount` may be omitted there, and the order
+     * records the same figure.
      *
      * @returns any The tax estimate. `tax_source` is `fallback` when automatic tax is not configured.
      * @throws ApiError
@@ -92,12 +108,35 @@ export class TaxService {
              * ISO 4217 currency code. Defaults to the store currency.
              */
             currency?: string;
+            /**
+             * The shipping charge the order will carry. With automatic tax it is rated as its own shipping line; at the store's own rate it is taxed when the store charges tax on shipping. Defaults to 0.
+             */
+            shipping_amount?: number;
+            /**
+             * The discount the order will carry. Only affects the estimate for a store whose prices include tax, where the tax is taken from what the shopper pays after the discount. Defaults to 0.
+             */
+            discount_amount?: number;
         },
     }): CancelablePromise<{
         tax_amount?: number;
         taxable?: number;
         currency?: string;
+        /**
+         * `automatic` when the tax was calculated for the destination; `fallback` when automatic tax is not configured and the store's own rate applies.
+         */
         tax_source?: 'automatic' | 'fallback';
+        /**
+         * The store's own tax rate as a fraction (`fallback` responses only).
+         */
+        rate?: number;
+        /**
+         * Whether the store's prices already include tax (`fallback` responses only). When true, `tax_amount` is the tax contained in the line totals, not an amount to add.
+         */
+        prices_include_tax?: boolean;
+        /**
+         * Whether the shipping charge is part of the taxed amount (`fallback` responses only).
+         */
+        shipping_taxed?: boolean;
         /**
          * Per-jurisdiction detail (present when `tax_source` is `automatic`).
          */

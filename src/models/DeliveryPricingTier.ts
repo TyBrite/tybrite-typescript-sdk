@@ -11,11 +11,11 @@ export type DeliveryPricingTier = {
      */
     tier_name?: string;
     /**
-     * Minimum distance in meters (inclusive)
+     * Start of the range in meters. An address at exactly this distance is in the range.
      */
     min_distance_meters?: number;
     /**
-     * Maximum distance in meters (inclusive)
+     * End of the range in meters. An address at exactly this distance belongs to the next range, so adjacent ranges can share an end point (0–10,000 and 10,000–50,000).
      */
     max_distance_meters?: number;
     /**

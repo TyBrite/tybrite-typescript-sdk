@@ -91,10 +91,24 @@ export class MarketplaceService {
      * after it. Each merchant is still paid their full net: the marketplace operator
      * funds the wallet.
      *
+     * Currency: every price is charged in the marketplace's currency. A merchant who prices in
+     * another currency is converted with the exchange rate the marketplace sets for that currency —
+     * items, the merchant's discounts, gift-card amounts and delivery fees alike, each rounded to
+     * the marketplace currency's minor units. A merchant whose currency has no rate in the
+     * marketplace cannot be bought from there (`400 item_currency_unsupported`).
+     *
+     * Shipping: each merchant's items are priced by that merchant's delivery rates, converted to
+     * the marketplace's currency with the marketplace's exchange rate; items the marketplace ships
+     * itself are priced by the marketplace's own delivery rates (`pricing: operator_rate`). A
+     * marketplace flat rate or free-shipping threshold overrides both.
+     *
      * Shipping errors: `400 shipping_destination_required` when a merchant's delivery rate needs
-     * a location and none can be found, `400 shipping_rate_invalid` when a chosen carrier option
-     * is unknown, expired, not in the marketplace's currency, or chosen for items the marketplace
-     * ships itself, and `502 shipping_unavailable` when shipping cannot be priced right now.
+     * a location and none can be found, `400 shipping_not_deliverable` when a merchant (or the
+     * marketplace, for items it ships) does not deliver to the address, `400
+     * shipping_currency_unsupported` when the marketplace has no exchange rate for the currency a
+     * merchant's delivery rates are set in, `400 shipping_rate_invalid` when a chosen carrier option is unknown,
+     * expired, not in the marketplace's currency, or chosen for items the marketplace ships itself,
+     * and `502 shipping_unavailable` when shipping cannot be priced right now.
      *
      * Requires the marketplace operator key.
      *
@@ -269,7 +283,7 @@ export class MarketplaceService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `The basket is invalid (\`invalid_request\`, \`insufficient_stock\`, \`currency_mismatch\`, \`discount_invalid\`), no location could be found for a merchant priced by location (\`shipping_destination_required\`), or a chosen carrier option cannot be used (\`shipping_rate_invalid\`).`,
+                400: `The basket is invalid (\`invalid_request\`, \`insufficient_stock\`, \`currency_mismatch\`, \`discount_invalid\`), a merchant's currency has no exchange rate in the marketplace (\`item_currency_unsupported\`), no location could be found for a merchant priced by location (\`shipping_destination_required\`), a merchant or the marketplace does not deliver to the address (\`shipping_not_deliverable\`), the marketplace has no exchange rate for a merchant's delivery-rate currency (\`shipping_currency_unsupported\`), or a chosen carrier option cannot be used (\`shipping_rate_invalid\`).`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,

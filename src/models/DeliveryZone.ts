@@ -20,7 +20,7 @@ export type DeliveryZone = {
     free_delivery_threshold?: number | null;
     is_active?: boolean;
     /**
-     * Zone priority (lower number = higher priority when zones overlap)
+     * Where zones overlap, the lowest number wins; on a tie, the zone created first.
      */
     priority?: number;
     /**
