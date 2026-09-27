@@ -82,6 +82,11 @@ export class PaymentsService {
      * - Must be unique per payment attempt
      * - Prevents duplicate charges on network retries
      * - Returns existing payment if key already used
+     * - A request refused before it reaches a payment provider (an invalid body, an unknown order, an
+     * amount that does not match the order) does not use up the key: the corrected request can be
+     * sent with the same key
+     * - While another request with the same key is still being initialized, the response is
+     * `409 idempotency_in_progress`; retry shortly with the same key
      *
      * **🛡️ Amount validation (anti-tampering)**
      *
@@ -248,7 +253,7 @@ export class PaymentsService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                409: `The payment method is still configured with test credentials and cannot take a real payment. The store must switch it to live mode first. On a sandbox request this does not apply.`,
+                409: `\`provider_not_live\` — the payment method is still configured with test credentials and cannot take a real payment; the store must switch it to live mode first (a sandbox request is not affected). \`idempotency_in_progress\` — another request with the same \`Idempotency-Key\` is still being initialized; retry shortly with the same key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
                 502: `A payment method the merchant added themselves did not complete the request. Retry, or fall back to another method.`,

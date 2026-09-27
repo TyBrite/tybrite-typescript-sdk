@@ -47,7 +47,7 @@ export class OrdersService {
         /**
          * Filter by order fulfillment status
          */
-        orderStatus?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
+        orderStatus?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled',
         /**
          * Filter to orders for a specific customer
          */
@@ -278,7 +278,7 @@ export class OrdersService {
             /**
              * Order fulfillment status (defaults to pending)
              */
-            order_status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+            order_status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
             /**
              * Subtotal before tax and shipping. Required.
              */
@@ -373,7 +373,7 @@ export class OrdersService {
              */
             currency?: string;
             /**
-             * Stock reservation ids returned by `POST /v1/checkout/reserve`. Supplying them commits the stock already held for this shopper instead of decrementing it again, which is what keeps a high-demand drop from overselling between reservation and payment.
+             * Stock reservation ids returned by `POST /v1/checkout/reserve`. Supplying them commits the stock already held for this shopper instead of decrementing it again, which is what keeps a high-demand drop from overselling between reservation and payment. On a `pending` order the ids are kept with the order: they are committed when the order is paid and released when it is cancelled or its payment fails. Only holds on the order's own items are committed. At most 100 ids.
              */
             reservation_ids?: Array<string>;
             /**
@@ -579,27 +579,44 @@ export class OrdersService {
      * - Multiple promotion usage recordings
      *
      * **Updatable Fields:**
-     * - `payment_status`: Payment status (pending, paid, failed, refunded)
-     * - `order_status`: Order fulfillment status (pending, processing, shipped, delivered, cancelled)
+     * - `payment_status`: Payment status (pending, paid, failed)
+     * - `order_status`: Order fulfillment status (pending, confirmed, processing, shipped, delivered, cancelled)
      * - `notes`: Additional order notes
      * - `tracking_number`: Shipping tracking number
      * - `estimated_delivery`: Estimated delivery date/time
      * - `shipped_at`: Timestamp when order was shipped
      * - `delivered_at`: Timestamp when order was delivered
      *
+     * **Status transitions:**
+     * - `payment_status`: `pending` → `paid` or `failed`; `failed` → `paid`. A `paid` order
+     * does not move back, and `refunded` is set by processing a refund, not by this endpoint.
+     * - `order_status` moves forward only (`pending` → `confirmed` → `processing` → `shipped` →
+     * `delivered`). `cancelled` is available until the order ships. `cancelled` and `delivered`
+     * are final, and a cancelled order cannot be marked paid.
+     * - Sending a field with the value it already has is not a transition: the request succeeds
+     * and nothing is repeated. Any other move is refused with `409 invalid_transition`.
+     * - A status change applies only if the order is still in the state it was in when the
+     * request began. When two requests change it at once, one succeeds and the other receives
+     * `409 order_changed`.
+     *
      * **Automatic Accounting:**
-     * When `payment_status` is updated to `paid`, the system automatically:
+     * When `payment_status` is updated to `paid`, the system automatically, and once:
      * - Triggers accounting entry creation (production only)
-     * - Reduces inventory stock for all order items
+     * - Reduces inventory stock for all order items, committing the order's own stock holds
      * - Updates customer purchase metrics
-     * - Processes gift card redemptions (if applicable)
-     * - Records promotion usage (if applicable)
+     * - Redeems the gift card applied at checkout (if applicable)
+     * - Records promotion usage and campaign spend (if applicable)
+     * Anything that does not complete is listed in `post_processing_warnings` on the response; the
+     * order stays paid.
+     *
+     * When an unpaid order is cancelled or its payment fails, its stock holds are released and any
+     * store credit applied to it is returned to the customer.
      *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
      * - ❌ Publishable keys (forbidden - returns 403)
      *
-     * @returns Order Order updated successfully
+     * @returns any Order updated successfully
      * @throws ApiError
      */
     public updateOrder({
@@ -631,13 +648,13 @@ export class OrdersService {
         xSignature: string,
         requestBody: {
             /**
-             * Payment status
+             * Payment status. See the allowed transitions above.
              */
-            payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
+            payment_status?: 'pending' | 'paid' | 'failed';
             /**
-             * Order fulfillment status
+             * Order fulfillment status. See the allowed transitions above.
              */
-            order_status?: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+            order_status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
             /**
              * Additional order notes
              */
@@ -667,7 +684,25 @@ export class OrdersService {
              */
             reservation_ids?: Array<string>;
         },
-    }): CancelablePromise<Order> {
+    }): CancelablePromise<(Order & {
+        /**
+         * Present only when the update marked the order paid and one or more of the
+         * steps that follow (stock, gift card, store credit, promotion usage) did not
+         * complete. The order stays paid; each warning names the step and what needs
+         * follow-up.
+         *
+         */
+        post_processing_warnings?: Array<{
+            /**
+             * The step that did not complete
+             */
+            stage: string;
+            /**
+             * Human-readable description of the failure
+             */
+            message: string;
+        }>;
+    })> {
         return this.httpRequest.request({
             method: 'PATCH',
             url: '/v1/orders/{id}',
@@ -686,6 +721,7 @@ export class OrdersService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                409: `The requested status change is not allowed from the order's current state (\`invalid_transition\`), or the order changed while the request was being applied (\`order_changed\`). The order is left as it was.`,
                 422: `You marked the order paid with a \`payment_reference\`, but the payment method the merchant added does not report that reference as paid. The order is left unchanged rather than accepted on an unverified claim.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
@@ -717,7 +753,16 @@ export class OrdersService {
      * Works with both publishable and secret keys (checkout originates in the
      * browser).
      *
-     * **Rate limit:** 300 requests/hour per API key.
+     * **Limits per request:** with a publishable key, at most 25 items and 25 units
+     * of any one variant (quantities for a repeated variant are added together);
+     * with a secret key, at most 100 items and 1,000 units of any one variant. A
+     * request over a limit is refused with `400` and nothing is reserved.
+     *
+     * **Rate limit:** 300 requests/hour per API key, and with a publishable key
+     * 60 requests/hour per visitor.
+     *
+     * A key issued through GC Connect needs the `orders:write` scope; without it
+     * the request returns `403`.
      *
      * @returns any Stock reserved
      * @throws ApiError
@@ -746,7 +791,7 @@ export class OrdersService {
              */
             ttl_seconds?: number;
             /**
-             * Optional - associate the hold with a customer (used for checkout recovery).
+             * Optional - associate the hold with a customer (used for checkout recovery). Honoured only with a secret key; with a publishable key the hold is recorded without a customer.
              */
             customer_id?: string;
             /**
@@ -777,6 +822,7 @@ export class OrdersService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 409: `Insufficient stock - nothing was reserved`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,

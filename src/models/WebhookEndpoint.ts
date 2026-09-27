@@ -8,6 +8,12 @@ export type WebhookEndpoint = {
     url?: string;
     events?: Array<string>;
     /**
+     * The environment of the key that created the endpoint. The endpoint
+     * receives only events from this environment.
+     *
+     */
+    environment?: WebhookEndpoint.environment;
+    /**
      * Whether the endpoint is active. An endpoint is automatically disabled
      * (`enabled: false`) after 20 consecutive failed deliveries; see
      * `disabled_reason`. Re-enable it with a `PATCH` once you've fixed the
@@ -44,4 +50,15 @@ export type WebhookEndpoint = {
     created_at?: string;
     updated_at?: string;
 };
+export namespace WebhookEndpoint {
+    /**
+     * The environment of the key that created the endpoint. The endpoint
+     * receives only events from this environment.
+     *
+     */
+    export enum environment {
+        PRODUCTION = 'production',
+        SANDBOX = 'sandbox',
+    }
+}
 

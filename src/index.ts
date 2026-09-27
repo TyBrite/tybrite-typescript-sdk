@@ -99,7 +99,7 @@ export { Thread } from './models/Thread';
 export type { UnifiedCustomerProfile } from './models/UnifiedCustomerProfile';
 export type { User } from './models/User';
 export type { WebhookDelivery } from './models/WebhookDelivery';
-export type { WebhookEndpoint } from './models/WebhookEndpoint';
+export { WebhookEndpoint } from './models/WebhookEndpoint';
 export type { WebhookEndpointWithSecret } from './models/WebhookEndpointWithSecret';
 export type { WebhookEndpointWithStats } from './models/WebhookEndpointWithStats';
 export { WebhookEvent } from './models/WebhookEvent';

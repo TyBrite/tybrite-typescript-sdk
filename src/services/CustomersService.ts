@@ -170,8 +170,19 @@ export class CustomersService {
      * which Galactic Core forwards to the store's Auth verifier (fail-closed).
      *
      * Mismatch returns `403`. Providing more than one of these headers returns
-     * `400`. Protected fields (`store_id`, `auth_user_id`, `environment`) cannot
-     * be modified.
+     * `400`.
+     *
+     * Only the profile fields listed in the request body are writable. Any other
+     * field on the customer record (for example `tier`, `total_spent`,
+     * `total_purchases` or `external_id`) is ignored. A body naming no writable
+     * field leaves the customer unchanged and returns it.
+     *
+     * `email` is writable only when the request is made with a secret key, from
+     * the storefront's server after it has verified the new address. With a
+     * publishable key, `email` is ignored like any other non-writable field,
+     * because guest orders are linked to a customer by email address. Changing
+     * `email` to an address another customer of the store already uses returns
+     * `409`.
      *
      * @returns any Customer updated successfully
      * @throws ApiError
@@ -201,17 +212,18 @@ export class CustomersService {
          */
         xIdpToken?: string,
         requestBody?: {
+            /**
+             * Writable with a secret key only; ignored when the request uses a publishable key.
+             */
             email?: string;
             phone?: string;
             name?: string;
             address?: string;
             status?: 'active' | 'inactive';
             /**
-             * Optional identifier from an external identity provider. Set or update
-             * the link between this Galactic Core customer and your upstream user.
-             *
+             * Whether the shopper agrees to receive marketing messages from the store.
              */
-            external_id?: string;
+            marketing_consent?: boolean;
         },
     }): CancelablePromise<{
         customer: Customer;
@@ -234,6 +246,12 @@ export class CustomersService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

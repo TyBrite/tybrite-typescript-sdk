@@ -25,6 +25,16 @@ export class WebhooksService {
      * `disabled_reason`. Re-enable it with a `PATCH` once the endpoint is healthy
      * again; re-enabling resets the failure counter.
      *
+     * An endpoint belongs to the environment of the key that created it
+     * (`environment`): an endpoint created with a test key receives only sandbox
+     * events, and one created with a live key receives only production events.
+     * Endpoints are listed, read, updated, deleted and tested only with a key of
+     * the same environment; with a key of the other environment they return `404`.
+     *
+     * Delivery follows redirects, and each redirect target is held to the same
+     * rules as the registered URL (HTTPS, public address). A redirect to a
+     * disallowed target fails the delivery.
+     *
      * @returns any Endpoint created
      * @throws ApiError
      */
@@ -379,6 +389,9 @@ export class WebhooksService {
      * Returns the event log for your store in reverse-chronological order.
      * Use this for debugging delivery failures or auditing event history.
      *
+     * A test key returns only sandbox events and a live key only production
+     * events. Requesting the other environment returns `403`.
+     *
      * @returns any Success
      * @throws ApiError
      */
@@ -393,7 +406,10 @@ export class WebhooksService {
          */
         type?: string,
         /**
-         * Filter by the environment the event was emitted in.
+         * Must match the calling key's environment (`sandbox` for a test key,
+         * `production` for a live key). The key's environment is applied whether or
+         * not this parameter is sent; a different value returns `403`.
+         *
          */
         environment?: 'production' | 'sandbox',
         limit?: number,
@@ -425,6 +441,8 @@ export class WebhooksService {
     /**
      * Get a webhook event
      * Returns a single event with all its delivery attempts across all endpoints.
+     * An event from the other environment than the calling key returns `404`.
+     *
      * @returns any Success
      * @throws ApiError
      */
@@ -455,9 +473,10 @@ export class WebhooksService {
     }
     /**
      * Retry a webhook event
-     * Manually re-delivers the event to all enabled endpoints that are subscribed
-     * to its event type. Each re-delivery is recorded as a new attempt in the
-     * delivery log.
+     * Manually re-delivers the event to all enabled endpoints of the same
+     * environment that are subscribed to its event type. Each re-delivery is
+     * recorded as a new attempt in the delivery log. An event from the other
+     * environment than the calling key returns `404`.
      *
      * @returns any Retry initiated
      * @throws ApiError

@@ -59,6 +59,8 @@ export class PricingService {
         location,
         region,
         customerId,
+        xAuthToken,
+        xExternalAuth,
         quantity,
         orderTotal,
     }: {
@@ -146,12 +148,24 @@ export class PricingService {
         /**
          * Customer UUID for personalized pricing.
          *
-         * When provided, the worker resolves the customer's RFM segment and tier
-         * server-side (from the customers + customer_stores tables) and feeds them
-         * into pricing rule evaluation. There is no need to pass segment/tier directly.
+         * Honored only together with that shopper's own credential: an
+         * `x-auth-token` session or an `x-external-auth` assertion that resolves
+         * to the same customer. The customer's segment, tier and first-purchase
+         * status then feed pricing rule evaluation, and the response is private
+         * to that shopper. Without a matching credential the request returns the
+         * public price; it is not rejected.
          *
          */
         customerId?: string,
+        /**
+         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token` or `x-external-auth`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token` or `x-external-auth`.
+         *
+         */
+        xExternalAuth?: string,
         /**
          * Quantity for volume-based pricing discounts
          */
@@ -258,9 +272,7 @@ export class PricingService {
             next_cursor?: string | null;
         };
         /**
-         * Global pricing context for the request. `customer_segment` and
-         * `customer_tier` are resolved server-side from `customer_id`
-         * (they are not request parameters).
+         * Global pricing context for the request.
          *
          */
         pricing_context?: {
@@ -269,14 +281,6 @@ export class PricingService {
              * Detected or specified region
              */
             region?: string | null;
-            /**
-             * Resolved RFM segment for the supplied customer_id
-             */
-            customer_segment?: string | null;
-            /**
-             * Resolved customer tier for the supplied customer_id
-             */
-            customer_tier?: string | null;
             quantity?: number | null;
             /**
              * Detected or default currency
@@ -291,6 +295,10 @@ export class PricingService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/prices/products',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+            },
             query: {
                 'search': search,
                 'category_id': categoryId,
@@ -366,6 +374,8 @@ export class PricingService {
         location,
         region,
         customerId,
+        xAuthToken,
+        xExternalAuth,
         quantity,
         orderTotal,
     }: {
@@ -426,12 +436,24 @@ export class PricingService {
         /**
          * Customer UUID for personalized pricing.
          *
-         * When provided, the worker resolves the customer's RFM segment and tier
-         * server-side (from the customers + customer_stores tables) and feeds them
-         * into pricing rule evaluation. There is no need to pass segment/tier directly.
+         * Honored only together with that shopper's own credential: an
+         * `x-auth-token` session or an `x-external-auth` assertion that resolves
+         * to the same customer. The customer's segment, tier and first-purchase
+         * status then feed pricing rule evaluation, and the response is private
+         * to that shopper. Without a matching credential the request returns the
+         * public price; it is not rejected.
          *
          */
         customerId?: string,
+        /**
+         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token` or `x-external-auth`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token` or `x-external-auth`.
+         *
+         */
+        xExternalAuth?: string,
         /**
          * Quantity for volume-based pricing
          */
@@ -528,22 +550,12 @@ export class PricingService {
          */
         exchange_rate?: number;
         /**
-         * Global context used for pricing rule evaluation. `customer_segment`
-         * and `customer_tier` are resolved server-side from `customer_id`
-         * (they are not request parameters).
+         * Global context used for pricing rule evaluation.
          *
          */
         pricing_context?: {
             location?: string | null;
             region?: string | null;
-            /**
-             * Resolved RFM segment for the supplied customer_id
-             */
-            customer_segment?: string | null;
-            /**
-             * Resolved customer tier for the supplied customer_id
-             */
-            customer_tier?: string | null;
             quantity?: number | null;
             /**
              * Detected display currency code
@@ -557,6 +569,10 @@ export class PricingService {
             url: '/v1/prices/products/{id}',
             path: {
                 'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
             },
             query: {
                 'fields': fields,
@@ -634,6 +650,8 @@ export class PricingService {
         location,
         region,
         customerId,
+        xAuthToken,
+        xExternalAuth,
         quantity,
         orderTotal,
     }: {
@@ -694,12 +712,24 @@ export class PricingService {
         /**
          * Customer UUID for personalized pricing.
          *
-         * When provided, the worker resolves the customer's RFM segment and tier
-         * server-side (from the customers + customer_stores tables) and feeds them
-         * into pricing rule evaluation. There is no need to pass segment/tier directly.
+         * Honored only together with that shopper's own credential: an
+         * `x-auth-token` session or an `x-external-auth` assertion that resolves
+         * to the same customer. The customer's segment, tier and first-purchase
+         * status then feed pricing rule evaluation, and the response is private
+         * to that shopper. Without a matching credential the request returns the
+         * public price; it is not rejected.
          *
          */
         customerId?: string,
+        /**
+         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token` or `x-external-auth`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token` or `x-external-auth`.
+         *
+         */
+        xExternalAuth?: string,
         /**
          * Quantity for volume-based pricing
          */
@@ -796,22 +826,12 @@ export class PricingService {
          */
         exchange_rate?: number;
         /**
-         * Global context used for pricing rule evaluation. `customer_segment`
-         * and `customer_tier` are resolved server-side from `customer_id`
-         * (they are not request parameters).
+         * Global context used for pricing rule evaluation.
          *
          */
         pricing_context?: {
             location?: string | null;
             region?: string | null;
-            /**
-             * Resolved RFM segment for the supplied customer_id
-             */
-            customer_segment?: string | null;
-            /**
-             * Resolved customer tier for the supplied customer_id
-             */
-            customer_tier?: string | null;
             quantity?: number | null;
             /**
              * Detected display currency code
@@ -825,6 +845,10 @@ export class PricingService {
             url: '/v1/prices/products/by-slug/{slug}',
             path: {
                 'slug': slug,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
             },
             query: {
                 'fields': fields,
