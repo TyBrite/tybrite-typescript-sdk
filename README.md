@@ -99,6 +99,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`b2B`**: Wholesale (B2B) — the buyer-facing flow for a wholesale store. For a routine reorder, `createDirectOrder({ requestBody: { items: [{ variant_id, quantity }] }, idempotencyKey, xAuthToken })` places an order in one call: send only items and quantities — Galactic Core prices every line from the buyer's wholesale price list (never send a price), enforces minimum order quantities, and returns `settlement: "terms"` (a terms invoice was issued, which the supplier settles when payment is received) or `settlement: "pay_now"` (complete payment against the returned `order_id` via `client.payments.*`). For a negotiated order, `createRfq({ requestBody, idempotencyKey, xAuthToken })` requests a quote; the supplier prices it into a quote the buyer reads with `getQuote({ id })` and accepts with `acceptQuote({ id })` (which creates a purchase order) or declines with `rejectQuote({ id })`. Track purchase orders with `listPurchaseOrders`/`getPurchaseOrder`, and once the supplier confirms one, the terms invoice appears in `listInvoices`/`getInvoice` with its balance and status. A buyer cannot record an invoice settlement: `payInvoice` answers `403 not_supported` for the buyer's own invoice, and paying online is done by placing a prepaid order and paying it through `client.payments.*`. Every call needs the buyer's session — pass `xAuthToken` (a session token) **or** `xExternalAuth` (a bring-your-own-auth assertion) — and every create needs an `Idempotency-Key`. Pricing quotes, confirming orders, fulfilling, and setting buyer credit are supplier admin actions, not in this API.
 - **`returns`**: Returns a shopper lodges against their own online orders. `listReturnReasons()` fetches the reason codes + labels for your dropdown (API key only — no customer session). `createReturn({ requestBody, xAuthToken })` lodges a return for one of the signed-in customer's orders (it starts `pending`), and `listReturns(...)` / `getReturn({ id, xAuthToken })` track the customer's own returns and per-item status. List/get/create require a customer session — pass `xAuthToken` (a session token) **or** `xExternalAuth` (a bring-your-own-auth assertion). `reason_description` is required only when `reason_code` is `other`. A customer can only see and create their own returns; approving, refunding, issuing store credit, restocking, and rejecting are merchant actions in the admin, not in this API. When a return carries a pending store-credit offer (`credit_offer.status === 'pending'`), the shopper can `acceptReturnCredit({ id, xAuthToken })` to take the credit or `requestReturnRefund({ id, xAuthToken })` to ask for a refund instead; `getStoreCredit({ xAuthToken })` returns their redeemable balance. Spend store credit at checkout by passing `apply_store_credit: true` to `orders.createOrder`.
 - **`system`**: Platform health checks and store metadata, including the store's currency (see below).
+- **`agent`**: Tools for an AI shopping assistant acting on a store — your own model or conversation design calls them, and each returns structured data with an `evidence` array naming where every figure was read from. `getCapabilities()` lists every tool with the JSON Schema of its request and response. Discovery: constraint search with per-result `match_reasons` (`search`), a product dossier with live stock per variant, the price a shopper is charged, specifications, reviews, shipping and the return window (`getProductContext`), side-by-side comparison (`compare`), a constraint check that separates met, missed and unpublished (`checkFit`), and alternatives (`getAlternatives`). Deciding: the landed total of a basket — promotion, shipping and tax for the address (`quote`), draft carts kept apart from the shopper's live cart (`createCartDraft`, `getCartDraft`, `applyCartDraft`), and cart insights (`getCartInsights`). The shopper's own data, with their consent (`setConsent`, `getShopperContext`, `getWishlistInsights`, `getReorderSuggestions`, `getOrderStatus`). Checkout: `createCheckoutIntent` prices the basket, freezes the price and holds the stock, and returns a single-use `confirmation_token`; no order exists until the shopper confirms with `confirmCheckoutIntent`, which re-prices first and answers `409 quote_changed` rather than charging a different amount. Every tool above is deterministic and costs what any storefront read costs. Two hosted helpers run a model and are paid for with the store's Agent Compute credits: `interpret` (a request in plain language → the constraints `search` accepts) and `draftCartFromIntent` (an intent and a budget → a priced draft, selected only from in-stock search results). `getStorePolicies()` returns returns, shipping, payment methods and currencies; `getUsage()` (secret key) returns the credit balance and this month's helper spend.
 - **`sandbox`**: Developer tooling for the **sandbox (test) environment** — **secret test key (`tybrite_sk_test_*`) only**, and only ever affects sandbox data. `resetSandbox()` (or `deleteSandboxData()`) wipes all your sandbox test data instantly instead of waiting for the 30-day cleanup; `advanceSandboxTime({ requestBody: { advance_days } })` fast-forwards sandbox time so abandoned-cart windows elapse, reserved stock releases, and analytics roll forward without waiting (returns a summary of what shifted / was left alone); `replaySandboxWebhook({ requestBody: { event_id } | { type } })` re-sends a recorded sandbox webhook event to your endpoints without recreating the underlying record. `seedSandboxPromotion()`, `seedSandboxGiftCard()` and `seedSandboxCampaign()` create discount instruments in your sandbox — these are otherwise created by the merchant in their admin, which writes production, so seeding is how a discount comes to exist in your sandbox at all. Each takes an optional body and produces a ready-to-use instrument from its defaults. `seedSandboxB2BBuyerAccount({ requestBody: { customer_id } })` creates the B2B buyer account that the `/v1/b2b/*` endpoints require, which is what makes that surface reachable with a test key. `seedSandboxPricingRule()` creates a dynamic-pricing rule so `/v1/prices/*` returns a rule-adjusted price you can build against.
 
 > **Custom Integrations are transparent to this SDK.** A merchant can extend the platform with **Custom Integrations** — automations that react to store events, and custom providers that stand in for a built-in capability (email, SMS, marketing, tax, shipping rates, sales channels, or payments), run either on the platform or on the merchant's own signed HTTPS endpoint. This is all configured in the merchant admin and runs server-side; there is **no SDK surface to call** and your storefront code doesn't change. The same endpoints work whether a built-in or a custom provider is active. The only SDK-observable effect: `shipping.calculateShipping` may return a custom carrier's options in `rates[]` with `rate_source: 'custom'` (handle it like a `shippo` rate), and `payments.initializePayment` accepts a provider name outside the built-in set the same way it accepts `stripe`/`paypal`.
@@ -141,6 +142,11 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | GC Connect — authorize / token / revoke (`client.gcConnect.*`) | Public (OAuth client credentials) · list sessions → `sk` |
 | Marketplace — checkout, checkout quote, info, profile, wallet (`client.marketplace.*`) | Operator key (profile and wallet also **+ one shopper credential**: `x-auth-token`/`X-Customer-Token` or `x-external-auth`) |
 | B2B — RFQ / quote / PO / invoice (`client.b2B.*`) | `pk` or `sk` **+ buyer session** (`x-auth-token`/`x-external-auth`/`x-idp-token`) · creates need `Idempotency-Key` · supplier deployments |
+| Agent tools — search, product context, compare, fit, alternatives, quote, cart drafts, store policies (`client.agent.*`) | `pk` or `sk` |
+| Agent hosted helpers (`interpret`, `draftCartFromIntent`) | `pk` or `sk` · debit the store's Agent Compute credits |
+| Agent shopper tools — consent, own context, wishlist insights, reorder suggestions, order status, apply a draft | `pk` **+ session** |
+| Agent checkout intents — create / get / cancel | `pk` or `sk` (create takes `Idempotency-Key`) · confirm → **+ session**, or a guest's `contact` with the `confirmation_token` |
+| Agent usage (`getUsage`) | **`sk` only** |
 | Sandbox tools — reset / time-travel / replay / seed (`client.sandbox.*`) | **`sk` test key only** (`tybrite_sk_test_*`; sandbox env) |
 
 ## Examples by service
@@ -438,6 +444,31 @@ const rfq = await client.b2B.createRfq({
 const po = await client.b2B.acceptQuote({ id: quoteId, xAuthToken: session });
 const invoices = await client.b2B.listInvoices({ xAuthToken: session });
 // invoices.data[0].balance / .status — the supplier records payment against a terms invoice.
+```
+
+### agent
+
+```typescript
+// Price a basket for an address: promotion first, shipping on the discounted amount, tax last.
+const { data: quote } = await client.agent.quote({
+  requestBody: {
+    items: [{ variant_id: 'variant-uuid', quantity: 2 }],
+    shipping_address: { line1: '350 Fifth Avenue', city: 'New York', state: 'NY', postal_code: '10118', country: 'US' },
+  },
+});
+// → { lines: [...], subtotal, discount, shipping, tax, grand_total, total_is_final, currency }
+
+// Hand the basket to the shopper. Nothing is placed until they confirm.
+const { data: intent } = await client.agent.createCheckoutIntent({
+  idempotencyKey: crypto.randomUUID(),
+  requestBody: { items: [{ variant_id: 'variant-uuid', quantity: 2 }], shipping_address: quote.shipping_address! },
+});
+// Show intent.quote to the shopper; on their approval:
+const { data: placed } = await client.agent.confirmCheckoutIntent({
+  id: intent.id!,
+  requestBody: { confirmation_token: intent.confirmation_token!, contact: { email: 'jordan.lee@example.com', name: 'Jordan Lee' } },
+});
+// → { intent, order: { id, payment_status: 'pending', … }, payment: { initialize_body, methods } }
 ```
 
 ### ingestion

@@ -63,6 +63,11 @@ export class WebhooksService {
              *
              * **Payment lifecycle:** `payment.succeeded`, `payment.failed`, `payment.refunded`
              *
+             * **Agent checkouts:** `agent.checkout_intent.created`,
+             * `agent.checkout_intent.confirmed`, `agent.checkout_intent.expired` — a checkout
+             * an assistant prepared through the Agent API, the shopper's confirmation of it
+             * (the order now exists), and one that lapsed unconfirmed.
+             *
              * **Customer lifecycle:** `customer.created`, `customer.updated`, `customer.deleted`
              *
              * **Inventory & catalog:** `product.created`, `product.updated`,
