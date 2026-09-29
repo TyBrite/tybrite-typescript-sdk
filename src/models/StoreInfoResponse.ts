@@ -33,6 +33,19 @@ export type StoreInfoResponse = {
             usage_note?: string | null;
         }>;
         /**
+         * The name and logo the merchant has given their shopping assistant, for a storefront or an assistant shopping the store to present it the way the store does. Always present; each field is null when the merchant has not set it.
+         */
+        shopping_assistant?: {
+            /**
+             * The assistant's display name, or null if not set.
+             */
+            name: string | null;
+            /**
+             * URL of the assistant's logo, or null if not set.
+             */
+            logo_url: string | null;
+        };
+        /**
          * Short description of the store, or null if not set.
          */
         description?: string | null;
@@ -299,6 +312,13 @@ export type StoreInfoResponse = {
      * `messaging`, `specifications`, `collections`. Not plan-gated at all; `true` simply means
      * the store currently has at least one of that item (e.g. `gift_cards: true` = the store has issued
      * one or more gift cards). `false` means none exist yet, not that the feature is forbidden.
+     *
+     * - **Shopping assistants** — `agentic_commerce` and `agent_hosted_helpers` describe the Agent
+     * API for assistants shopping the store. `agentic_commerce` is `true` on every store;
+     * `agent_hosted_helpers` is `true` while the model-backed helper tools can be called.
+     *
+     *
+     * Pass `cache=false` to read the flags as they are at this moment rather than as cached.
      */
     features?: {
         /**
@@ -354,9 +374,17 @@ export type StoreInfoResponse = {
          */
         collections?: boolean;
         /**
-         * The REASON behind each flag above, keyed by the same feature name — so you can tell a feature that's off because the plan excludes it apart from one that's in the plan but has no data yet. Each value is one of: `available` (usable now — the boolean is `true`); `awaiting_data` (entitled/ungated but nothing to show yet — the boolean is `false`, but you can safely **pre-build the UI** and it will light up automatically once data exists); or `not_in_plan` (a plan-gated feature the store's plan doesn't include — hide it, an upgrade is required). Data-presence features (gift_cards, promotions, messaging, specifications, collections) are never `not_in_plan`.
+         * The Agent API is available for assistants shopping this store: discovery, quotes, cart drafts and checkout intents. `true` on every store.
          */
-        feature_status?: Record<string, 'available' | 'awaiting_data' | 'not_in_plan'>;
+        agentic_commerce?: boolean;
+        /**
+         * The Agent API's hosted helper tools (natural-language interpretation and intent-based cart drafting) can be called right now. When `false`, its status is `unavailable` and the other Agent API tools still work.
+         */
+        agent_hosted_helpers?: boolean;
+        /**
+         * The REASON behind each flag above, keyed by the same feature name — so you can tell a feature that's off because the plan excludes it apart from one that's in the plan but has no data yet. Each value is one of: `available` (usable now — the boolean is `true`); `awaiting_data` (entitled/ungated but nothing to show yet — the boolean is `false`, but you can safely **pre-build the UI** and it will light up automatically once data exists); `not_in_plan` (a plan-gated feature the store's plan doesn't include — hide it, an upgrade is required); or `unavailable` (switched off or not ready at the moment; the reason is not disclosed, and the feature may become `available` without any change on the caller's side). Data-presence features (gift_cards, promotions, messaging, specifications, collections) are never `not_in_plan`. `agent_hosted_helpers` is either `available` or `unavailable`.
+         */
+        feature_status?: Record<string, 'available' | 'awaiting_data' | 'not_in_plan' | 'unavailable'>;
     };
     /**
      * The extra fields this merchant has added to their own records (optional, included when requested), grouped by the kind of record each one describes.

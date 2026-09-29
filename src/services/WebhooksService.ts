@@ -126,16 +126,22 @@ export class WebhooksService {
              * render navigation, a category strip, or any layout built from the taxonomy.
              *
              * **Store lifecycle & configuration:** `store.updated` (the store's name,
-             * logo, branding, contact, or base currency changed — carries a
-             * `changed_fields` list), `payment_provider.connected` (a payment provider was
+             * logo, branding, contact, base currency, or the shopping assistant's name or
+             * logo changed — carries a `changed_fields` list, which names
+             * `agent_assistant_name` and `agent_assistant_logo_url` for the assistant),
+             * `payment_provider.connected` (a payment provider was
              * connected), `shipping_provider.connected` (a shipping-rate provider was
              * connected), `channel.connected` (a sales channel was connected)
              *
-             * **Feature availability:** `feature.status_changed` — a capability crossed
-             * from awaiting data to available (or the reverse), e.g. the store's first
-             * approved reviews arrive and reviews become usable. Carries `feature`,
-             * `status`, and `previous_status`. Use this to light up a storefront surface
-             * the moment its data exists. See the `automation-webhooks` guide.
+             * **Feature availability:** `feature.status_changed` — a capability's
+             * `feature_status` in `GET /v1/store/info` changed, e.g. the store publishes its
+             * first post and `cms` becomes `available`. Carries `feature`,
+             * `status`, and `previous_status`, each status one of `available`,
+             * `awaiting_data`, `not_in_plan` or `unavailable`. `feature` includes
+             * `agentic_commerce` and `agent_hosted_helpers`, so a shopping assistant can
+             * follow when the hosted helper tools become available or unavailable. Use this
+             * to light up a storefront surface the moment its data exists. See the
+             * `automation-webhooks` guide.
              *
              * **Catalog sync & syndication:** `feed.sync.completed` (a scheduled
              * inbound feed-pull finished — carries created/updated/failed counts),

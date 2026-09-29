@@ -57,7 +57,7 @@ export class SystemService {
      *
      * **Purpose:**
      * This endpoint consolidates store metadata that would normally require 10+ separate API calls:
-     * - Store basic info (name, currencies, timezone)
+     * - Store basic info (name, currencies, timezone, the shopping assistant's name and logo)
      * - Catalog overview (products, categories, collections, brands, specifications)
      * - Pricing configuration (dynamic pricing, customer tiers, rules)
      * - Active promotions (types, counts)
@@ -129,8 +129,13 @@ export class SystemService {
          *
          * **Cache Duration:** 5 minutes (300 seconds)
          *
+         * With `cache=false` the response is built from the store's current data, including the
+         * `features` flags and their `feature_status`, and `X-Cache` is `MISS`.
+         *
          * **When to Bypass Cache:**
          * - After updating store configuration
+         * - When a feature's availability matters at this moment (for example
+         * `features.agent_hosted_helpers` before calling a hosted helper)
          * - After adding/removing products or categories
          * - After changing payment or shipping settings
          * - When you need real-time data

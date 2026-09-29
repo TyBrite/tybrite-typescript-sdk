@@ -14,8 +14,12 @@ export class AgentService {
      * store's Agent Compute credits.
      *
      * `hosted_helpers_available` says whether the two hosted helpers can be called right now. When it is
-     * false, `hosted_helpers_reason` says why: `disabled` (the merchant has not turned them on), `paused`,
-     * or `insufficient_credits`. The deterministic tools are always available.
+     * false, calling one returns `403 helpers_unavailable` or `402 insufficient_credits`. The deterministic
+     * tools are always available.
+     *
+     * `assistant` carries the name and logo the merchant has given their shopping assistant, so an assistant
+     * shopping the store can introduce itself the way the store does. Each field is null when the merchant
+     * has not set it.
      *
      * Every Agent API response shares one envelope: `data`, `evidence` (where each figure was read from),
      * `computed_at`, `currency` and `environment`.
@@ -34,8 +38,23 @@ export class AgentService {
                 request_schema?: any | null;
                 response_schema?: Record<string, any>;
             }>;
+            /**
+             * Whether the hosted helpers can be called right now.
+             */
             hosted_helpers_available?: boolean;
-            hosted_helpers_reason?: string | null;
+            /**
+             * The shopping assistant as the merchant has named it. Null fields are not set.
+             */
+            assistant?: {
+                /**
+                 * The assistant's display name.
+                 */
+                name: string | null;
+                /**
+                 * The assistant's logo image.
+                 */
+                logo_url: string | null;
+            };
             response_contract?: Record<string, any>;
         };
         /**
@@ -1767,6 +1786,20 @@ export class AgentService {
      * it is stored only as a hash, so a replay of the same `Idempotency-Key` returns the intent without it.
      * No order exists and nothing is charged until the shopper confirms.
      *
+     * `confirmation_mode` chooses who collects the shopper's approval:
+     *
+     * - `token` (the default): the agent confirms through `POST /v1/agent/checkout-intents/{id}/confirm`,
+     * sending the token with the shopper's credential or contact details. `confirmation_url` is null.
+     * - `hosted`: `confirmation_url` is a link to the store's own confirmation page,
+     * `https://{store host}/confirm/{intent_id}#t={confirmation_token}`. The token travels in the URL
+     * fragment, which a browser does not send to any server. The agent hands the link to the shopper; the
+     * page shows the frozen quote, takes the shopper's contact details, confirms the intent and passes
+     * payment to the store's own payment provider (a Stripe Checkout redirect, a Paystack popup, PayPal
+     * buttons, or a custom provider's redirect). Card details are entered only on the provider's page.
+     *
+     * A replay of the same `Idempotency-Key` returns `confirmation_token` and `confirmation_url` as null in
+     * either mode, with `replayed: true`.
+     *
      * The intent is refused when a line cannot be bought (`409 items_unavailable`), the store does not deliver
      * to the address (`409 shipping_not_deliverable`), or shipping or tax cannot be priced for it
      * (`409 quote_incomplete`); each carries the quote in `error.details`.
@@ -1805,6 +1838,9 @@ export class AgentService {
                 latitude?: number;
                 longitude?: number;
             };
+            /**
+             * `token` returns a token the agent confirms with. `hosted` also returns `confirmation_url`, a link to the store's hosted confirmation page for the shopper to open.
+             */
             confirmation_mode?: 'token' | 'hosted';
         },
         /**
@@ -1825,13 +1861,17 @@ export class AgentService {
             status?: 'pending_confirmation' | 'confirmed' | 'expired' | 'cancelled' | 'completed';
             confirmation_mode?: 'token' | 'hosted';
             /**
-             * Returned once, when the intent is created. Store it only for as long as the shopper needs to confirm.
+             * Always null on a replay. The token is returned only by the request that created the intent.
              */
             confirmation_token?: string | null;
             /**
-             * Reserved for a hosted confirmation page. Currently always null; confirm with the token.
+             * Always null on a replay.
              */
             confirmation_url?: string | null;
+            /**
+             * True when this response replays an earlier request with the same `Idempotency-Key`.
+             */
+            replayed?: boolean;
             expires_at?: string;
             order_id?: string | null;
             customer_id?: string | null;
@@ -1952,14 +1992,6 @@ export class AgentService {
             id?: string;
             status?: 'pending_confirmation' | 'confirmed' | 'expired' | 'cancelled' | 'completed';
             confirmation_mode?: 'token' | 'hosted';
-            /**
-             * Returned once, when the intent is created. Store it only for as long as the shopper needs to confirm.
-             */
-            confirmation_token?: string | null;
-            /**
-             * Reserved for a hosted confirmation page. Currently always null; confirm with the token.
-             */
-            confirmation_url?: string | null;
             expires_at?: string;
             order_id?: string | null;
             customer_id?: string | null;
@@ -2114,14 +2146,6 @@ export class AgentService {
                 id?: string;
                 status?: 'pending_confirmation' | 'confirmed' | 'expired' | 'cancelled' | 'completed';
                 confirmation_mode?: 'token' | 'hosted';
-                /**
-                 * Returned once, when the intent is created. Store it only for as long as the shopper needs to confirm.
-                 */
-                confirmation_token?: string | null;
-                /**
-                 * Reserved for a hosted confirmation page. Currently always null; confirm with the token.
-                 */
-                confirmation_url?: string | null;
                 expires_at?: string;
                 order_id?: string | null;
                 customer_id?: string | null;
@@ -2254,14 +2278,6 @@ export class AgentService {
             id?: string;
             status?: 'pending_confirmation' | 'confirmed' | 'expired' | 'cancelled' | 'completed';
             confirmation_mode?: 'token' | 'hosted';
-            /**
-             * Returned once, when the intent is created. Store it only for as long as the shopper needs to confirm.
-             */
-            confirmation_token?: string | null;
-            /**
-             * Reserved for a hosted confirmation page. Currently always null; confirm with the token.
-             */
-            confirmation_url?: string | null;
             expires_at?: string;
             order_id?: string | null;
             customer_id?: string | null;
