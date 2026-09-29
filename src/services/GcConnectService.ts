@@ -182,8 +182,9 @@ export class GcConnectService {
      * **Security:** Always verify that the `state` value in the callback
      * matches what you sent before calling this endpoint.
      *
-     * **Attempt limits:** 30 exchanges per `client_id` and 5 per authorization code in any 10 minutes.
-     * Beyond that the call returns `429 rate_limited` with a `Retry-After` header.
+     * **Attempt limits:** 30 exchanges per `client_id` from one calling address, and 5 per authorization
+     * code, in any 10 minutes; beyond that the call returns `429 rate_limited` with a `Retry-After` header.
+     * Past 200 exchanges for one `client_id` across all addresses, it is slowed to one every 2 seconds.
      *
      * @returns ConnectTokenResponse Code exchanged successfully — store the `sk` securely server-side
      * @throws ApiError
@@ -245,8 +246,9 @@ export class GcConnectService {
      *
      * **Rate limit:** 60 requests/hour per IP address.
      *
-     * **Attempt limits:** 60 revocations per `client_id` in any 10 minutes. Beyond that the call
-     * returns `429 rate_limited` with a `Retry-After` header.
+     * **Attempt limits:** 60 revocations per `client_id` from one calling address in any 10 minutes;
+     * beyond that the call returns `429 rate_limited` with a `Retry-After` header. Past 300 for one
+     * `client_id` across all addresses, it is slowed to one every 2 seconds.
      *
      * @returns any Connection revoked (or was already revoked)
      * @throws ApiError

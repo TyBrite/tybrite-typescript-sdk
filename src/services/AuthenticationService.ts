@@ -28,10 +28,13 @@ export class AuthenticationService {
      * **Why Secret Key?** Authentication endpoints create and manage user sessions, which should
      * only be performed from secure server-side environments.
      *
-     * **Attempt limits:** attempts are counted per email address — 5 per 15 minutes from one store,
-     * 20 across every store, whether they succeed or fail. Beyond that the call returns
-     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
-     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     * **Attempt limits:** an account is never locked by attempts made on it. With a secret key, past
+     * 5 attempts for one email address from one store in 15 minutes, the call is slowed to one attempt
+     * every 60 seconds; other calls for that address answer `429 rate_limited` with a `Retry-After` header
+     * giving the seconds until the next attempt is accepted. With a publishable key, attempts are
+     * limited per calling address: 10 per address and email, and 30 per address, in 15 minutes. Across
+     * every store and address, past 20 attempts for one email the call is slowed to one every 60 seconds.
+     * Every attempt counts, successful or not, and an address with no account is treated identically.
      *
      * @returns any Registration successful
      * @throws ApiError
@@ -110,10 +113,13 @@ export class AuthenticationService {
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
      *
-     * **Attempt limits:** attempts are counted per email address — 10 per 15 minutes from one store,
-     * 30 across every store, whether they succeed or fail. Beyond that the call returns
-     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
-     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     * **Attempt limits:** an account is never locked by attempts made on it. With a secret key, past
+     * 10 attempts for one email address from one store in 15 minutes, the call is slowed to one attempt
+     * every 15 seconds; other calls for that address answer `429 rate_limited` with a `Retry-After` header
+     * giving the seconds until the next attempt is accepted. With a publishable key, attempts are
+     * limited per calling address: 10 per address and email, and 30 per address, in 15 minutes. Across
+     * every store and address, past 50 attempts for one email the call is slowed to one every 10 seconds.
+     * Every attempt counts, successful or not, and an address with no account is treated identically.
      *
      * @returns any Login successful
      * @throws ApiError
@@ -189,10 +195,13 @@ export class AuthenticationService {
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
      *
-     * **Attempt limits:** attempts are counted per email address — 5 per 15 minutes from one store,
-     * 10 across every store, whether they succeed or fail. Beyond that the call returns
-     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
-     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     * **Attempt limits:** an account is never locked by attempts made on it. With a secret key, past
+     * 5 attempts for one email address from one store in 15 minutes, the call is slowed to one attempt
+     * every 60 seconds; other calls for that address answer `429 rate_limited` with a `Retry-After` header
+     * giving the seconds until the next attempt is accepted. With a publishable key, attempts are
+     * limited per calling address: 10 per address and email, and 30 per address, in 15 minutes. Across
+     * every store and address, past 10 attempts for one email the call is slowed to one every 60 seconds.
+     * Every attempt counts, successful or not, and an address with no account is treated identically.
      *
      * @returns any Magic link/OTP sent successfully
      * @throws ApiError
@@ -242,10 +251,13 @@ export class AuthenticationService {
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
      *
-     * **Attempt limits:** attempts are counted per email address — 10 per 15 minutes from one store,
-     * 10 across every store, whether they succeed or fail. Beyond that the call returns
-     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
-     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     * **Attempt limits:** an account is never locked by attempts made on it. With a secret key, past
+     * 10 attempts for one email address from one store in 15 minutes, the call is slowed to one attempt
+     * every 30 seconds; other calls for that address answer `429 rate_limited` with a `Retry-After` header
+     * giving the seconds until the next attempt is accepted. With a publishable key, attempts are
+     * limited per calling address: 10 per address and email, and 30 per address, in 15 minutes. Across
+     * every store and address, past 20 attempts for one email the call is slowed to one every 30 seconds.
+     * Every attempt counts, successful or not, and an address with no account is treated identically.
      *
      * @returns any OTP verified successfully
      * @throws ApiError
@@ -294,10 +306,13 @@ export class AuthenticationService {
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
      *
-     * **Attempt limits:** attempts are counted per email address — 5 per 15 minutes from one store,
-     * 10 across every store, whether they succeed or fail. Beyond that the call returns
-     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
-     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     * **Attempt limits:** an account is never locked by attempts made on it. With a secret key, past
+     * 5 attempts for one email address from one store in 15 minutes, the call is slowed to one attempt
+     * every 60 seconds; other calls for that address answer `429 rate_limited` with a `Retry-After` header
+     * giving the seconds until the next attempt is accepted. With a publishable key, attempts are
+     * limited per calling address: 10 per address and email, and 30 per address, in 15 minutes. Across
+     * every store and address, past 10 attempts for one email the call is slowed to one every 60 seconds.
+     * Every attempt counts, successful or not, and an address with no account is treated identically.
      *
      * @returns any Reset email sent
      * @throws ApiError
