@@ -19,7 +19,7 @@ export class GcConnectService {
      * Validation errors are returned as JSON error responses, never
      * as redirects (prevents open redirect attacks).
      *
-     * **Rate limit:** 60 requests/hour per IP address.
+     * **Rate limit:** 60 requests/hour and 30 per 10 minutes per IP address.
      *
      * @returns ConnectAuthorizeResponse Request is valid — consent page can render
      * @throws ApiError
@@ -97,7 +97,7 @@ export class GcConnectService {
      * the `Authorization: Bearer` header. This is not an API key — it is the
      * session token issued by the GC login flow.
      *
-     * **Rate limit:** 20 requests/hour per IP address.
+     * **Rate limit:** 20 requests/hour per IP address, and 20 approvals per hour per merchant.
      *
      * This endpoint is called by the hosted consent page — you do not call
      * it directly from your integration.
@@ -177,10 +177,13 @@ export class GcConnectService {
      * Unix time and `X-Signature` to the base64 HMAC-SHA256 of
      * `{timestamp}.{requestBody}`. Neither value can be retrieved later.
      *
-     * **Rate limit:** 10 requests/minute per IP address.
+     * **Rate limit:** 60 requests/minute per IP address.
      *
      * **Security:** Always verify that the `state` value in the callback
      * matches what you sent before calling this endpoint.
+     *
+     * **Attempt limits:** 30 exchanges per `client_id` and 5 per authorization code in any 10 minutes.
+     * Beyond that the call returns `429 rate_limited` with a `Retry-After` header.
      *
      * @returns ConnectTokenResponse Code exchanged successfully — store the `sk` securely server-side
      * @throws ApiError
@@ -241,6 +244,9 @@ export class GcConnectService {
      * endpoint for merchant-initiated disconnects.
      *
      * **Rate limit:** 60 requests/hour per IP address.
+     *
+     * **Attempt limits:** 60 revocations per `client_id` in any 10 minutes. Beyond that the call
+     * returns `429 rate_limited` with a `Retry-After` header.
      *
      * @returns any Connection revoked (or was already revoked)
      * @throws ApiError

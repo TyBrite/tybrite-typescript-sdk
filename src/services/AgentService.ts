@@ -14,8 +14,8 @@ export class AgentService {
      * store's Agent Compute credits.
      *
      * `hosted_helpers_available` says whether the two hosted helpers can be called right now. When it is
-     * false, calling one returns `403 helpers_unavailable` or `402 insufficient_credits`. The deterministic
-     * tools are always available.
+     * false, calling one with a publishable key returns `403 helpers_unavailable`, the same answer whatever
+     * the reason; a secret key receives the reason. The deterministic tools are always available.
      *
      * `assistant` carries the name and logo the merchant has given their shopping assistant, so an assistant
      * shopping the store can introduce itself the way the store does. Each field is null when the merchant
@@ -286,8 +286,8 @@ export class AgentService {
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
-                402: `The store has no Agent Compute credits available`,
-                403: `Hosted helpers are not enabled for this store`,
+                402: `The store has no Agent Compute credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
+                403: `Hosted helpers are unavailable. To a publishable key this is the one answer for every reason and carries no \`details\`. A secret key receives \`details.reason\` (\`disabled\`, \`paused\` or \`unavailable\`), and \`402 insufficient_credits\` when the store is out of credits.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
                 502: `The hosted helper did not complete`,
@@ -1019,8 +1019,8 @@ export class AgentService {
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
-                402: `The store has no Agent Compute credits available`,
-                403: `Hosted helpers are not enabled for this store`,
+                402: `The store has no Agent Compute credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
+                403: `Hosted helpers are unavailable. To a publishable key this is the one answer for every reason and carries no \`details\`. A secret key receives \`details.reason\` (\`disabled\`, \`paused\` or \`unavailable\`), and \`402 insufficient_credits\` when the store is out of credits.`,
                 404: `Nothing in stock matches the intent`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
@@ -1972,17 +1972,39 @@ export class AgentService {
      * Get a checkout intent
      * The intent's status and frozen quote. An intent past its expiry reads as `expired` and its stock hold
      * is released.
+     *
+     * The shopper's personal data — `customer_id` and the quote's `shipping_address` — is returned to a secret
+     * key, and to a publishable key that also sends a shopper credential (`x-auth-token`, `x-external-auth` or
+     * `x-idp-token`) for the intent's own customer. A publishable key alone, a guest intent read with a
+     * publishable key, or another shopper's credential receives the intent without those two fields; its
+     * status, lines and totals are unchanged. A credential that is sent and cannot be verified is answered
+     * with its own error rather than the reduced view.
      * @returns any The intent
      * @throws ApiError
      */
     public getCheckoutIntent({
         id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
         fields,
     }: {
         /**
          * The checkout intent.
          */
         id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. With a publishable key, a credential for the intent's own customer returns the shipping address and `customer_id`. Provide at most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. With a publishable key, an assertion for the intent's own customer returns the shipping address and `customer_id`. Provide at most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. With a publishable key, a token for the intent's own customer returns the shipping address and `customer_id`. Provide at most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
         /**
          * Comma-separated top-level keys of `data` to return, e.g. `fields=grand_total,lines`.
          */
@@ -1994,6 +2016,9 @@ export class AgentService {
             confirmation_mode?: 'token' | 'hosted';
             expires_at?: string;
             order_id?: string | null;
+            /**
+             * The customer the intent belongs to. Present only for a secret key or the intent's own shopper credential.
+             */
             customer_id?: string | null;
             total?: number;
             currency?: string;
@@ -2045,6 +2070,9 @@ export class AgentService {
                 total_is_final?: boolean;
                 unavailable_count?: number;
                 currency?: string | null;
+                /**
+                 * Where the order is going. Present only for a secret key or the intent's own shopper credential.
+                 */
                 shipping_address?: any | null;
             };
             created_at?: string;
@@ -2073,6 +2101,11 @@ export class AgentService {
             url: '/v1/agent/checkout-intents/{id}',
             path: {
                 'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'fields': fields,
@@ -2262,17 +2295,33 @@ export class AgentService {
     }
     /**
      * Cancel a checkout intent
-     * Cancels a pending intent and releases its stock hold at once.
+     * Cancels a pending intent and releases its stock hold at once. The answer is the cancelled intent, with the
+     * shopper's personal data returned on the same terms as `GET /v1/agent/checkout-intents/{id}`.
      * @returns any The cancelled intent
      * @throws ApiError
      */
     public cancelCheckoutIntent({
         id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * The checkout intent.
          */
         id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. With a publishable key, a credential for the intent's own customer returns the shipping address and `customer_id`. Provide at most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. With a publishable key, an assertion for the intent's own customer returns the shipping address and `customer_id`. Provide at most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. With a publishable key, a token for the intent's own customer returns the shipping address and `customer_id`. Provide at most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data: {
             id?: string;
@@ -2280,6 +2329,9 @@ export class AgentService {
             confirmation_mode?: 'token' | 'hosted';
             expires_at?: string;
             order_id?: string | null;
+            /**
+             * The customer the intent belongs to. Present only for a secret key or the intent's own shopper credential.
+             */
             customer_id?: string | null;
             total?: number;
             currency?: string;
@@ -2331,6 +2383,9 @@ export class AgentService {
                 total_is_final?: boolean;
                 unavailable_count?: number;
                 currency?: string | null;
+                /**
+                 * Where the order is going. Present only for a secret key or the intent's own shopper credential.
+                 */
                 shipping_address?: any | null;
             };
             created_at?: string;
@@ -2359,6 +2414,11 @@ export class AgentService {
             url: '/v1/agent/checkout-intents/{id}/cancel',
             path: {
                 'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             errors: {
                 400: `The request is invalid`,

@@ -28,6 +28,11 @@ export class AuthenticationService {
      * **Why Secret Key?** Authentication endpoints create and manage user sessions, which should
      * only be performed from secure server-side environments.
      *
+     * **Attempt limits:** attempts are counted per email address — 5 per 15 minutes from one store,
+     * 20 across every store, whether they succeed or fail. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
+     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     *
      * @returns any Registration successful
      * @throws ApiError
      */
@@ -105,6 +110,11 @@ export class AuthenticationService {
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
      *
+     * **Attempt limits:** attempts are counted per email address — 10 per 15 minutes from one store,
+     * 30 across every store, whether they succeed or fail. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
+     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     *
      * @returns any Login successful
      * @throws ApiError
      */
@@ -179,6 +189,11 @@ export class AuthenticationService {
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
      *
+     * **Attempt limits:** attempts are counted per email address — 5 per 15 minutes from one store,
+     * 10 across every store, whether they succeed or fail. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
+     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     *
      * @returns any Magic link/OTP sent successfully
      * @throws ApiError
      */
@@ -227,6 +242,11 @@ export class AuthenticationService {
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
      *
+     * **Attempt limits:** attempts are counted per email address — 10 per 15 minutes from one store,
+     * 10 across every store, whether they succeed or fail. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
+     * the same for an address with no account, so a refusal says nothing about whether one exists.
+     *
      * @returns any OTP verified successfully
      * @throws ApiError
      */
@@ -273,6 +293,11 @@ export class AuthenticationService {
      * **⚠️ SECRET KEY REQUIRED**
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
+     *
+     * **Attempt limits:** attempts are counted per email address — 5 per 15 minutes from one store,
+     * 10 across every store, whether they succeed or fail. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header (seconds until the window closes). The limit is
+     * the same for an address with no account, so a refusal says nothing about whether one exists.
      *
      * @returns any Reset email sent
      * @throws ApiError
@@ -337,6 +362,9 @@ export class AuthenticationService {
          * }
          * ```
          *
+         * **Attempt limits:** 5 password changes per session per 15 minutes. Beyond that the call returns
+         * `429 rate_limited` with a `Retry-After` header.
+         *
          * @returns any Password updated
          * @throws ApiError
          */
@@ -389,6 +417,9 @@ export class AuthenticationService {
          *
          * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
          *
+         * **Attempt limits:** 20 refreshes per refresh token per 15 minutes. Beyond that the call returns
+         * `429 rate_limited` with a `Retry-After` header.
+         *
          * @returns any Token refreshed
          * @throws ApiError
          */
@@ -436,6 +467,9 @@ export class AuthenticationService {
          * Authorization: Bearer tybrite_sk_live_YOUR_API_KEY
          * x-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
          * ```
+         *
+         * **Attempt limits:** 120 requests per session per minute. Beyond that the call returns
+         * `429 rate_limited` with a `Retry-After` header.
          *
          * @returns any Success
          * @throws ApiError
