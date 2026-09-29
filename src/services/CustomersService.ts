@@ -20,9 +20,12 @@ export class CustomersService {
         requestBody: {
             email: string;
             /**
-             * Customer full name
+             * Customer full name. Defaults to the part of the email address before the `@` when omitted.
              */
             name?: string;
+            /**
+             * Customer phone number. Stored as an empty string when omitted.
+             */
             phone?: string;
             address?: string;
             status?: 'active' | 'inactive';

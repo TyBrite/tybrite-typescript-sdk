@@ -268,4 +268,65 @@ export class IngestionService {
             },
         });
     }
+    /**
+     * Store summary for AI assistants (llms.txt)
+     * A Markdown summary of the store in the llms.txt format: its name, description, website and
+     * product count, the categories and subcategories it sells with product counts, and its featured
+     * products and collections, each linking to the storefront. It carries only what the storefront
+     * already shows and is regenerated as the catalog changes.
+     *
+     * `{store}` is the store id or store code. The file is published by default; a wholesale store
+     * publishes it only once the merchant turns it on, and the merchant can turn it off at any time.
+     * A store on a trial or with a lapsed subscription returns 404. No API key required.
+     *
+     * AI assistants look for `/llms.txt` at the root of a site, so a storefront typically forwards its
+     * own `/llms.txt` to this address.
+     *
+     * @returns string The store summary as Markdown.
+     * @throws ApiError
+     */
+    public getStoreLlmsTxt({
+        store,
+    }: {
+        store: string,
+    }): CancelablePromise<string> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/feeds/{store}/llms.txt',
+            path: {
+                'store': store,
+            },
+            errors: {
+                404: `The store does not publish an llms.txt.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+            },
+        });
+    }
+    /**
+     * Full catalog for AI assistants (llms-full.txt)
+     * The complete form of the store's llms.txt: every product the storefront lists, with its
+     * storefront link, category, brand and description, and one line per variant giving its SKU,
+     * price, any previous price and whether it is in stock. Published under the same rules as the
+     * summary. No API key required.
+     *
+     * @returns string The full catalog as Markdown.
+     * @throws ApiError
+     */
+    public getStoreLlmsFullTxt({
+        store,
+    }: {
+        store: string,
+    }): CancelablePromise<string> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/feeds/{store}/llms-full.txt',
+            path: {
+                'store': store,
+            },
+            errors: {
+                404: `The store does not publish an llms.txt.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+            },
+        });
+    }
 }
