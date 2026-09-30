@@ -1,16 +1,25 @@
 {
   "name": "@tybrite-labs/sdk",
   "version": "1.0.13",
-  "description": "TypeScript SDK for Galactic Core — a headless commerce API for catalog, cart, checkout, orders, payments, customers, search, recommendations, promotions, gift cards, returns and webhooks.",
-  "homepage": "https://gc.tybritelabs.com",
-  "bugs": {
-    "url": "https://docs.tybritelabs.com"
+  "description": "TypeScript SDK for Galactic Core, programmable commerce infrastructure: storefront, marketplace and wholesale (B2B) commerce, plus tools for AI shopping assistants — catalog, pricing, cart, checkout, orders, payments, customers, search, recommendations, promotions, gift cards, returns, reviews, messaging, content, shipping, tax and webhooks.",
+  "homepage": "https://docs.tybritelabs.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TyBrite/tybrite-typescript-sdk.git"
   },
+  "bugs": {
+    "url": "https://github.com/TyBrite/tybrite-typescript-sdk/issues"
+  },
+  "license": "MIT",
+  "author": "Tybrite Labs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [
     "dist"
   ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "generate": "openapi --input ../cloudflare-workers/openapi.yaml --output ./src --client fetch --name Tybrite --useOptions && node scripts/post-generate.js",
     "build": "tsc",
@@ -53,10 +62,18 @@
     "galactic-core-sdk",
     "gc-sdk",
     "tybrite-gc-sdk",
-    "gc-tybrite-sdk"
+    "gc-tybrite-sdk",
+    "agentic-commerce",
+    "ai-agents",
+    "shopping-agent",
+    "llm-tools",
+    "b2b",
+    "wholesale",
+    "marketplace-api",
+    "tax",
+    "messaging",
+    "headless-cms"
   ],
-  "author": "Tybrite Labs",
-  "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.10.5",
     "openapi-typescript-codegen": "^0.29.0",
@@ -65,8 +82,5 @@
     "typedoc": "^0.28.16",
     "typedoc-plugin-markdown": "^4.10.0",
     "typescript": "^5.7.3"
-  },
-  "dependencies": {
-    "@tybrite-labs/sdk": "^1.0.0"
   }
 }
