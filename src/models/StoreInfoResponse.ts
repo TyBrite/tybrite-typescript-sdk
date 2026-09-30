@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { StoreProfileSummary } from './StoreProfileSummary';
 export type StoreInfoResponse = {
     /**
      * Basic store information (always included)
@@ -431,6 +432,7 @@ export type StoreInfoResponse = {
          */
         total_fields?: number;
     };
+    profile?: StoreProfileSummary;
     /**
      * Indicates whether this store is part of a marketplace, so a storefront can adapt its experience accordingly.
      */

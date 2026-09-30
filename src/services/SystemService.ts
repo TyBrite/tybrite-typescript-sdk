@@ -65,6 +65,7 @@ export class SystemService {
      * - Shipping zones (delivery fees, free thresholds)
      * - CMS content (posts, lookbooks)
      * - Feature flags (enabled capabilities)
+     * - Store profile summary (support contact, social profiles, published legal documents)
      *
      * **Use Cases:**
      * - AI agents understanding store capabilities before making recommendations
@@ -105,6 +106,8 @@ export class SystemService {
          * - `shipping` - Delivery zones and fees
          * - `cms` - CMS posts and lookbooks
          * - `features` - Feature flags and capabilities
+         * - `custom_fields` - The custom fields the merchant has defined, by record type
+         * - `profile` - Contact details, social profiles, published legal documents and legal identity, in summary
          *
          * **Note:** The `store` section is always included regardless of this parameter.
          *
