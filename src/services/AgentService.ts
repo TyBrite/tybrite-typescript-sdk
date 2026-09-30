@@ -23,6 +23,12 @@ export class AgentService {
      *
      * Every Agent API response shares one envelope: `data`, `evidence` (where each figure was read from),
      * `computed_at`, `currency` and `environment`.
+     *
+     * Called with a marketplace operator key, the manifest lists the tools that span every seller of that
+     * marketplace — search, compare, alternatives, quote, the hosted helpers and the drafts they make, and the
+     * checkout intent tools — with `marketplace: true`,
+     * and the marketplace shapes of their requests and responses. The single-store tools answer `403` to a
+     * marketplace key; they need the store's own key.
      * @returns any The manifest
      * @throws ApiError
      */
@@ -38,6 +44,10 @@ export class AgentService {
                 request_schema?: any | null;
                 response_schema?: Record<string, any>;
             }>;
+            /**
+             * Present and true when the key is a marketplace operator key.
+             */
+            marketplace?: boolean;
             /**
              * Whether the hosted helpers can be called right now.
              */
@@ -97,6 +107,11 @@ export class AgentService {
      * promotions, shipping and tax, comes from `POST /v1/agent/quote`.
      *
      * `in_stock_only` checks every variant of a multi-variant product before excluding it.
+     *
+     * With a marketplace operator key the search spans every active seller of that marketplace and no other.
+     * Each result names its seller (`merchant_store_id`, `merchant_name`), `price` is in the marketplace's
+     * currency, `sellers_matched` counts the sellers among the results, and matching is on name, brand,
+     * category, SKU and tags (`semantic_search: not_requested`).
      * @returns any Matching products
      * @throws ApiError
      */
@@ -130,6 +145,14 @@ export class AgentService {
         data: {
             results?: Array<{
                 product_id?: string;
+                /**
+                 * Marketplace key only — the seller of this product.
+                 */
+                merchant_store_id?: string;
+                /**
+                 * Marketplace key only — the seller's name.
+                 */
+                merchant_name?: string | null;
                 variant_id?: string | null;
                 name?: string;
                 brand?: string | null;
@@ -153,6 +176,10 @@ export class AgentService {
                 score?: number | null;
             }>;
             total_matched?: number;
+            /**
+             * Marketplace key only — how many sellers the results come from.
+             */
+            sellers_matched?: number;
             /**
              * Products considered.
              */
@@ -221,6 +248,12 @@ export class AgentService {
      * It runs a model and debits the store's Agent Compute credits at the true cost of the call; `usage`
      * reports what was debited. A failed call keeps no credits. It is limited to 60 calls a minute per client
      * and 1,000 an hour per key, in addition to the standard limits.
+     *
+     * **With a marketplace operator key** the call is paid from the marketplace operator's own Agent Compute
+     * credits, never a seller's. A secret key receives the reason a call is refused: `403 helpers_unavailable`
+     * with `details.reason` when the operator has not switched hosted helpers on, `402 insufficient_credits`
+     * when the operator's credits are exhausted. A publishable key receives `403 helpers_unavailable` whatever
+     * the reason, as on a single store.
      * @returns any The constraints
      * @throws ApiError
      */
@@ -375,6 +408,10 @@ export class AgentService {
      * Two to five products side by side: price and price range, stock, rating, and the store's return
      * window, with `spec_rows` aligning every published specification across them. A specification a product
      * does not publish is `null` in its column.
+     *
+     * With a marketplace operator key the products may come from different sellers of that marketplace; each
+     * carries `merchant_store_id` and `merchant_name`, prices are in the marketplace's currency, the return
+     * window is the seller's own, and `rating` is null. A product not sold on that marketplace answers `404`.
      * @returns any The comparison
      * @throws ApiError
      */
@@ -525,6 +562,10 @@ export class AgentService {
      * `in_stock`, or `same_spec` (matching every specification both products publish, ignoring identity
      * fields such as model). Candidates come from the store's recommendations where available
      * (`basis: recommendations`), otherwise from the same subcategory or category (`basis: same_category`).
+     *
+     * With a marketplace operator key the alternatives come from any seller of that marketplace — the same
+     * subcategory first, then the same category — and each names its seller (`merchant_store_id`,
+     * `merchant_name`). A product not sold on that marketplace answers `404`.
      * @returns any The alternatives
      * @throws ApiError
      */
@@ -547,6 +588,14 @@ export class AgentService {
             mode?: string;
             basis?: 'recommendations' | 'same_category';
             alternatives?: Array<{
+                /**
+                 * Marketplace key only — the seller.
+                 */
+                merchant_store_id?: string | null;
+                /**
+                 * Marketplace key only — the seller's name.
+                 */
+                merchant_name?: string | null;
                 product_id?: string;
                 variant_id?: string | null;
                 name?: string;
@@ -615,6 +664,15 @@ export class AgentService {
      * A line that cannot be bought as asked is flagged with `available: false` and an `unavailable_reason`,
      * never dropped, and is left out of the totals. Without an address, shipping and tax report
      * `address_required` and `total_is_final` is false.
+     *
+     * **With a marketplace operator key** the basket may span several sellers of that marketplace. The quote
+     * is the marketplace checkout's own pricing: each line at the marketplace's price, each seller's
+     * merchandise total and shipping in `sellers`, marketplace-wide promotions in `discount.amount`, and the
+     * `grand_total` the checkout charges. Tax is not added (`tax.status: not_charged`). A line may name its
+     * seller with `merchant_store_id`; a variant not sold on that marketplace is flagged
+     * `not_available_on_this_marketplace`, and one sold by a different seller than named
+     * `not_sold_by_that_seller`. `shipping_selections` chooses a carrier option a seller offered in an earlier
+     * quote.
      * @returns any The quote
      * @throws ApiError
      */
@@ -626,6 +684,10 @@ export class AgentService {
             items: Array<{
                 variant_id: string;
                 quantity: number;
+                /**
+                 * Marketplace key only — the seller of this variant. Optional; when given it must match.
+                 */
+                merchant_store_id?: string;
             }>;
             /**
              * Where the order is going. `country` (ISO 3166-1 alpha-2) is needed for tax; `line1` with `city`, or `latitude` with `longitude`, for shipping.
@@ -641,6 +703,14 @@ export class AgentService {
                 latitude?: number;
                 longitude?: number;
             };
+            /**
+             * Marketplace key only — per seller, a carrier option chosen from an earlier quote.
+             */
+            shipping_selections?: Array<{
+                merchant_store_id: string;
+                rate_id?: string;
+                rate_source?: 'custom' | 'shippo';
+            }>;
         },
         /**
          * Comma-separated top-level keys of `data` to return, e.g. `fields=grand_total,lines`.
@@ -650,6 +720,14 @@ export class AgentService {
         data: {
             lines?: Array<{
                 variant_id?: string;
+                /**
+                 * Marketplace key only.
+                 */
+                merchant_store_id?: string | null;
+                /**
+                 * Marketplace key only.
+                 */
+                merchant_name?: string | null;
                 product_id?: string | null;
                 name?: string | null;
                 variant_name?: string | null;
@@ -661,8 +739,29 @@ export class AgentService {
                 category_name?: string | null;
                 available?: boolean;
                 stock?: number | null;
-                unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price';
+                unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price' | 'not_available_on_this_marketplace' | 'not_sold_by_that_seller';
             }>;
+            /**
+             * Present and true on a marketplace quote.
+             */
+            marketplace?: boolean;
+            /**
+             * Marketplace key only — each seller's share of the basket.
+             */
+            sellers?: Array<{
+                merchant_store_id?: string;
+                merchant_name?: string | null;
+                variant_ids?: Array<string>;
+                merchandise_total?: number | null;
+                /**
+                 * The seller's shipping — `amount`, `pricing`, `fulfilled_by`, `is_free`, `description`, and any carrier `rates`.
+                 */
+                shipping?: any | null;
+            }>;
+            /**
+             * Marketplace key only — the carrier choices this quote was priced with.
+             */
+            shipping_selections?: Array<Record<string, any>>;
             subtotal?: number;
             discount?: {
                 amount?: number;
@@ -676,7 +775,7 @@ export class AgentService {
                 is_free?: boolean | null;
             };
             tax?: {
-                status?: 'quoted' | 'address_required' | 'unavailable';
+                status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                 amount?: number | null;
                 source?: 'automatic' | 'fallback';
                 /**
@@ -684,7 +783,10 @@ export class AgentService {
                  */
                 prices_include_tax?: boolean;
             };
-            grand_total?: number;
+            /**
+             * Null on a marketplace quote until shipping can be priced for an address.
+             */
+            grand_total?: number | null;
             /**
              * True when every line is available and both shipping and tax were priced for the address.
              */
@@ -876,6 +978,13 @@ export class AgentService {
      * exceeds the budget.
      *
      * It debits the store's Agent Compute credits for both model steps; `usage` reports the total.
+     *
+     * **With a marketplace operator key** the candidates come only from that marketplace's sellers, each
+     * selection names its seller (`merchant_store_id`), and the draft is priced with the marketplace quote
+     * (`quote.sellers`). Both model steps are paid from the marketplace operator's own Agent Compute credits,
+     * never a seller's, and are refused on the same terms as `POST /v1/agent/interpret`. The draft is read back with
+     * `GET /v1/agent/cart-drafts/{id}` using the same key and turned into an order with
+     * `POST /v1/agent/checkout-intents`.
      * @returns any The draft
      * @throws ApiError
      */
@@ -907,6 +1016,10 @@ export class AgentService {
                 items?: Array<{
                     variant_id: string;
                     quantity: number;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string;
                 }>;
                 source?: 'items' | 'intent';
                 expires_at?: string;
@@ -915,6 +1028,14 @@ export class AgentService {
             };
             quote?: {
                 lines?: Array<{
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string | null;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_name?: string | null;
                     variant_id?: string;
                     product_id?: string | null;
                     name?: string | null;
@@ -927,8 +1048,11 @@ export class AgentService {
                     category_name?: string | null;
                     available?: boolean;
                     stock?: number | null;
-                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price';
+                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price' | 'not_available_on_this_marketplace' | 'not_sold_by_that_seller';
                 }>;
+                marketplace?: boolean;
+                sellers?: Array<Record<string, any>>;
+                shipping_selections?: Array<Record<string, any>>;
                 subtotal?: number;
                 discount?: {
                     amount?: number;
@@ -942,7 +1066,7 @@ export class AgentService {
                     is_free?: boolean | null;
                 };
                 tax?: {
-                    status?: 'quoted' | 'address_required' | 'unavailable';
+                    status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                     amount?: number | null;
                     source?: 'automatic' | 'fallback';
                     /**
@@ -950,7 +1074,7 @@ export class AgentService {
                      */
                     prices_include_tax?: boolean;
                 };
-                grand_total?: number;
+                grand_total?: number | null;
                 /**
                  * True when every line is available and both shipping and tax were priced for the address.
                  */
@@ -1032,6 +1156,9 @@ export class AgentService {
      * Get a cart draft
      * A draft with a fresh quote: prices, promotion, availability, and — when the draft was created with an
      * address — shipping and tax, all re-read now.
+     *
+     * With a marketplace operator key only that marketplace's drafts are found, and the fresh quote is the
+     * marketplace quote, broken down per seller.
      * @returns any The draft, re-quoted
      * @throws ApiError
      */
@@ -1054,6 +1181,10 @@ export class AgentService {
                 items?: Array<{
                     variant_id: string;
                     quantity: number;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string;
                 }>;
                 source?: 'items' | 'intent';
                 expires_at?: string;
@@ -1062,6 +1193,14 @@ export class AgentService {
             };
             quote?: {
                 lines?: Array<{
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string | null;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_name?: string | null;
                     variant_id?: string;
                     product_id?: string | null;
                     name?: string | null;
@@ -1074,8 +1213,11 @@ export class AgentService {
                     category_name?: string | null;
                     available?: boolean;
                     stock?: number | null;
-                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price';
+                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price' | 'not_available_on_this_marketplace' | 'not_sold_by_that_seller';
                 }>;
+                marketplace?: boolean;
+                sellers?: Array<Record<string, any>>;
+                shipping_selections?: Array<Record<string, any>>;
                 subtotal?: number;
                 discount?: {
                     amount?: number;
@@ -1089,7 +1231,7 @@ export class AgentService {
                     is_free?: boolean | null;
                 };
                 tax?: {
-                    status?: 'quoted' | 'address_required' | 'unavailable';
+                    status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                     amount?: number | null;
                     source?: 'automatic' | 'fallback';
                     /**
@@ -1097,7 +1239,7 @@ export class AgentService {
                      */
                     prices_include_tax?: boolean;
                 };
-                grand_total?: number;
+                grand_total?: number | null;
                 /**
                  * True when every line is available and both shipping and tax were priced for the address.
                  */
@@ -1805,6 +1947,12 @@ export class AgentService {
      * (`409 quote_incomplete`); each carries the quote in `error.details`.
      *
      * A shopper credential, when sent, ties the intent to that shopper, who must then confirm with it.
+     *
+     * **With a marketplace operator key** the basket may span several sellers of that marketplace, priced as
+     * `POST /v1/agent/quote` prices it for that key; the intent records each seller's lines in `sellers`.
+     * Only `token` confirmation is available (`hosted` answers `400`). A line not sold on that marketplace is
+     * refused with `409 items_unavailable`, and nothing is created. Stock is held from confirmation, for the
+     * payment window, rather than from creation. Shopper credentials are sent at confirmation.
      * @returns any A replay of an Idempotency-Key already used with the same items
      * @throws ApiError
      */
@@ -1823,6 +1971,10 @@ export class AgentService {
             items: Array<{
                 variant_id: string;
                 quantity: number;
+                /**
+                 * Marketplace key only — the seller of this variant. Optional; when given it must match.
+                 */
+                merchant_store_id?: string;
             }>;
             /**
              * Where the order is going. `country` (ISO 3166-1 alpha-2) is needed for tax; `line1` with `city`, or `latitude` with `longitude`, for shipping.
@@ -1838,6 +1990,14 @@ export class AgentService {
                 latitude?: number;
                 longitude?: number;
             };
+            /**
+             * Marketplace key only — per seller, a carrier option chosen from an earlier quote.
+             */
+            shipping_selections?: Array<{
+                merchant_store_id: string;
+                rate_id?: string;
+                rate_source?: 'custom' | 'shippo';
+            }>;
             /**
              * `token` returns a token the agent confirms with. `hosted` also returns `confirmation_url`, a link to the store's hosted confirmation page for the shopper to open.
              */
@@ -1880,9 +2040,21 @@ export class AgentService {
             items?: Array<{
                 variant_id: string;
                 quantity: number;
+                /**
+                 * Marketplace key only.
+                 */
+                merchant_store_id?: string;
             }>;
             quote?: {
                 lines?: Array<{
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string | null;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_name?: string | null;
                     variant_id?: string;
                     product_id?: string | null;
                     name?: string | null;
@@ -1895,8 +2067,11 @@ export class AgentService {
                     category_name?: string | null;
                     available?: boolean;
                     stock?: number | null;
-                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price';
+                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price' | 'not_available_on_this_marketplace' | 'not_sold_by_that_seller';
                 }>;
+                marketplace?: boolean;
+                sellers?: Array<Record<string, any>>;
+                shipping_selections?: Array<Record<string, any>>;
                 subtotal?: number;
                 discount?: {
                     amount?: number;
@@ -1910,7 +2085,7 @@ export class AgentService {
                     is_free?: boolean | null;
                 };
                 tax?: {
-                    status?: 'quoted' | 'address_required' | 'unavailable';
+                    status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                     amount?: number | null;
                     source?: 'automatic' | 'fallback';
                     /**
@@ -1918,7 +2093,7 @@ export class AgentService {
                      */
                     prices_include_tax?: boolean;
                 };
-                grand_total?: number;
+                grand_total?: number | null;
                 /**
                  * True when every line is available and both shipping and tax were priced for the address.
                  */
@@ -1927,6 +2102,14 @@ export class AgentService {
                 currency?: string | null;
                 shipping_address?: any | null;
             };
+            /**
+             * Marketplace key only — each seller's frozen lines, with `merchant_store_id`, `merchant_name`, `items`, `merchandise_total` and `shipping`.
+             */
+            sellers?: Array<Record<string, any>>;
+            /**
+             * Marketplace key only — the marketplace order placed when the shopper confirmed.
+             */
+            order_group_id?: string | null;
             created_at?: string;
             confirmed_at?: string | null;
             cancelled_at?: string | null;
@@ -1979,6 +2162,10 @@ export class AgentService {
      * publishable key, or another shopper's credential receives the intent without those two fields; its
      * status, lines and totals are unchanged. A credential that is sent and cannot be verified is answered
      * with its own error rather than the reduced view.
+     *
+     * With a marketplace operator key only that marketplace's intents are found; `sellers` and `order_group_id`
+     * carry the per-seller lines and, once confirmed, the marketplace order. A publishable key does not see the
+     * shipping address; a secret key does.
      * @returns any The intent
      * @throws ApiError
      */
@@ -2025,9 +2212,21 @@ export class AgentService {
             items?: Array<{
                 variant_id: string;
                 quantity: number;
+                /**
+                 * Marketplace key only.
+                 */
+                merchant_store_id?: string;
             }>;
             quote?: {
                 lines?: Array<{
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string | null;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_name?: string | null;
                     variant_id?: string;
                     product_id?: string | null;
                     name?: string | null;
@@ -2040,8 +2239,11 @@ export class AgentService {
                     category_name?: string | null;
                     available?: boolean;
                     stock?: number | null;
-                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price';
+                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price' | 'not_available_on_this_marketplace' | 'not_sold_by_that_seller';
                 }>;
+                marketplace?: boolean;
+                sellers?: Array<Record<string, any>>;
+                shipping_selections?: Array<Record<string, any>>;
                 subtotal?: number;
                 discount?: {
                     amount?: number;
@@ -2055,7 +2257,7 @@ export class AgentService {
                     is_free?: boolean | null;
                 };
                 tax?: {
-                    status?: 'quoted' | 'address_required' | 'unavailable';
+                    status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                     amount?: number | null;
                     source?: 'automatic' | 'fallback';
                     /**
@@ -2063,7 +2265,7 @@ export class AgentService {
                      */
                     prices_include_tax?: boolean;
                 };
-                grand_total?: number;
+                grand_total?: number | null;
                 /**
                  * True when every line is available and both shipping and tax were priced for the address.
                  */
@@ -2075,6 +2277,14 @@ export class AgentService {
                  */
                 shipping_address?: any | null;
             };
+            /**
+             * Marketplace key only — each seller's frozen lines, with `merchant_store_id`, `merchant_name`, `items`, `merchandise_total` and `shipping`.
+             */
+            sellers?: Array<Record<string, any>>;
+            /**
+             * Marketplace key only — the marketplace order placed when the shopper confirmed.
+             */
+            order_group_id?: string | null;
             created_at?: string;
             confirmed_at?: string | null;
             cancelled_at?: string | null;
@@ -2132,6 +2342,14 @@ export class AgentService {
      *
      * The token is single use: a second confirmation returns `409 intent_not_pending`. A wrong token returns
      * `403 invalid_token` and discloses nothing about the intent.
+     *
+     * **With a marketplace operator key** `contact.email` and `contact.name` are always required, and a
+     * shopper credential (`x-auth-token` or `x-external-auth`), when sent, is recorded on the purchase. The
+     * basket is re-priced through the marketplace checkout; a change returns `409 quote_changed`, and a seller
+     * that has run out returns `409 items_unavailable`. Otherwise one marketplace order is placed across the
+     * sellers, each seller's stock is held for the payment window, and the response carries `order_group` and
+     * a single `payment` whose `client_secret` the storefront confirms with the payment provider's own card form.
+     * Once paid, every seller receives their own order, marked as placed through a shopping assistant.
      * @returns any The order, placed with payment pending
      * @throws ApiError
      */
@@ -2187,9 +2405,21 @@ export class AgentService {
                 items?: Array<{
                     variant_id: string;
                     quantity: number;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string;
                 }>;
                 quote?: {
                     lines?: Array<{
+                        /**
+                         * Marketplace key only.
+                         */
+                        merchant_store_id?: string | null;
+                        /**
+                         * Marketplace key only.
+                         */
+                        merchant_name?: string | null;
                         variant_id?: string;
                         product_id?: string | null;
                         name?: string | null;
@@ -2202,8 +2432,11 @@ export class AgentService {
                         category_name?: string | null;
                         available?: boolean;
                         stock?: number | null;
-                        unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price';
+                        unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price' | 'not_available_on_this_marketplace' | 'not_sold_by_that_seller';
                     }>;
+                    marketplace?: boolean;
+                    sellers?: Array<Record<string, any>>;
+                    shipping_selections?: Array<Record<string, any>>;
                     subtotal?: number;
                     discount?: {
                         amount?: number;
@@ -2217,7 +2450,7 @@ export class AgentService {
                         is_free?: boolean | null;
                     };
                     tax?: {
-                        status?: 'quoted' | 'address_required' | 'unavailable';
+                        status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                         amount?: number | null;
                         source?: 'automatic' | 'fallback';
                         /**
@@ -2225,7 +2458,7 @@ export class AgentService {
                          */
                         prices_include_tax?: boolean;
                     };
-                    grand_total?: number;
+                    grand_total?: number | null;
                     /**
                      * True when every line is available and both shipping and tax were priced for the address.
                      */
@@ -2234,6 +2467,14 @@ export class AgentService {
                     currency?: string | null;
                     shipping_address?: any | null;
                 };
+                /**
+                 * Marketplace key only — each seller's frozen lines, with `merchant_store_id`, `merchant_name`, `items`, `merchandise_total` and `shipping`.
+                 */
+                sellers?: Array<Record<string, any>>;
+                /**
+                 * Marketplace key only — the marketplace order placed when the shopper confirmed.
+                 */
+                order_group_id?: string | null;
                 created_at?: string;
                 confirmed_at?: string | null;
                 cancelled_at?: string | null;
@@ -2246,8 +2487,43 @@ export class AgentService {
                 payment_status?: string;
                 order_status?: string;
             };
+            /**
+             * Marketplace key only — the one order placed across the sellers.
+             */
+            order_group?: {
+                id?: string;
+                group_number?: string | null;
+                total_amount?: number;
+                currency?: string;
+                payment_status?: string;
+                sellers?: Array<{
+                    merchant_store_id?: string;
+                    shipping_amount?: number | null;
+                    fulfilled_by?: 'seller' | 'marketplace';
+                }>;
+            };
             payment?: {
                 next_step?: string;
+                /**
+                 * Marketplace key only.
+                 */
+                provider?: string;
+                /**
+                 * Marketplace key only — confirms the single payment with the provider's own card form.
+                 */
+                client_secret?: string | null;
+                /**
+                 * Marketplace key only.
+                 */
+                payment_intent_id?: string | null;
+                /**
+                 * Marketplace key only.
+                 */
+                amount?: number;
+                /**
+                 * Marketplace key only.
+                 */
+                currency?: string;
                 initialize_body?: Record<string, any>;
                 methods?: Array<Record<string, any>>;
             };
@@ -2297,6 +2573,9 @@ export class AgentService {
      * Cancel a checkout intent
      * Cancels a pending intent and releases its stock hold at once. The answer is the cancelled intent, with the
      * shopper's personal data returned on the same terms as `GET /v1/agent/checkout-intents/{id}`.
+     *
+     * A marketplace intent holds no stock before confirmation, so cancelling it only closes it. A marketplace
+     * key finds only its own marketplace's intents.
      * @returns any The cancelled intent
      * @throws ApiError
      */
@@ -2338,9 +2617,21 @@ export class AgentService {
             items?: Array<{
                 variant_id: string;
                 quantity: number;
+                /**
+                 * Marketplace key only.
+                 */
+                merchant_store_id?: string;
             }>;
             quote?: {
                 lines?: Array<{
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_store_id?: string | null;
+                    /**
+                     * Marketplace key only.
+                     */
+                    merchant_name?: string | null;
                     variant_id?: string;
                     product_id?: string | null;
                     name?: string | null;
@@ -2353,8 +2644,11 @@ export class AgentService {
                     category_name?: string | null;
                     available?: boolean;
                     stock?: number | null;
-                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price';
+                    unavailable_reason?: 'not_found' | 'insufficient_stock' | 'no_price' | 'not_available_on_this_marketplace' | 'not_sold_by_that_seller';
                 }>;
+                marketplace?: boolean;
+                sellers?: Array<Record<string, any>>;
+                shipping_selections?: Array<Record<string, any>>;
                 subtotal?: number;
                 discount?: {
                     amount?: number;
@@ -2368,7 +2662,7 @@ export class AgentService {
                     is_free?: boolean | null;
                 };
                 tax?: {
-                    status?: 'quoted' | 'address_required' | 'unavailable';
+                    status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                     amount?: number | null;
                     source?: 'automatic' | 'fallback';
                     /**
@@ -2376,7 +2670,7 @@ export class AgentService {
                      */
                     prices_include_tax?: boolean;
                 };
-                grand_total?: number;
+                grand_total?: number | null;
                 /**
                  * True when every line is available and both shipping and tax were priced for the address.
                  */
@@ -2388,6 +2682,14 @@ export class AgentService {
                  */
                 shipping_address?: any | null;
             };
+            /**
+             * Marketplace key only — each seller's frozen lines, with `merchant_store_id`, `merchant_name`, `items`, `merchandise_total` and `shipping`.
+             */
+            sellers?: Array<Record<string, any>>;
+            /**
+             * Marketplace key only — the marketplace order placed when the shopper confirmed.
+             */
+            order_group_id?: string | null;
             created_at?: string;
             confirmed_at?: string | null;
             cancelled_at?: string | null;
