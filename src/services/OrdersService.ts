@@ -586,6 +586,7 @@ export class OrdersService {
      * - `estimated_delivery`: Estimated delivery date/time
      * - `shipped_at`: Timestamp when order was shipped
      * - `delivered_at`: Timestamp when order was delivered
+     * - `shipping_metadata`: Fulfilment details such as a purchased label's carrier and tracking (replaces the stored object)
      *
      * **Status transitions:**
      * - `payment_status`: `pending` → `paid` or `failed`; `failed` → `paid`. A `paid` order
@@ -683,6 +684,10 @@ export class OrdersService {
              * Stock reservation ids returned by `POST /v1/checkout/reserve`. Supplying them commits the stock already held for this shopper rather than decrementing it a second time.
              */
             reservation_ids?: Array<string>;
+            /**
+             * Fulfilment details to store on the order, such as the carrier, service, label URL and tracking details of a purchased shipping label. The object replaces the order's stored `shipping_metadata` in full rather than being merged into it, so include any existing keys that should be kept.
+             */
+            shipping_metadata?: any | null;
         },
     }): CancelablePromise<(Order & {
         /**

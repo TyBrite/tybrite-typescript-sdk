@@ -125,6 +125,7 @@ export { CustomersService } from './services/CustomersService';
 export { DiscoveryService } from './services/DiscoveryService';
 export { DisputesService } from './services/DisputesService';
 export { EventsService } from './services/EventsService';
+export { FeedsService } from './services/FeedsService';
 export { GcConnectService } from './services/GcConnectService';
 export { GiftCardsService } from './services/GiftCardsService';
 export { IngestionService } from './services/IngestionService';

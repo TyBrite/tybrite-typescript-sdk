@@ -668,8 +668,10 @@ export class AgentService {
      * **With a marketplace operator key** the basket may span several sellers of that marketplace. The quote
      * is the marketplace checkout's own pricing: each line at the marketplace's price, each seller's
      * merchandise total and shipping in `sellers`, marketplace-wide promotions in `discount.amount`, and the
-     * `grand_total` the checkout charges. Tax is not added (`tax.status: not_charged`). A line may name its
-     * seller with `merchant_store_id`; a variant not sold on that marketplace is flagged
+     * `grand_total` the checkout charges. Tax is not added (`tax.status: not_charged`, `amount: 0`): the
+     * marketplace checkout charges no tax, so `grand_total` is exactly the amount the shopper pays and the
+     * quote can be final. A line may name its seller with `merchant_store_id`; a variant not sold on that
+     * marketplace is flagged
      * `not_available_on_this_marketplace`, and one sold by a different seller than named
      * `not_sold_by_that_seller`. `shipping_selections` chooses a carrier option a seller offered in an earlier
      * quote.
@@ -775,6 +777,9 @@ export class AgentService {
                 is_free?: boolean | null;
             };
             tax?: {
+                /**
+                 * `not_charged` is returned with a marketplace key: the marketplace checkout adds no tax, so `amount` is 0 and `grand_total` is the amount charged.
+                 */
                 status?: 'quoted' | 'address_required' | 'unavailable' | 'not_charged';
                 amount?: number | null;
                 source?: 'automatic' | 'fallback';
@@ -1922,6 +1927,358 @@ export class AgentService {
         });
     }
     /**
+     * Request a return for an order
+     * Lodges a return for one of the shopper's own orders — the action `getOrderStatus` lists as `request_return`
+     * while the order is inside the store's return window. Omit `items` to return every line in full, or name
+     * lines with `order_item_id` and a `quantity`. The store reviews the return and decides the refund; the shopper
+     * is emailed that it was received. Requires the shopper's credential.
+     * @returns any The return was lodged
+     * @throws ApiError
+     */
+    public requestReturn({
+        id,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The order.
+         */
+        id: string,
+        requestBody: {
+            reason_code: 'damaged' | 'defective' | 'wrong_item' | 'not_as_described' | 'wrong_size' | 'no_longer_needed' | 'arrived_late' | 'other';
+            /**
+             * Required when `reason_code` is `other`.
+             */
+            reason_description?: string;
+            /**
+             * Defaults to `full_refund`.
+             */
+            return_type?: 'full_refund' | 'partial_refund' | 'exchange' | 'store_credit';
+            items?: Array<{
+                order_item_id: string;
+                quantity?: number;
+                condition?: 'sellable' | 'damaged' | 'defective' | 'expired';
+            }>;
+        },
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: Record<string, any>;
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/orders/{id}/returns',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List the shopper's standing instructions
+     * The shopper's standing instructions with this store, newest first. Requires the shopper's credential and
+     * personalization consent.
+     * @returns any The standing instructions
+     * @throws ApiError
+     */
+    public listMandates({
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            mandates?: Array<{
+                id?: string;
+                kind?: 'reorder' | 'price_drop' | 'back_in_stock';
+                status?: 'active' | 'paused' | 'cancelled' | 'completed' | 'expired';
+                /**
+                 * Why it is no longer active: `cancelled_by_shopper`, `consent_revoked`, `fulfilled` or `expired`.
+                 */
+                status_reason?: string | null;
+                product_id?: string;
+                variant_id?: string;
+                quantity?: number;
+                max_unit_price?: number;
+                currency?: string;
+                interval_days?: number | null;
+                max_triggers?: number;
+                trigger_count?: number;
+                shipping_address?: Record<string, any>;
+                next_check_at?: string;
+                last_triggered_at?: string | null;
+                /**
+                 * The checkout intent prepared the last time it fired.
+                 */
+                last_intent_id?: string | null;
+                expires_at?: string;
+                created_at?: string;
+            }>;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/agent/me/mandates',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Personalization consent has not been granted`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Create a standing instruction
+     * Leaves a standing instruction for the shopper, bounded on every side: reorder an item every `interval_days`
+     * (7–365, at most 12 times), or watch for it to come back in stock (`back_in_stock`) or to reach a price (`price_drop`) —
+     * always at or below `max_unit_price` per unit. When the condition holds, Galactic Core prepares a hosted checkout
+     * intent for the shopper, sends the `agent.mandate.triggered` webhook event with its confirmation link, and emails the
+     * shopper that link under the store's own name. The shopper confirms; nothing is paid without them, and a prepared
+     * checkout stays open for 48 hours. Requires the shopper's credential and personalization consent. A shopper can keep
+     * at most 10 with one store; a mandate pauses if consent is withdrawn.
+     * @returns any The standing instruction was created
+     * @throws ApiError
+     */
+    public createMandate({
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        requestBody: {
+            kind: 'reorder' | 'price_drop' | 'back_in_stock';
+            variant_id: string;
+            /**
+             * Defaults to 1.
+             */
+            quantity?: number;
+            /**
+             * The most the shopper will pay per unit, in the store's currency.
+             */
+            max_unit_price: number;
+            /**
+             * Required for `reorder`; not allowed otherwise.
+             */
+            interval_days?: number;
+            /**
+             * `reorder` only: how many times it may fire. Defaults to 1.
+             */
+            max_triggers?: number;
+            /**
+             * Defaults to 180.
+             */
+            expires_in_days?: number;
+            /**
+             * Where to deliver: `line1` (or `latitude`/`longitude`) and `country` are required.
+             */
+            shipping_address: {
+                name?: string;
+                line1?: string;
+                line2?: string;
+                city?: string;
+                state?: string;
+                postal_code?: string;
+                country?: string;
+            };
+        },
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            id?: string;
+            kind?: 'reorder' | 'price_drop' | 'back_in_stock';
+            status?: 'active' | 'paused' | 'cancelled' | 'completed' | 'expired';
+            /**
+             * Why it is no longer active: `cancelled_by_shopper`, `consent_revoked`, `fulfilled` or `expired`.
+             */
+            status_reason?: string | null;
+            product_id?: string;
+            variant_id?: string;
+            quantity?: number;
+            max_unit_price?: number;
+            currency?: string;
+            interval_days?: number | null;
+            max_triggers?: number;
+            trigger_count?: number;
+            shipping_address?: Record<string, any>;
+            next_check_at?: string;
+            last_triggered_at?: string | null;
+            /**
+             * The checkout intent prepared the last time it fired.
+             */
+            last_intent_id?: string | null;
+            expires_at?: string;
+            created_at?: string;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/mandates',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `A bound was not met`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Personalization consent has not been granted`,
+                404: `Resource not found`,
+                409: `\`mandate_limit\` (10 already) or \`shipping_not_deliverable\``,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Cancel a standing instruction
+     * Cancels one of the shopper's standing instructions. A checkout it already prepared is unaffected and expires
+     * unless the shopper confirms it. Requires the shopper's credential.
+     * @returns any Cancelled
+     * @throws ApiError
+     */
+    public cancelMandate({
+        id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The standing instruction.
+         */
+        id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            id?: string;
+            kind?: 'reorder' | 'price_drop' | 'back_in_stock';
+            status?: 'active' | 'paused' | 'cancelled' | 'completed' | 'expired';
+            /**
+             * Why it is no longer active: `cancelled_by_shopper`, `consent_revoked`, `fulfilled` or `expired`.
+             */
+            status_reason?: string | null;
+            product_id?: string;
+            variant_id?: string;
+            quantity?: number;
+            max_unit_price?: number;
+            currency?: string;
+            interval_days?: number | null;
+            max_triggers?: number;
+            trigger_count?: number;
+            shipping_address?: Record<string, any>;
+            next_check_at?: string;
+            last_triggered_at?: string | null;
+            /**
+             * The checkout intent prepared the last time it fired.
+             */
+            last_intent_id?: string | null;
+            expires_at?: string;
+            created_at?: string;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/mandates/{id}/cancel',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
+                409: `Not active (already cancelled, completed or expired)`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
      * Create a checkout intent
      * An agent's hand-off to the shopper. The basket is priced for the address, the price is frozen, and the
      * stock is held until the intent expires (30 minutes). The response carries a `confirmation_token`, once:
@@ -1953,6 +2310,12 @@ export class AgentService {
      * Only `token` confirmation is available (`hosted` answers `400`). A line not sold on that marketplace is
      * refused with `409 items_unavailable`, and nothing is created. Stock is held from confirmation, for the
      * payment window, rather than from creation. Shopper credentials are sent at confirmation.
+     * **Limits on a publishable key.** An intent holds stock, so a publishable key — which anyone can read from a
+     * storefront — is bounded: 60 new intents an hour from one address, 5 waiting for confirmation at once per
+     * address (per shopper when a shopper credential is sent), 10 units of one item per intent for a guest and 25
+     * for a signed-in shopper, and guests together may hold at most half of an item's stock. Past a limit the
+     * answer is `409 hold_limit_reached` with `details.limit`, or `429 rate_limited` with `Retry-After`. A secret key
+     * (the store's own server) is bound only by its plan.
      * @returns any A replay of an Idempotency-Key already used with the same items
      * @throws ApiError
      */

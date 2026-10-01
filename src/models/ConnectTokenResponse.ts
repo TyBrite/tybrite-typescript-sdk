@@ -11,7 +11,7 @@ export type ConnectTokenResponse = {
     sk: string;
     /**
      * Publishable key. Safe to use client-side (browser/mobile).
-     * Use it for read-only catalog and cart operations.
+     * Use it for catalogue reads and the actions a shopper takes for themselves, such as cart and wishlist.
      *
      */
     pk: string;

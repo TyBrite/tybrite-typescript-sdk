@@ -23,7 +23,7 @@ export class PaymentsService {
      *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
-     * - ✅ Publishable keys (read-only)
+     * - ✅ Publishable keys
      *
      * @returns any Successfully retrieved payment methods
      * @throws ApiError
@@ -216,10 +216,6 @@ export class PaymentsService {
              * Optional order ID to link payment to an order
              */
             order_id?: string;
-            /**
-             * Optional idempotency key to prevent duplicate payments
-             */
-            idempotency_key?: string;
             /**
              * Optional metadata to attach to the payment
              */

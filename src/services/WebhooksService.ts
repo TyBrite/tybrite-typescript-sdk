@@ -66,7 +66,9 @@ export class WebhooksService {
              * **Agent checkouts:** `agent.checkout_intent.created`,
              * `agent.checkout_intent.confirmed`, `agent.checkout_intent.expired` — a checkout
              * an assistant prepared through the Agent API, the shopper's confirmation of it
-             * (the order now exists), and one that lapsed unconfirmed.
+             * (the order now exists), and one that lapsed unconfirmed. `agent.mandate.triggered`
+             * — a shopper's standing instruction found its condition met and a checkout was
+             * prepared; the payload carries `confirmation_url` for the shopper to confirm it.
              *
              * **Customer lifecycle:** `customer.created`, `customer.updated`, `customer.deleted`
              *

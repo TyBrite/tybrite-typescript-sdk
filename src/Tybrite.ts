@@ -16,6 +16,7 @@ import { CustomersService } from './services/CustomersService';
 import { DiscoveryService } from './services/DiscoveryService';
 import { DisputesService } from './services/DisputesService';
 import { EventsService } from './services/EventsService';
+import { FeedsService } from './services/FeedsService';
 import { GcConnectService } from './services/GcConnectService';
 import { GiftCardsService } from './services/GiftCardsService';
 import { IngestionService } from './services/IngestionService';
@@ -50,6 +51,7 @@ export class Tybrite {
     public readonly discovery: DiscoveryService;
     public readonly disputes: DisputesService;
     public readonly events: EventsService;
+    public readonly feeds: FeedsService;
     public readonly gcConnect: GcConnectService;
     public readonly giftCards: GiftCardsService;
     public readonly ingestion: IngestionService;
@@ -95,6 +97,7 @@ export class Tybrite {
         this.discovery = new DiscoveryService(this.request);
         this.disputes = new DisputesService(this.request);
         this.events = new EventsService(this.request);
+        this.feeds = new FeedsService(this.request);
         this.gcConnect = new GcConnectService(this.request);
         this.giftCards = new GiftCardsService(this.request);
         this.ingestion = new IngestionService(this.request);
