@@ -162,7 +162,9 @@ export class WebhooksService {
              * **Wholesale (B2B):** for stores with wholesale enabled — the trade itself:
              * `b2b.rfq.created`, `b2b.quote.sent`, `b2b.quote.accepted`, `b2b.quote.rejected`,
              * `b2b.po.issued`, `b2b.po.confirmed`, `b2b.po.fulfilled`,
-             * `b2b.invoice.issued`, `b2b.invoice.paid`, `b2b.invoice.overdue`
+             * `b2b.invoice.issued`, `b2b.invoice.partially_paid` (a payment arrived and a
+             * balance remains — fires for each such payment), `b2b.invoice.paid`,
+             * `b2b.invoice.overdue`
              *
              * **Wholesale credit and approvals:** `b2b.credit.threshold_reached` and
              * `b2b.credit.exhausted` fire when a buyer crosses a share of their credit limit,

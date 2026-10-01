@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { B2bDirectOrderResponse } from '../models/B2bDirectOrderResponse';
 import type { B2bInvoice } from '../models/B2bInvoice';
+import type { B2bInvoicePaymentResponse } from '../models/B2bInvoicePaymentResponse';
 import type { B2bPurchaseOrder } from '../models/B2bPurchaseOrder';
 import type { B2bQuote } from '../models/B2bQuote';
 import type { B2bRfq } from '../models/B2bRfq';
@@ -506,13 +507,29 @@ export class B2BService {
         });
     }
     /**
-     * Pay an invoice (not available to buyers)
-     * A terms invoice is settled by the supplier when payment is received; a buyer credential
-     * cannot record an invoice settlement, so this operation always returns `403 not_supported`
-     * for an invoice the buyer owns (and `404` for one they do not). To pay online, place a
-     * prepaid order with `POST /v1/b2b/orders` and pay it through the payments API.
+     * Start paying an invoice
+     * Opens a payment for one of the buyer's own invoices and returns a hosted payment link. The
+     * buyer follows `payment_url` to a page branded as the supplier, which shows the invoice and
+     * hands off to one of the supplier's payment providers; no card details are entered on that
+     * page.
      *
-     * @returns void
+     * `amount` is optional. Without it the payment is for the whole open balance; with it, any
+     * amount from `0.01` up to the open balance, so an invoice can be paid in parts. The currency is
+     * the invoice's.
+     *
+     * The invoice is updated only when the payment provider confirms the money arrived, for exactly
+     * the amount and currency of this payment: `amount_paid` rises, the status becomes
+     * `partially_paid` or `paid`, and the `b2b.invoice.partially_paid` or `b2b.invoice.paid` event
+     * fires. Opening a payment records nothing on the invoice.
+     *
+     * The link is valid for 24 hours. The `t` value in its fragment is the page's only credential;
+     * treat the whole link as a secret and send it only to the buyer. Opening a new payment for the
+     * same invoice replaces an earlier link that has not reached a payment provider yet.
+     *
+     * Requires a secret key and the buyer's identity (exactly one of x-auth-token, x-external-auth or
+     * x-idp-token).
+     *
+     * @returns B2bInvoicePaymentResponse The payment was opened. Follow `payment_url` to pay.
      * @throws ApiError
      */
     public payInvoice({
@@ -520,6 +537,7 @@ export class B2BService {
         xAuthToken,
         xExternalAuth,
         xIdpToken,
+        requestBody,
     }: {
         id: string,
         /**
@@ -537,7 +555,13 @@ export class B2BService {
          *
          */
         xIdpToken?: string,
-    }): CancelablePromise<void> {
+        requestBody?: {
+            /**
+             * Amount to pay now, from 0.01 up to the open balance. Omit to pay the whole balance.
+             */
+            amount?: number;
+        },
+    }): CancelablePromise<B2bInvoicePaymentResponse> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/b2b/invoices/{id}/pay',
@@ -549,10 +573,15 @@ export class B2BService {
                 'x-external-auth': xExternalAuth,
                 'x-idp-token': xIdpToken,
             },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
-                403: `A buyer cannot record an invoice settlement.`,
+                400: `The amount is not a number, is below 0.01, has more than two decimal places, or is more than the open balance.`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The key is publishable, or the customer has no wholesale account with this store.`,
                 404: `Resource not found`,
+                409: `The invoice is already paid or was voided.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
         });

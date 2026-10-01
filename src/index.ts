@@ -17,6 +17,8 @@ export type { AdSlotResponse } from './models/AdSlotResponse';
 export { B2bDirectOrder } from './models/B2bDirectOrder';
 export type { B2bDirectOrderResponse } from './models/B2bDirectOrderResponse';
 export { B2bInvoice } from './models/B2bInvoice';
+export type { B2bInvoicePayment } from './models/B2bInvoicePayment';
+export type { B2bInvoicePaymentResponse } from './models/B2bInvoicePaymentResponse';
 export { B2bPurchaseOrder } from './models/B2bPurchaseOrder';
 export { B2bQuote } from './models/B2bQuote';
 export { B2bRfq } from './models/B2bRfq';

@@ -2316,6 +2316,15 @@ export class AgentService {
      * for a signed-in shopper, and guests together may hold at most half of an item's stock. Past a limit the
      * answer is `409 hold_limit_reached` with `details.limit`, or `429 rate_limited` with `Retry-After`. A secret key
      * (the store's own server) is bound only by its plan.
+     *
+     * **Verified assistant platforms.** Many shoppers using one assistant reach the store from the same few network
+     * addresses, so a request identified as coming from an assistant platform Galactic Core recognises is counted
+     * per store and platform instead of per address: 600 new intents an hour and 100 waiting for confirmation. A
+     * request is identified either by a Web Bot Auth signature (HTTP Message Signatures with `tag="web-bot-auth"`,
+     * an Ed25519 key from the platform's published key directory, `created` within the last five minutes, covering
+     * `@authority` and the platform's `Signature-Agent` member) or by a source address inside the platform's
+     * published egress ranges. The per-item limits and the share-of-stock limit apply unchanged. A signature that
+     * cannot be verified is not an error: the request is counted by address, as an unsigned one is.
      * @returns any A replay of an Idempotency-Key already used with the same items
      * @throws ApiError
      */
