@@ -23,6 +23,9 @@ export class PromotionsService {
         cursor,
         fields,
     }: {
+        /**
+         * Only live promotions are returned. `active` is the default; any other value returns an empty list.
+         */
         status?: 'active' | 'inactive' | 'scheduled' | 'expired',
         /**
          * Filter promotions by minimum cart total requirement (numeric string)

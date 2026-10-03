@@ -86,6 +86,7 @@ export { SandboxCampaign } from './models/SandboxCampaign';
 export { SandboxGiftCard } from './models/SandboxGiftCard';
 export { SandboxPricingRule } from './models/SandboxPricingRule';
 export { SandboxPromotion } from './models/SandboxPromotion';
+export type { SandboxStockLevel } from './models/SandboxStockLevel';
 export type { SearchResponse } from './models/SearchResponse';
 export type { SearchResult } from './models/SearchResult';
 export type { Session } from './models/Session';

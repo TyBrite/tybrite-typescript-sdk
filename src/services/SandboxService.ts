@@ -7,6 +7,7 @@ import type { SandboxCampaign } from '../models/SandboxCampaign';
 import type { SandboxGiftCard } from '../models/SandboxGiftCard';
 import type { SandboxPricingRule } from '../models/SandboxPricingRule';
 import type { SandboxPromotion } from '../models/SandboxPromotion';
+import type { SandboxStockLevel } from '../models/SandboxStockLevel';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class SandboxService {
@@ -464,6 +465,150 @@ export class SandboxService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List sandbox stock levels
+     * Lists the sandbox stock levels set for your store, each with the variant's live stock beside
+     * it. A variant with no level reads live stock with a test key.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any The sandbox stock levels, most recently changed first.
+     * @throws ApiError
+     */
+    public listSandboxStockLevels(): CancelablePromise<{
+        stock_levels?: Array<SandboxStockLevel>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/sandbox/stock',
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Set sandbox stock levels
+     * Sets a sandbox-only stock level for one or more variants, so you can exercise low-stock and
+     * sold-out behaviour without touching the merchant's real inventory.
+     *
+     * A sandbox order never lowers live stock. For a variant with a level, a test key reads the level
+     * in place of live stock everywhere stock appears — product reads, priced products, shoppable
+     * posts and lookbooks, cart and wishlist stock checks, and checkout reservations — and a paid
+     * sandbox order takes its quantity from the level. A level of `0` makes the variant sold out for
+     * test keys: adding it to a cart or reserving it is refused. Setting a level again replaces it.
+     *
+     * Send one level as `{ variant_id, stock }`, or up to 100 as `items`. Every variant must belong to
+     * your store. A live key, and the merchant's own admin, keep reading live stock throughout.
+     *
+     * Levels are removed with `DELETE`, and by `POST /v1/sandbox/reset`.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any The levels as set.
+     * @throws ApiError
+     */
+    public setSandboxStockLevels({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The variant to set a level for, when setting one.
+             */
+            variant_id?: string;
+            /**
+             * The level, when setting one.
+             */
+            stock?: number;
+            /**
+             * Several levels at once, in place of `variant_id` and `stock`.
+             */
+            items?: Array<{
+                variant_id: string;
+                stock: number;
+            }>;
+        },
+    }): CancelablePromise<{
+        stock_levels?: Array<SandboxStockLevel>;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/sandbox/stock',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `A variant does not belong to your store.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Remove every sandbox stock level
+     * Removes every sandbox stock level for your store. Each variant reads live stock again with a
+     * test key.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any Levels removed.
+     * @throws ApiError
+     */
+    public clearSandboxStockLevels(): CancelablePromise<{
+        success?: boolean;
+        message?: string;
+        removed?: number;
+    }> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/sandbox/stock',
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Remove one sandbox stock level
+     * Removes the sandbox stock level for one variant, which then reads live stock again with a test
+     * key.
+     *
+     * **Requires a secret test key** (`tybrite_sk_test_*`).
+     *
+     * @returns any Level removed.
+     * @throws ApiError
+     */
+    public deleteSandboxStockLevel({
+        variantId,
+    }: {
+        variantId: string,
+    }): CancelablePromise<{
+        success?: boolean;
+        message?: string;
+        removed?: number;
+    }> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/sandbox/stock/{variant_id}',
+            path: {
+                'variant_id': variantId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `No sandbox stock level is set for that variant.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
