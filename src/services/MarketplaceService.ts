@@ -112,11 +112,17 @@ export class MarketplaceService {
      *
      * Requires the marketplace operator key.
      *
-     * @returns MarketplaceCheckoutResponse The multi-merchant order was created and is awaiting payment.
+     * Send an `Idempotency-Key` header to make a retry safe: a repeat of the same request with the
+     * same key returns the purchase the first attempt created (`200`, the same `order_group_id` and
+     * PaymentIntent) instead of creating a second order, holding stock twice or raising a second
+     * charge. Keys are unique per marketplace and environment.
+     *
+     * @returns MarketplaceCheckoutResponse A repeat of an earlier checkout with the same `Idempotency-Key` and body. The body is the original checkout's result, with the same `order_group_id` and `payment_intent_id`.
      * @throws ApiError
      */
     public marketplaceCheckout({
         requestBody,
+        idempotencyKey,
         xAuthToken,
         xCustomerToken,
         xExternalAuth,
@@ -191,6 +197,10 @@ export class MarketplaceService {
             };
         },
         /**
+         * A unique key for this checkout attempt. Repeating the request with the same key and the same body returns the original result with `200`; the same key with a different body is refused with `409 idempotency_conflict`.
+         */
+        idempotencyKey?: string,
+        /**
          * Session token of a shopper signed in through Galactic Core, tying the checkout to their account rather than treating it as a guest checkout. Optional; send at most one shopper credential.
          */
         xAuthToken?: string,
@@ -207,6 +217,7 @@ export class MarketplaceService {
             method: 'POST',
             url: '/v1/cart/checkout',
             headers: {
+                'Idempotency-Key': idempotencyKey,
                 'x-auth-token': xAuthToken,
                 'x-customer-token': xCustomerToken,
                 'x-external-auth': xExternalAuth,
@@ -218,7 +229,7 @@ export class MarketplaceService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                409: `The marketplace has not finished connecting its payment account, so it cannot take payment yet (\`provider_not_live\`).`,
+                409: `The marketplace has not finished connecting its payment account, so it cannot take payment yet (\`provider_not_live\`); or the \`Idempotency-Key\` was already used with a different body (\`idempotency_conflict\`), names a checkout still being processed (\`idempotency_in_progress\`), or names a checkout that did not complete (\`idempotency_failed\` — retry with a new key).`,
                 500: `Internal server error`,
                 502: `The payment provider could not be reached or rejected the request (\`provider_error\`), or shipping could not be priced (\`shipping_unavailable\`). No order is created.`,
             },

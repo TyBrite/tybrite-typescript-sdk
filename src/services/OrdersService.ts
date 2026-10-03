@@ -231,7 +231,7 @@ export class OrdersService {
                 country?: string;
             };
             /**
-             * Order line items (at least one required)
+             * Order line items (at least one, at most 100)
              */
             items: Array<{
                 /**
