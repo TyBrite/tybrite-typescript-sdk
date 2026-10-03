@@ -61,6 +61,7 @@ export class PricingService {
         customerId,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         quantity,
         orderTotal,
     }: {
@@ -149,8 +150,8 @@ export class PricingService {
          * Customer UUID for personalized pricing.
          *
          * Honored only together with that shopper's own credential: an
-         * `x-auth-token` session or an `x-external-auth` assertion that resolves
-         * to the same customer. The customer's segment, tier and first-purchase
+         * `x-auth-token` session, an `x-external-auth` assertion or an
+         * `x-idp-token` that resolves to the same customer. The customer's segment, tier and first-purchase
          * status then feed pricing rule evaluation, and the response is private
          * to that shopper. Without a matching credential the request returns the
          * public price; it is not rejected.
@@ -158,14 +159,18 @@ export class PricingService {
          */
         customerId?: string,
         /**
-         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token` or `x-external-auth`.
+         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token` or `x-external-auth`.
+         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier, for personalized pricing; it must resolve to the `customer_id` supplied. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
+         */
+        xIdpToken?: string,
         /**
          * Quantity for volume-based pricing discounts
          */
@@ -298,6 +303,7 @@ export class PricingService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'search': search,
@@ -376,6 +382,7 @@ export class PricingService {
         customerId,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         quantity,
         orderTotal,
     }: {
@@ -437,8 +444,8 @@ export class PricingService {
          * Customer UUID for personalized pricing.
          *
          * Honored only together with that shopper's own credential: an
-         * `x-auth-token` session or an `x-external-auth` assertion that resolves
-         * to the same customer. The customer's segment, tier and first-purchase
+         * `x-auth-token` session, an `x-external-auth` assertion or an
+         * `x-idp-token` that resolves to the same customer. The customer's segment, tier and first-purchase
          * status then feed pricing rule evaluation, and the response is private
          * to that shopper. Without a matching credential the request returns the
          * public price; it is not rejected.
@@ -446,14 +453,18 @@ export class PricingService {
          */
         customerId?: string,
         /**
-         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token` or `x-external-auth`.
+         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token` or `x-external-auth`.
+         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier, for personalized pricing; it must resolve to the `customer_id` supplied. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
+         */
+        xIdpToken?: string,
         /**
          * Quantity for volume-based pricing
          */
@@ -573,6 +584,7 @@ export class PricingService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'fields': fields,
@@ -652,6 +664,7 @@ export class PricingService {
         customerId,
         xAuthToken,
         xExternalAuth,
+        xIdpToken,
         quantity,
         orderTotal,
     }: {
@@ -713,8 +726,8 @@ export class PricingService {
          * Customer UUID for personalized pricing.
          *
          * Honored only together with that shopper's own credential: an
-         * `x-auth-token` session or an `x-external-auth` assertion that resolves
-         * to the same customer. The customer's segment, tier and first-purchase
+         * `x-auth-token` session, an `x-external-auth` assertion or an
+         * `x-idp-token` that resolves to the same customer. The customer's segment, tier and first-purchase
          * status then feed pricing rule evaluation, and the response is private
          * to that shopper. Without a matching credential the request returns the
          * public price; it is not rejected.
@@ -722,14 +735,18 @@ export class PricingService {
          */
         customerId?: string,
         /**
-         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token` or `x-external-auth`.
+         * Galactic Core customer session access_token. Required, together with `customer_id`, for personalized pricing. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
          */
         xAuthToken?: string,
         /**
-         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token` or `x-external-auth`.
+         * Bring-your-own-auth assertion for personalized pricing, resolving to the `customer_id` supplied. Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` signed with the store's `hmac_secret`. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
          *
          */
         xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier, for personalized pricing; it must resolve to the `customer_id` supplied. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`.
+         */
+        xIdpToken?: string,
         /**
          * Quantity for volume-based pricing
          */
@@ -849,6 +866,7 @@ export class PricingService {
             headers: {
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             query: {
                 'fields': fields,
