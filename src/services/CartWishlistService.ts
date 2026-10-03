@@ -228,671 +228,664 @@ export class CartWishlistService {
      * X-Session-Id: session-abc123-xyz789
      * Content-Type: application/json
      *
-     * {
-         * "variant_id": "9a47e047-b1b6-4c35-9617-820629e22e04",
-         * "quantity": 2
-         * }
-         * ```
+     * { "variant_id": "9a47e047-b1b6-4c35-9617-820629e22e04", "quantity": 2 }
+     * ```
+     *
+     * **Authenticated Cart Example:**
+     * ```
+     * POST /v1/cart/items
+     * Authorization: Bearer tybrite_pk_live_YOUR_API_KEY
+     * Content-Type: application/json
+     *
+     * { "variant_id": "9a47e047-b1b6-4c35-9617-820629e22e04", "quantity": 2, "customer_id": "650e8400-e29b-41d4-a716-446655440000" }
+     * ```
+     *
+     * **SDK example** (adds the Sony WH-1000XM4 default variant, $349.99):
+     *
+     * @returns any Item added (returns refreshed cart)
+     * @throws ApiError
+     */
+    public addToCart({
+        requestBody,
+        storeId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+    }: {
+        requestBody: {
+            /**
+             * Specific product variant UUID (required for multi-variant products)
+             */
+            variant_id: string;
+            /**
+             * Quantity to add
+             */
+            quantity: number;
+            /**
+             * Customer UUID for authenticated carts (optional if using X-Session-Id)
+             */
+            customer_id?: string;
+        },
+        /**
+         * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+         */
+        storeId?: string,
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          *
-         * **Authenticated Cart Example:**
-         * ```
-         * POST /v1/cart/items
-         * Authorization: Bearer tybrite_pk_live_YOUR_API_KEY
-         * Content-Type: application/json
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
          *
-         * {
-             * "variant_id": "9a47e047-b1b6-4c35-9617-820629e22e04",
-             * "quantity": 2,
-             * "customer_id": "650e8400-e29b-41d4-a716-446655440000"
-             * }
-             * ```
-             *
-             * **SDK example** (adds the Sony WH-1000XM4 default variant, $349.99):
-             *
-             * @returns any Item added (returns refreshed cart)
-             * @throws ApiError
-             */
-            public addToCart({
-                requestBody,
-                storeId,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-                xSessionId,
-            }: {
-                requestBody: {
-                    /**
-                     * Specific product variant UUID (required for multi-variant products)
-                     */
-                    variant_id: string;
-                    /**
-                     * Quantity to add
-                     */
-                    quantity: number;
-                    /**
-                     * Customer UUID for authenticated carts (optional if using X-Session-Id)
-                     */
-                    customer_id?: string;
-                },
-                /**
-                 * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
-                 */
-                storeId?: string,
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-                /**
-                 * Session ID for anonymous carts (UUID or random string stored in localStorage). Optional if `customer_id` is provided in the body.
-                 */
-                xSessionId?: string,
-            }): CancelablePromise<{
-                items?: Array<CartItem>;
-                total_items?: number;
-                subtotal?: number;
-                session_id?: string | null;
-                customer_id?: string | null;
-            }> {
-                return this.httpRequest.request({
-                    method: 'POST',
-                    url: '/v1/cart/items',
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                        'X-Session-Id': xSessionId,
-                    },
-                    query: {
-                        'store_id': storeId,
-                    },
-                    body: requestBody,
-                    mediaType: 'application/json',
-                    errors: {
-                        400: `Invalid request or insufficient stock`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        404: `Variant not found or not available`,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+        /**
+         * Session ID for anonymous carts (UUID or random string stored in localStorage). Optional if `customer_id` is provided in the body.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        items?: Array<CartItem>;
+        total_items?: number;
+        subtotal?: number;
+        session_id?: string | null;
+        customer_id?: string | null;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/cart/items',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'X-Session-Id': xSessionId,
+            },
+            query: {
+                'store_id': storeId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request or insufficient stock`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Variant not found or not available`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Update cart item
+     * Update the quantity of an existing cart item. Setting `quantity` to `0`
+     * removes the item from the cart. Ownership is verified against either
+     * `customer_id` (when provided) or the `X-Session-Id` header.
+     *
+     * **Auth / key type:** publishable or secret key. Authenticated carts
+     * (`customer_id` in the body) also require the customer session token
+     * (`x-auth-token`); anonymous carts are verified by `X-Session-Id`.
+     *
+     * **SDK example:**
+     *
+     * @returns any Item updated (returns refreshed cart)
+     * @throws ApiError
+     */
+    public updateCartItem({
+        id,
+        requestBody,
+        storeId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+    }: {
+        /**
+         * Cart item UUID
+         */
+        id: string,
+        requestBody: {
             /**
-             * Update cart item
-             * Update the quantity of an existing cart item. Setting `quantity` to `0`
-             * removes the item from the cart. Ownership is verified against either
-             * `customer_id` (when provided) or the `X-Session-Id` header.
-             *
-             * **Auth / key type:** publishable or secret key. Authenticated carts
-             * (`customer_id` in the body) also require the customer session token
-             * (`x-auth-token`); anonymous carts are verified by `X-Session-Id`.
-             *
-             * **SDK example:**
-             *
-             * @returns any Item updated (returns refreshed cart)
-             * @throws ApiError
+             * New quantity. Use `0` to remove the item from the cart.
              */
-            public updateCartItem({
-                id,
-                requestBody,
-                storeId,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-                xSessionId,
-            }: {
-                /**
-                 * Cart item UUID
-                 */
-                id: string,
-                requestBody: {
-                    /**
-                     * New quantity. Use `0` to remove the item from the cart.
-                     */
-                    quantity: number;
-                    /**
-                     * Customer UUID used to verify ownership of the cart item.
-                     */
-                    customer_id?: string;
-                },
-                /**
-                 * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
-                 */
-                storeId?: string,
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-                /**
-                 * Session ID for anonymous carts. Required for ownership verification when `customer_id` is not provided.
-                 */
-                xSessionId?: string,
-            }): CancelablePromise<{
-                items?: Array<CartItem>;
-                total_items?: number;
-                subtotal?: number;
-                session_id?: string | null;
-                customer_id?: string | null;
-            }> {
-                return this.httpRequest.request({
-                    method: 'PATCH',
-                    url: '/v1/cart/items/{id}',
-                    path: {
-                        'id': id,
-                    },
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                        'X-Session-Id': xSessionId,
-                    },
-                    query: {
-                        'store_id': storeId,
-                    },
-                    body: requestBody,
-                    mediaType: 'application/json',
-                    errors: {
-                        400: `Invalid request - malformed data or missing required fields`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        404: `Resource not found`,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
+            quantity: number;
             /**
-             * Remove cart item
-             * Remove a specific item from the cart by its cart item ID.
-             *
-             * **Auth / key type:** publishable or secret key. For authenticated carts the
-             * customer session token (`x-auth-token`) is also required.
-             *
-             * **Key Type Support:**
-             * - Publishable keys (`tybrite_pk_*`) — fully supported (browser/storefront)
-             * - Secret keys (`tybrite_sk_*`) — also supported (server-side)
-             *
-             * **SDK example:**
-             *
-             * @returns any Item removed successfully
-             * @throws ApiError
+             * Customer UUID used to verify ownership of the cart item.
              */
-            public removeCartItem({
-                id,
-                storeId,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-                customerId,
-                xSessionId,
-            }: {
-                /**
-                 * Cart item UUID
-                 */
-                id: string,
-                /**
-                 * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
-                 */
-                storeId?: string,
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-                /**
-                 * The signed-in shopper whose cart line is being removed. Send this together with a customer credential header; for an anonymous cart send `X-Session-Id` instead.
-                 */
-                customerId?: string,
-                /**
-                 * Session ID for anonymous carts. Required for ownership verification when `customer_id` is not provided.
-                 */
-                xSessionId?: string,
-            }): CancelablePromise<{
-                success?: boolean;
-                message?: string;
-            }> {
-                return this.httpRequest.request({
-                    method: 'DELETE',
-                    url: '/v1/cart/items/{id}',
-                    path: {
-                        'id': id,
-                    },
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                        'X-Session-Id': xSessionId,
-                    },
-                    query: {
-                        'store_id': storeId,
-                        'customer_id': customerId,
-                    },
-                    errors: {
-                        400: `Invalid request - malformed data or missing required fields`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        404: `Resource not found`,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
+            customer_id?: string;
+        },
+        /**
+         * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+         */
+        storeId?: string,
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+        /**
+         * Session ID for anonymous carts. Required for ownership verification when `customer_id` is not provided.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        items?: Array<CartItem>;
+        total_items?: number;
+        subtotal?: number;
+        session_id?: string | null;
+        customer_id?: string | null;
+    }> {
+        return this.httpRequest.request({
+            method: 'PATCH',
+            url: '/v1/cart/items/{id}',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'X-Session-Id': xSessionId,
+            },
+            query: {
+                'store_id': storeId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Remove cart item
+     * Remove a specific item from the cart by its cart item ID.
+     *
+     * **Auth / key type:** publishable or secret key. For authenticated carts the
+     * customer session token (`x-auth-token`) is also required.
+     *
+     * **Key Type Support:**
+     * - Publishable keys (`tybrite_pk_*`) — fully supported (browser/storefront)
+     * - Secret keys (`tybrite_sk_*`) — also supported (server-side)
+     *
+     * **SDK example:**
+     *
+     * @returns any Item removed successfully
+     * @throws ApiError
+     */
+    public removeCartItem({
+        id,
+        storeId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        customerId,
+        xSessionId,
+    }: {
+        /**
+         * Cart item UUID
+         */
+        id: string,
+        /**
+         * Marketplace keys only, and then required: the merchant whose items this cart holds. A marketplace cart is held by `x-session-id` (a `customer_id` is not accepted), is recorded as the marketplace's, and is never visible to the merchant's own storefront.
+         */
+        storeId?: string,
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Required whenever `customer_id` is supplied so the gateway can prove the caller owns that customer record. Anonymous (session-only) carts may omit it.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+        /**
+         * The signed-in shopper whose cart line is being removed. Send this together with a customer credential header; for an anonymous cart send `X-Session-Id` instead.
+         */
+        customerId?: string,
+        /**
+         * Session ID for anonymous carts. Required for ownership verification when `customer_id` is not provided.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        success?: boolean;
+        message?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/cart/items/{id}',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'X-Session-Id': xSessionId,
+            },
+            query: {
+                'store_id': storeId,
+                'customer_id': customerId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Merge carts
+     * Merge an anonymous session cart into a customer cart after login.
+     *
+     * For each item in the session cart, either the quantity of a matching
+     * `(product_id, variant_id)` row in the customer cart is incremented (and the
+     * session row deleted) or the session row is re-assigned to the customer. The
+     * refreshed merged cart is returned.
+     *
+     * **Auth / key type:** publishable key + a customer session token
+     * (`x-auth-token`) is **required** — the resolved customer must match the
+     * `customer_id` in the body. Use it right after the shopper signs in to carry
+     * their pre-login cart over.
+     *
+     * **SDK example:**
+     *
+     * @returns any Carts merged (returns refreshed cart)
+     * @throws ApiError
+     */
+    public mergeCart({
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        requestBody: {
             /**
-             * Merge carts
-             * Merge an anonymous session cart into a customer cart after login.
-             *
-             * For each item in the session cart, either the quantity of a matching
-             * `(product_id, variant_id)` row in the customer cart is incremented (and the
-             * session row deleted) or the session row is re-assigned to the customer. The
-             * refreshed merged cart is returned.
-             *
-             * **Auth / key type:** publishable key + a customer session token
-             * (`x-auth-token`) is **required** — the resolved customer must match the
-             * `customer_id` in the body. Use it right after the shopper signs in to carry
-             * their pre-login cart over.
-             *
-             * **SDK example:**
-             *
-             * @returns any Carts merged (returns refreshed cart)
-             * @throws ApiError
+             * Anonymous session ID whose cart should be merged
              */
-            public mergeCart({
-                requestBody,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-            }: {
-                requestBody: {
-                    /**
-                     * Anonymous session ID whose cart should be merged
-                     */
-                    session_id: string;
-                    /**
-                     * Customer UUID that will own the merged cart
-                     */
-                    customer_id: string;
-                },
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-            }): CancelablePromise<{
-                items?: Array<CartItem>;
-                total_items?: number;
-                subtotal?: number;
-                session_id?: string | null;
-                customer_id?: string | null;
-            }> {
-                return this.httpRequest.request({
-                    method: 'POST',
-                    url: '/v1/cart/merge',
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                    },
-                    body: requestBody,
-                    mediaType: 'application/json',
-                    errors: {
-                        400: `Invalid request - malformed data or missing required fields`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
+            session_id: string;
             /**
-             * Get wishlist
-             * Retrieve a customer's wishlist. Wishlists are always customer-scoped,
-             * so `customer_id` is required (anonymous wishlists are not supported).
-             *
-             * **Auth / key type:** publishable key + a customer session token
-             * (`x-auth-token`) is **required** — the resolved customer must match the
-             * `customer_id` query parameter.
-             *
-             * **SDK example:**
-             *
-             * @returns any Success
-             * @throws ApiError
+             * Customer UUID that will own the merged cart
              */
-            public getWishlist({
-                customerId,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-            }: {
-                /**
-                 * Customer UUID. Required — returns 400 if missing.
-                 */
-                customerId: string,
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-            }): CancelablePromise<{
-                items?: Array<WishlistItem>;
-                total_items?: number;
-                customer_id?: string;
-            }> {
-                return this.httpRequest.request({
-                    method: 'GET',
-                    url: '/v1/wishlist',
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                    },
-                    query: {
-                        'customer_id': customerId,
-                    },
-                    errors: {
-                        400: `Invalid request - malformed data or missing required fields`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
+            customer_id: string;
+        },
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        items?: Array<CartItem>;
+        total_items?: number;
+        subtotal?: number;
+        session_id?: string | null;
+        customer_id?: string | null;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/cart/merge',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get wishlist
+     * Retrieve a customer's wishlist. Wishlists are always customer-scoped,
+     * so `customer_id` is required (anonymous wishlists are not supported).
+     *
+     * **Auth / key type:** publishable key + a customer session token
+     * (`x-auth-token`) is **required** — the resolved customer must match the
+     * `customer_id` query parameter.
+     *
+     * **SDK example:**
+     *
+     * @returns any Success
+     * @throws ApiError
+     */
+    public getWishlist({
+        customerId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Customer UUID. Required — returns 400 if missing.
+         */
+        customerId: string,
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        items?: Array<WishlistItem>;
+        total_items?: number;
+        customer_id?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/wishlist',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            query: {
+                'customer_id': customerId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Add to wishlist
+     * Add a variant to a customer's wishlist. Returns `201 Created` on success.
+     * If the same `(customer_id, product_id, variant_id)` already exists,
+     * returns `409 Conflict` instead of duplicating the entry.
+     *
+     * **Auth / key type:** publishable key + a customer session token
+     * (`x-auth-token`) is **required** — the resolved customer must match the
+     * `customer_id` in the body.
+     *
+     * **SDK example** (saves the Sony WH-1000XM4 default variant):
+     *
+     * @returns any Item added (returns refreshed wishlist)
+     * @throws ApiError
+     */
+    public addToWishlist({
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        requestBody: {
             /**
-             * Add to wishlist
-             * Add a variant to a customer's wishlist. Returns `201 Created` on success.
-             * If the same `(customer_id, product_id, variant_id)` already exists,
-             * returns `409 Conflict` instead of duplicating the entry.
-             *
-             * **Auth / key type:** publishable key + a customer session token
-             * (`x-auth-token`) is **required** — the resolved customer must match the
-             * `customer_id` in the body.
-             *
-             * **SDK example** (saves the Sony WH-1000XM4 default variant):
-             *
-             * @returns any Item added (returns refreshed wishlist)
-             * @throws ApiError
+             * Specific product variant UUID
              */
-            public addToWishlist({
-                requestBody,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-            }: {
-                requestBody: {
-                    /**
-                     * Specific product variant UUID
-                     */
-                    variant_id: string;
-                    /**
-                     * Customer UUID
-                     */
-                    customer_id: string;
-                },
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-            }): CancelablePromise<{
-                items?: Array<WishlistItem>;
-                total_items?: number;
-                customer_id?: string;
-            }> {
-                return this.httpRequest.request({
-                    method: 'POST',
-                    url: '/v1/wishlist',
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                    },
-                    body: requestBody,
-                    mediaType: 'application/json',
-                    errors: {
-                        400: `Invalid request - malformed data or missing required fields`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        404: `Variant not found`,
-                        409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
-                        Common causes:
-                        - Email already registered to another customer at this store
-                        - Item already exists in wishlist
-                        - Idempotency-Key reused with a different request body
-                        `,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
+            variant_id: string;
             /**
-             * Remove from wishlist
-             * Remove a wishlist item by ID. The item is scoped to the supplied
-             * `customer_id`, which is required.
-             *
-             * @returns any Item removed
-             * @throws ApiError
+             * Customer UUID
              */
-            public removeFromWishlist({
-                id,
-                customerId,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-            }: {
-                /**
-                 * Wishlist item UUID
-                 */
-                id: string,
-                /**
-                 * Customer UUID that owns the wishlist item. Required — returns 400 if missing.
-                 */
-                customerId: string,
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-            }): CancelablePromise<{
-                success?: boolean;
-                message?: string;
-            }> {
-                return this.httpRequest.request({
-                    method: 'DELETE',
-                    url: '/v1/wishlist/{id}',
-                    path: {
-                        'id': id,
-                    },
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                    },
-                    query: {
-                        'customer_id': customerId,
-                    },
-                    errors: {
-                        400: `Invalid request - malformed data or missing required fields`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
+            customer_id: string;
+        },
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        items?: Array<WishlistItem>;
+        total_items?: number;
+        customer_id?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/wishlist',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Variant not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Remove from wishlist
+     * Remove a wishlist item by ID. The item is scoped to the supplied
+     * `customer_id`, which is required.
+     *
+     * @returns any Item removed
+     * @throws ApiError
+     */
+    public removeFromWishlist({
+        id,
+        customerId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Wishlist item UUID
+         */
+        id: string,
+        /**
+         * Customer UUID that owns the wishlist item. Required — returns 400 if missing.
+         */
+        customerId: string,
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        success?: boolean;
+        message?: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/wishlist/{id}',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            query: {
+                'customer_id': customerId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Move wishlist item to cart
+     * Atomically move a wishlist item into the customer's cart. The variant's
+     * stock is validated; on success the item is added to (or merged with) the
+     * cart and removed from the wishlist. Returns the refreshed cart.
+     *
+     * @returns any Item moved to cart (returns refreshed cart with metadata)
+     * @throws ApiError
+     */
+    public moveWishlistToCart({
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+    }: {
+        requestBody: {
             /**
-             * Move wishlist item to cart
-             * Atomically move a wishlist item into the customer's cart. The variant's
-             * stock is validated; on success the item is added to (or merged with) the
-             * cart and removed from the wishlist. Returns the refreshed cart.
-             *
-             * @returns any Item moved to cart (returns refreshed cart with metadata)
-             * @throws ApiError
+             * Wishlist item UUID to move
              */
-            public moveWishlistToCart({
-                requestBody,
-                xAuthToken,
-                xExternalAuth,
-                xIdpToken,
-                xSessionId,
-            }: {
-                requestBody: {
-                    /**
-                     * Wishlist item UUID to move
-                     */
-                    wishlist_item_id: string;
-                    /**
-                     * Customer UUID that owns the wishlist item and target cart
-                     */
-                    customer_id: string;
-                    /**
-                     * Quantity to add to the cart (defaults to 1)
-                     */
-                    quantity?: number;
-                },
-                /**
-                 * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
-                 */
-                xAuthToken?: string,
-                /**
-                 * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
-                 *
-                 */
-                xExternalAuth?: string,
-                /**
-                 * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
-                 *
-                 * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
-                 *
-                 */
-                xIdpToken?: string,
-                /**
-                 * Optional session ID used to associate the resulting cart row when the customer does not already have one.
-                 */
-                xSessionId?: string,
-            }): CancelablePromise<{
-                success?: boolean;
-                message?: string;
-                removed_wishlist_item_id?: string;
-                items?: Array<CartItem>;
-                total_items?: number;
-                subtotal?: number;
-                session_id?: string | null;
-                customer_id?: string | null;
-            }> {
-                return this.httpRequest.request({
-                    method: 'POST',
-                    url: '/v1/wishlist/move-to-cart',
-                    headers: {
-                        'x-auth-token': xAuthToken,
-                        'x-external-auth': xExternalAuth,
-                        'x-idp-token': xIdpToken,
-                        'X-Session-Id': xSessionId,
-                    },
-                    body: requestBody,
-                    mediaType: 'application/json',
-                    errors: {
-                        400: `Invalid request or insufficient stock`,
-                        401: `Authentication failed - invalid or missing API key`,
-                        403: `Insufficient permissions - operation requires secret key`,
-                        404: `Wishlist item or variant not found`,
-                        429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                        500: `Internal server error`,
-                    },
-                });
-            }
-        }
+            wishlist_item_id: string;
+            /**
+             * Customer UUID that owns the wishlist item and target cart
+             */
+            customer_id: string;
+            /**
+             * Quantity to add to the cart (defaults to 1)
+             */
+            quantity?: number;
+        },
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. The resolved customer must match the `customer_id` in the request.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Galactic Core forwards it to the store's configured Auth verifier, which validates it and returns the identity.
+         *
+         * Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Requires an Auth verifier to be configured for the store. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+        /**
+         * Optional session ID used to associate the resulting cart row when the customer does not already have one.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        success?: boolean;
+        message?: string;
+        removed_wishlist_item_id?: string;
+        items?: Array<CartItem>;
+        total_items?: number;
+        subtotal?: number;
+        session_id?: string | null;
+        customer_id?: string | null;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/wishlist/move-to-cart',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'X-Session-Id': xSessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request or insufficient stock`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Wishlist item or variant not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+}

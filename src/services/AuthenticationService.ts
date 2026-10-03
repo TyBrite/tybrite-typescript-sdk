@@ -372,147 +372,145 @@ export class AuthenticationService {
      * x-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
      * Content-Type: application/json
      *
-     * {
-         * "password": "newSecurePassword123"
-         * }
-         * ```
-         *
-         * **Attempt limits:** 5 password changes per session per 15 minutes. Beyond that the call returns
-         * `429 rate_limited` with a `Retry-After` header.
-         *
-         * @returns any Password updated
-         * @throws ApiError
-         */
-        public updatePassword({
-            xAuthToken,
-            requestBody,
-        }: {
-            /**
-             * Authentication token obtained from login/register endpoints
-             */
-            xAuthToken: string,
-            requestBody: {
-                password: string;
-            },
-        }): CancelablePromise<{
-            /**
-             * Success message
-             */
-            message?: string;
-            /**
-             * Updated user details
-             */
-            user?: {
-                id?: string;
-                email?: string;
-            };
-        }> {
-            return this.httpRequest.request({
-                method: 'POST',
-                url: '/v1/auth/update-password',
-                headers: {
-                    'x-auth-token': xAuthToken,
-                },
-                body: requestBody,
-                mediaType: 'application/json',
-                errors: {
-                    400: `Invalid request - malformed data or missing required fields`,
-                    401: `Invalid current password`,
-                    403: `Insufficient permissions - operation requires secret key`,
-                    429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                    500: `Internal server error`,
-                },
-            });
-        }
+     * { "password": "newSecurePassword123" }
+     * ```
+     *
+     * **Attempt limits:** 5 password changes per session per 15 minutes. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header.
+     *
+     * @returns any Password updated
+     * @throws ApiError
+     */
+    public updatePassword({
+        xAuthToken,
+        requestBody,
+    }: {
         /**
-         * Refresh access token
-         * Get new access token using refresh token.
-         *
-         * **⚠️ SECRET KEY REQUIRED**
-         *
-         * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
-         *
-         * **Attempt limits:** 20 refreshes per refresh token per 15 minutes. Beyond that the call returns
-         * `429 rate_limited` with a `Retry-After` header.
-         *
-         * @returns any Token refreshed
-         * @throws ApiError
+         * Authentication token obtained from login/register endpoints
          */
-        public refreshToken({
-            requestBody,
-        }: {
-            requestBody: {
-                refresh_token: string;
-            },
-        }): CancelablePromise<{
-            /**
-             * Success message
-             */
-            message?: string;
-            session?: Session;
-        }> {
-            return this.httpRequest.request({
-                method: 'POST',
-                url: '/v1/auth/refresh',
-                body: requestBody,
-                mediaType: 'application/json',
-                errors: {
-                    400: `Invalid request - malformed data or missing required fields`,
-                    401: `Authentication failed - invalid or missing API key`,
-                    403: `Insufficient permissions - operation requires secret key`,
-                    429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                    500: `Internal server error`,
-                },
-            });
-        }
+        xAuthToken: string,
+        requestBody: {
+            password: string;
+        },
+    }): CancelablePromise<{
         /**
-         * Get current user
-         * Get current authenticated user details.
-         *
-         * **⚠️ SECRET KEY REQUIRED**
-         *
-         * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
-         *
-         * **Special Headers:**
-         * - `x-auth-token`: **REQUIRED** - Authentication token from login/register response
-         *
-         * **Usage:**
-         * ```
-         * GET /v1/auth/me
-         * Authorization: Bearer tybrite_sk_live_YOUR_API_KEY
-         * x-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-         * ```
-         *
-         * **Attempt limits:** 120 requests per session per minute. Beyond that the call returns
-         * `429 rate_limited` with a `Retry-After` header.
-         *
-         * @returns any Success
-         * @throws ApiError
+         * Success message
          */
-        public getCurrentUser({
-            xAuthToken,
-        }: {
-            /**
-             * Authentication token obtained from login/register endpoints
-             */
-            xAuthToken: string,
-        }): CancelablePromise<{
-            user?: User;
-            customer?: Customer;
-        }> {
-            return this.httpRequest.request({
-                method: 'GET',
-                url: '/v1/auth/me',
-                headers: {
-                    'x-auth-token': xAuthToken,
-                },
-                errors: {
-                    400: `Invalid request - malformed data or missing required fields`,
-                    401: `Authentication failed - invalid or missing API key`,
-                    403: `Insufficient permissions - operation requires secret key`,
-                    429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                    500: `Internal server error`,
-                },
-            });
-        }
+        message?: string;
+        /**
+         * Updated user details
+         */
+        user?: {
+            id?: string;
+            email?: string;
+        };
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/auth/update-password',
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Invalid current password`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
     }
+    /**
+     * Refresh access token
+     * Get new access token using refresh token.
+     *
+     * **⚠️ SECRET KEY REQUIRED**
+     *
+     * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
+     *
+     * **Attempt limits:** 20 refreshes per refresh token per 15 minutes. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header.
+     *
+     * @returns any Token refreshed
+     * @throws ApiError
+     */
+    public refreshToken({
+        requestBody,
+    }: {
+        requestBody: {
+            refresh_token: string;
+        },
+    }): CancelablePromise<{
+        /**
+         * Success message
+         */
+        message?: string;
+        session?: Session;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/auth/refresh',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get current user
+     * Get current authenticated user details.
+     *
+     * **⚠️ SECRET KEY REQUIRED**
+     *
+     * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
+     *
+     * **Special Headers:**
+     * - `x-auth-token`: **REQUIRED** - Authentication token from login/register response
+     *
+     * **Usage:**
+     * ```
+     * GET /v1/auth/me
+     * Authorization: Bearer tybrite_sk_live_YOUR_API_KEY
+     * x-auth-token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+     * ```
+     *
+     * **Attempt limits:** 120 requests per session per minute. Beyond that the call returns
+     * `429 rate_limited` with a `Retry-After` header.
+     *
+     * @returns any Success
+     * @throws ApiError
+     */
+    public getCurrentUser({
+        xAuthToken,
+    }: {
+        /**
+         * Authentication token obtained from login/register endpoints
+         */
+        xAuthToken: string,
+    }): CancelablePromise<{
+        user?: User;
+        customer?: Customer;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/auth/me',
+            headers: {
+                'x-auth-token': xAuthToken,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+}
