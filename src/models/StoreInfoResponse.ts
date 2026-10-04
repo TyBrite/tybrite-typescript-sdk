@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { PickupLocation } from './PickupLocation';
 import type { StoreProfileSummary } from './StoreProfileSummary';
 export type StoreInfoResponse = {
     /**
@@ -260,27 +261,62 @@ export type StoreInfoResponse = {
         }>;
     };
     /**
-     * Shipping configuration (optional, included when requested)
+     * How the store delivers and where it offers pickup (optional, included when requested). The flags summarise the rates below: a store with no zones, distance rates or "everywhere else" choice charges nothing for delivery through these rates, so it is `configured: false` and still `delivers`. Exact prices for an address come from `POST /v1/shipping/calculate`.
      */
     shipping?: {
+        /**
+         * True when the store has any delivery zone, distance rate, or "everywhere else" choice.
+         */
+        configured?: boolean;
+        /**
+         * True when the store delivers to at least some addresses.
+         */
+        delivers?: boolean;
+        /**
+         * True when an address outside every zone and distance rate is still delivered to — at the "everywhere else" rate, or for nothing when the store has no rates at all.
+         */
+        delivers_everywhere?: boolean;
+        /**
+         * True when at least one active location offers in-store pickup.
+         */
+        offers_pickup?: boolean;
+        /**
+         * The rate for any address outside the zones and distance rates. Null when the store has not set one. When `refuse` is true the store does not deliver outside its zones and distance rates, and both amounts are null.
+         */
+        everywhere_else?: any | null;
+        /**
+         * The store's locations that offer pickup, primary location first. Empty when the store does not offer pickup.
+         */
+        pickup_locations?: Array<PickupLocation>;
         zones?: {
             /**
              * Number of shipping rules — the combined count of custom delivery zones and distance-based pricing tiers (equals `list.length`).
              */
             total?: number;
             /**
-             * Both custom polygon delivery zones and distance-based pricing tiers, each tagged with its `type`.
+             * The store's active delivery zones and distance-based pricing tiers, each tagged with its `type`.
              */
             list?: Array<{
                 name?: string;
                 /**
-                 * `zone` = a custom polygon delivery zone; `distance_tier` = a distance-based pricing tier.
+                 * `zone` = a delivery zone; `distance_tier` = a distance-based pricing tier.
                  */
                 type?: 'zone' | 'distance_tier';
+                /**
+                 * `area` = a zone drawn on a map; `region` = a zone covering whole countries or postcode prefixes; `distance` = a distance tier.
+                 */
+                coverage?: 'area' | 'region' | 'distance';
+                /**
+                 * The ISO country codes a `region` zone covers. Empty for other entries.
+                 */
+                countries?: Array<string>;
                 delivery_fee?: number;
                 free_threshold?: number | null;
             }>;
         };
+        /**
+         * True when any zone, distance rate or the "everywhere else" rate is free above an order amount.
+         */
         has_free_shipping_threshold?: boolean;
     };
     /**
