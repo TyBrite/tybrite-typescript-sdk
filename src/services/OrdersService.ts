@@ -151,6 +151,13 @@ export class OrdersService {
      * amount must equal the store's charge for that address, free-delivery thresholds measured
      * against the line totals after `discount_amount` → otherwise **`400 price_mismatch`**. A
      * destination the store does not deliver to → **`400 shipping_not_deliverable`**.
+     * - With a named delivery option (`shipping_option_id` of the form `opt:<id>`), the amount must
+     * equal that option's fee for the address and basket → otherwise **`400 price_mismatch`**. An
+     * option the order does not qualify for → **`400 shipping_option_unavailable`**.
+     * - On a pickup order (`fulfillment_method: pickup`), the amount must equal the location's pickup
+     * fee → otherwise **`400 price_mismatch`**. A location that is not one of the store's pickup
+     * locations, or an order below its minimum → **`400 pickup_unavailable`**. Tax is calculated
+     * at the pickup location.
      * - A store with no delivery rates (it ships through its own arrangements) accepts the amount
      * sent; so does an order whose destination cannot be located. Such an order is recorded as
      * not checked.
@@ -221,9 +228,9 @@ export class OrdersService {
                 country?: string;
             };
             /**
-             * Shipping address. Required.
+             * Shipping address. Required for a delivery order. On a pickup order it is not needed: the collection location's address is stored as the order's shipping address, with `type: pickup`.
              */
-            shipping_address: {
+            shipping_address?: {
                 street?: string;
                 city?: string;
                 state?: string;
@@ -408,6 +415,18 @@ export class OrdersService {
                 mass_unit?: string;
             };
             /**
+             * How the shopper receives the order: delivered to `shipping_address`, or collected at one of the store's locations.
+             */
+            fulfillment_method?: 'delivery' | 'pickup';
+            /**
+             * The location to collect from, on a pickup order — a location `id` from `pickup_locations` (`GET /v1/shipping/zones`) or from a pickup option's `location` (`POST /v1/shipping/calculate`). When omitted on a pickup order, the store's primary pickup location is used.
+             */
+            pickup_location_id?: string;
+            /**
+             * The `id` of the option the shopper chose from `options[]` in `POST /v1/shipping/calculate` — `place` for standard delivery, `opt:<id>` for a named delivery option such as Express, or `pickup:<location id>` on a pickup order. `shipping_amount` must equal that option's fee for this order.
+             */
+            shipping_option_id?: string;
+            /**
              * The ship-from address the option was quoted with, when one was sent to `POST /v1/shipping/calculate` as `address_from`.
              */
             shipping_address_from?: Record<string, any>;
@@ -523,6 +542,7 @@ export class OrdersService {
          * - `shipped_at`, `delivered_at`
          * - `created_at`, `updated_at`
          * - `shipping_metadata`
+         * - `fulfillment_method`, `pickup_location_id`, `fulfillment_location_id`, `shipping_option_id`
          * - `items`
          *
          */

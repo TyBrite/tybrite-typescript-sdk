@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Custom polygon delivery zone with specific pricing
+ * A delivery zone with its own fee. A zone covers either an area drawn on a map (`match_kind: area`) or whole countries, optionally narrowed to postcode prefixes (`match_kind: region`).
  */
 export type DeliveryZone = {
     /**
@@ -27,5 +27,32 @@ export type DeliveryZone = {
      * Hex color code for map visualization
      */
     color?: string;
+    /**
+     * How the zone decides whether it covers an address:
+     * - area: the address lies inside the area drawn on the zone's map
+     * - region: the address is in one of `countries` and, when `postcodes` is not empty, its postcode
+     * starts with one of the listed prefixes (compared without spaces, ignoring case)
+     */
+    match_kind?: DeliveryZone.match_kind;
+    /**
+     * ISO 3166-1 alpha-2 country codes a `region` zone covers. Empty for an `area` zone.
+     */
+    countries?: Array<string>;
+    /**
+     * Postcode prefixes a `region` zone is narrowed to. Empty means every postcode in its countries.
+     */
+    postcodes?: Array<string>;
 };
+export namespace DeliveryZone {
+    /**
+     * How the zone decides whether it covers an address:
+     * - area: the address lies inside the area drawn on the zone's map
+     * - region: the address is in one of `countries` and, when `postcodes` is not empty, its postcode
+     * starts with one of the listed prefixes (compared without spaces, ignoring case)
+     */
+    export enum match_kind {
+        AREA = 'area',
+        REGION = 'region',
+    }
+}
 

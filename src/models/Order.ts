@@ -5,6 +5,7 @@
 import type { Address } from './Address';
 import type { CustomFieldValue } from './CustomFieldValue';
 import type { OrderItem } from './OrderItem';
+import type { OrderShippingAddress } from './OrderShippingAddress';
 import type { OrderStatusNote } from './OrderStatusNote';
 export type Order = {
     id?: string;
@@ -34,7 +35,23 @@ export type Order = {
     discount_amount?: number;
     total_amount?: number;
     billing_address?: Address;
-    shipping_address?: Address;
+    shipping_address?: OrderShippingAddress;
+    /**
+     * Whether the order is delivered to the shopper or collected at one of the store's locations.
+     */
+    fulfillment_method?: Order.fulfillment_method;
+    /**
+     * The location the shopper collects from, on a pickup order. Null on a delivery order.
+     */
+    pickup_location_id?: string | null;
+    /**
+     * The store location the order is fulfilled from: the pickup location on a pickup order, or the location deliveries leave from when the store delivers from its nearest location. Null when the store does not route orders between locations.
+     */
+    fulfillment_location_id?: string | null;
+    /**
+     * The shipping option the order was placed with, as returned by `POST /v1/shipping/calculate` (`place`, `opt:<id>` or `pickup:<location id>`). Null when none was named.
+     */
+    shipping_option_id?: string | null;
     items?: Array<OrderItem>;
     /**
      * Customer-visible updates the merchant added as the order moved — the work between payment and
@@ -65,7 +82,7 @@ export type Order = {
      */
     environment?: Order.environment;
     /**
-     * Complete shipping calculation details for audit trail
+     * How the shipping charge was arrived at. `shipping_source` and `shipping_rule` are recorded by the server when the order is created; the other fields are the details the storefront sent with the order.
      */
     shipping_metadata?: any | null;
 };
@@ -102,6 +119,13 @@ export namespace Order {
         AUTOMATIC = 'automatic',
         FALLBACK = 'fallback',
         MANUAL = 'manual',
+    }
+    /**
+     * Whether the order is delivered to the shopper or collected at one of the store's locations.
+     */
+    export enum fulfillment_method {
+        DELIVERY = 'delivery',
+        PICKUP = 'pickup',
     }
     /**
      * Whether this order was created in the live or test environment. Sandbox orders are isolated from production data.

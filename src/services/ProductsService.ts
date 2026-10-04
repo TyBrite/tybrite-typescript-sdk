@@ -252,7 +252,8 @@ export class ProductsService {
          * for that line, so the shelf price applies).
          *
          * A request without a buyer credential, or from a customer who is not a wholesale buyer on
-         * this store, returns the ordinary retail page — this never fails the request.
+         * this store, returns the store's standard listing — list prices and the full range,
+         * unnarrowed. The request is not refused.
          *
          * Responses on this path are not cached, because they are specific to one buyer. Ordinary
          * retail reads are unaffected.
