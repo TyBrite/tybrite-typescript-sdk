@@ -18,6 +18,10 @@ export type Category = {
      * Whether the category is active
      */
     active?: boolean;
+    /**
+     * The standard category this one behaves like. For a standard category it is the category's own name; for a category created for a particular marketplace or reseller it is the closest standard category, which is the reliable key for choosing a storefront style or product-detail layout.
+     */
+    base_category?: string;
     created_at?: string;
     updated_at?: string;
 };
