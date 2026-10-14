@@ -11,7 +11,7 @@ export class AgentService {
      * The tool manifest for this store. Each entry names a tool, its HTTP operation, a JSON Schema for its
      * request and for its response `data`, the credential it needs, and its cost class: `deterministic` tools
      * read store data and cost what any storefront read costs; `hosted_helper` tools run a model and debit the
-     * store's Agent Compute credits.
+     * store's AI credits.
      *
      * `hosted_helpers_available` says whether the two hosted helpers can be called right now. When it is
      * false, calling one with a publishable key returns `403 helpers_unavailable`, the same answer whatever
@@ -245,11 +245,11 @@ export class AgentService {
      * A hosted helper: natural language in, the exact constraint object `POST /v1/agent/search` accepts out,
      * plus `unresolved` — the parts of the request it could not map to a constraint.
      *
-     * It runs a model and debits the store's Agent Compute credits at the true cost of the call; `usage`
+     * It runs a model and debits the store's AI credits at the true cost of the call; `usage`
      * reports what was debited. A failed call keeps no credits. It is limited to 60 calls a minute per client
      * and 1,000 an hour per key, in addition to the standard limits.
      *
-     * **With a marketplace operator key** the call is paid from the marketplace operator's own Agent Compute
+     * **With a marketplace operator key** the call is paid from the marketplace operator's own AI
      * credits, never a seller's. A secret key receives the reason a call is refused: `403 helpers_unavailable`
      * with `details.reason` when the operator has not switched hosted helpers on, `402 insufficient_credits`
      * when the operator's credits are exhausted. A publishable key receives `403 helpers_unavailable` whatever
@@ -305,7 +305,7 @@ export class AgentService {
          */
         usage?: {
             /**
-             * Agent Compute credits debited, in US dollars.
+             * AI credits debited, in US dollars.
              */
             credits_debited?: number;
             model_class?: 'fast' | 'reasoning' | 'fast+reasoning';
@@ -319,7 +319,7 @@ export class AgentService {
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
-                402: `The store has no Agent Compute credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
+                402: `The store has no AI credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
                 403: `Hosted helpers are unavailable. To a publishable key this is the one answer for every reason and carries no \`details\`. A secret key receives \`details.reason\` (\`disabled\`, \`paused\` or \`unavailable\`), and \`402 insufficient_credits\` when the store is out of credits.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
@@ -982,11 +982,11 @@ export class AgentService {
      * price. Every amount in the draft comes from the quote. `over_budget` reports whether the quoted total
      * exceeds the budget.
      *
-     * It debits the store's Agent Compute credits for both model steps; `usage` reports the total.
+     * It debits the store's AI credits for both model steps; `usage` reports the total.
      *
      * **With a marketplace operator key** the candidates come only from that marketplace's sellers, each
      * selection names its seller (`merchant_store_id`), and the draft is priced with the marketplace quote
-     * (`quote.sellers`). Both model steps are paid from the marketplace operator's own Agent Compute credits,
+     * (`quote.sellers`). Both model steps are paid from the marketplace operator's own AI credits,
      * never a seller's, and are refused on the same terms as `POST /v1/agent/interpret`. The draft is read back with
      * `GET /v1/agent/cart-drafts/{id}` using the same key and turned into an order with
      * `POST /v1/agent/checkout-intents`.
@@ -1134,7 +1134,7 @@ export class AgentService {
          */
         usage?: {
             /**
-             * Agent Compute credits debited, in US dollars.
+             * AI credits debited, in US dollars.
              */
             credits_debited?: number;
             model_class?: 'fast' | 'reasoning' | 'fast+reasoning';
@@ -1148,7 +1148,7 @@ export class AgentService {
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
-                402: `The store has no Agent Compute credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
+                402: `The store has no AI credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
                 403: `Hosted helpers are unavailable. To a publishable key this is the one answer for every reason and carries no \`details\`. A secret key receives \`details.reason\` (\`disabled\`, \`paused\` or \`unavailable\`), and \`402 insufficient_credits\` when the store is out of credits.`,
                 404: `Nothing in stock matches the intent`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
@@ -3158,8 +3158,8 @@ export class AgentService {
         });
     }
     /**
-     * Get Agent Compute usage
-     * The store's Agent Compute credit balance, the state of its automatic recharge and of its hosted helpers,
+     * Get AI credit usage
+     * The store's AI credit balance, the state of its automatic recharge and of its hosted helpers,
      * and this month's hosted-helper spend by tool and environment. Requires a secret key.
      * @returns any The usage
      * @throws ApiError
