@@ -9,6 +9,10 @@ export type Lookbook = {
     description?: string;
     featured_image?: string;
     /**
+     * Optional URL of a short video for this banner (MP4, H.264 with AAC audio). Null when none is set. `featured_image` stays the poster and the fallback, so a storefront that shows only images keeps working unchanged.
+     */
+    video?: string | null;
+    /**
      * Publication status. Only `published` lookbooks are returned by the public API.
      */
     status?: Lookbook.status;

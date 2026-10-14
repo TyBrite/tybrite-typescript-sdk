@@ -23,6 +23,10 @@ export type ProductCollection = {
      */
     image?: string | null;
     /**
+     * Optional URL of a short video for this banner (MP4, H.264 with AAC audio). Null when none is set. `image` stays the poster and the fallback, so a storefront that shows only images keeps working unchanged.
+     */
+    video?: string | null;
+    /**
      * Optional URL of a phone-sized collection banner. Storefronts render this on
      * small viewports when set and fall back to `image` otherwise.
      *

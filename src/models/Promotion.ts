@@ -37,6 +37,10 @@ export type Promotion = {
      */
     image?: string | null;
     /**
+     * Optional URL of a short video for this banner (MP4, H.264 with AAC audio). Null when none is set. `image` stays the poster and the fallback, so a storefront that shows only images keeps working unchanged.
+     */
+    video?: string | null;
+    /**
      * Optional banner image sized for mobile viewports. When set, render this on small screens and fall back to `image` on larger ones (e.g. a `<picture>` element with a mobile `<source>`). When absent, use `image` everywhere.
      */
     image_mobile?: string | null;

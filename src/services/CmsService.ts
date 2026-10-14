@@ -44,7 +44,7 @@ export class CmsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `title`, `slug`, `excerpt`, `featured_image`
+         * - `id`, `title`, `slug`, `excerpt`, `featured_image`, `video`
          * - `category_id`, `category_name`, `category_slug`, `category_icon`
          * - `author_name`, `author_avatar`, `status`, `published_at`
          * - `view_count`, `product_count`, `seo_title`, `seo_description`
@@ -100,7 +100,7 @@ export class CmsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `title`, `slug`, `excerpt`, `content`, `featured_image`
+         * - `id`, `title`, `slug`, `excerpt`, `content`, `featured_image`, `video`
          * - `category_id`, `category_name`, `category_slug`, `category_icon`
          * - `author_name`, `author_avatar`, `status`, `published_at`
          * - `view_count`, `product_count`, `seo_title`, `seo_description`
@@ -183,6 +183,10 @@ export class CmsService {
             slug?: string;
             excerpt?: string | null;
             featured_image?: string | null;
+            /**
+             * Optional cover video; `featured_image` stays the poster and the fallback.
+             */
+            video?: string | null;
             published_at?: string | null;
             reads_per_day?: number;
         }>;
@@ -242,6 +246,10 @@ export class CmsService {
             slug?: string;
             excerpt?: string | null;
             featured_image?: string | null;
+            /**
+             * Optional cover video; `featured_image` stays the poster and the fallback.
+             */
+            video?: string | null;
             published_at?: string | null;
             /**
              * Diagnostic relevance. Not ordered monotonically — render `reason`.
@@ -295,7 +303,7 @@ export class CmsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `title`, `slug`, `description`, `featured_image`
+         * - `id`, `title`, `slug`, `description`, `featured_image`, `video`
          * - `status`, `published_at`, `created_at`, `updated_at`
          *
          * The gallery (`images`, with its shoppable hotspots) and `collection_id` are returned by
@@ -347,7 +355,7 @@ export class CmsService {
          * Comma-separated list of fields to include in the response.
          *
          * **Allowed Fields:**
-         * - `id`, `title`, `slug`, `description`, `featured_image`
+         * - `id`, `title`, `slug`, `description`, `featured_image`, `video`
          * - `collection_id`, `published_at`, `created_at`, `images`
          *
          */

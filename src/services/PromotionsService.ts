@@ -41,7 +41,7 @@ export class PromotionsService {
          *
          * **Allowed Fields:**
          * - `id`, `name`, `type`, `display_type`, `value`, `min_purchase`
-         * - `start_date`, `end_date`, `status`, `conditions`, `image`, `image_mobile`
+         * - `start_date`, `end_date`, `status`, `conditions`, `image`, `image_mobile`, `video`
          * - `bundle_products`, `bogo_required_products`, `bogo_free_products`, `free_products`
          * - `has_time_restrictions`, `start_time`, `end_time`, `time_zone`, `apply_to_days`
          * - `created_at`, `updated_at`
@@ -130,7 +130,7 @@ export class PromotionsService {
          *
          * **Allowed Fields:**
          * - `id`, `name`, `type`, `display_type`, `value`, `min_purchase`
-         * - `start_date`, `end_date`, `status`, `conditions`, `image`, `image_mobile`
+         * - `start_date`, `end_date`, `status`, `conditions`, `image`, `image_mobile`, `video`
          * - `bundle_products`, `bogo_required_products`, `bogo_free_products`, `free_products`
          * - `has_time_restrictions`, `start_time`, `end_time`, `time_zone`, `apply_to_days`
          * - `created_at`, `updated_at`
