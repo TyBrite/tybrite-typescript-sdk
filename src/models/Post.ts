@@ -30,6 +30,10 @@ export type Post = {
     seo_title?: string;
     seo_description?: string;
     /**
+     * Search keywords the author chose for the post, for a page's meta tags. Returned by `getPost`.
+     */
+    seo_keywords?: any[] | null;
+    /**
      * When the post was first created.
      */
     created_at?: string;
