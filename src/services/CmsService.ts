@@ -83,7 +83,7 @@ export class CmsService {
     }
     /**
      * Get blog post by slug
-     * Retrieve a single published blog post by its URL slug, including full `content` and any linked products (for shoppable posts). Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
+     * Retrieve a single published blog post by its URL slug, including full `content` and any linked products (for shoppable posts). `content` is an Editor.js document (`time`, `version`, `blocks`), or `null` for a post with no body; the block types and rendering rules are described on the `PostContent` schema. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
      * @returns Post Success
      * @throws ApiError
      */

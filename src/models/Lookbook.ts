@@ -13,7 +13,7 @@ export type Lookbook = {
      */
     video?: string | null;
     /**
-     * Publication status. Only `published` lookbooks are returned by the public API.
+     * Publication status. Only `published` lookbooks are returned by the public API. Returned by the list; the single-lookbook response omits it.
      */
     status?: Lookbook.status;
     /**
@@ -81,7 +81,7 @@ export type Lookbook = {
 };
 export namespace Lookbook {
     /**
-     * Publication status. Only `published` lookbooks are returned by the public API.
+     * Publication status. Only `published` lookbooks are returned by the public API. Returned by the list; the single-lookbook response omits it.
      */
     export enum status {
         PUBLISHED = 'published',

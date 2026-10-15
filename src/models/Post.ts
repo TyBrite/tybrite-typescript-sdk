@@ -2,12 +2,16 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { PostContent } from './PostContent';
 export type Post = {
     id?: string;
     title?: string;
     slug?: string;
     excerpt?: string;
-    content?: string;
+    /**
+     * The article body, or `null` for a post with no body. See `PostContent`.
+     */
+    content?: (PostContent | null);
     featured_image?: string;
     /**
      * Optional URL of a short video for this banner (MP4, H.264 with AAC audio). Null when none is set. `featured_image` stays the poster and the fallback, so a storefront that shows only images keeps working unchanged.
@@ -38,7 +42,7 @@ export type Post = {
      */
     updated_at?: string;
     /**
-     * Products embedded in the post body, in the order the author placed them. `block_id` ties an embed to the content block it belongs beside, and `display_type` is how the author chose to show it. Each entry arrives with the product already resolved, and an embed whose product is no longer available is omitted, so a post can return fewer products than were authored.
+     * Products embedded in the post body, in the order the author placed them. Match an entry to a `productEmbed` block in `content` on `product_id` (the block's `productId`). `block_id` is the `id` of the content block an embed is anchored to and is `null` for embeds placed in the post editor. `display_type` is how the author chose to show it. Each entry arrives with the product already resolved, and an embed whose product is no longer available is omitted, so a post can return fewer products than were authored.
      */
     products?: Array<{
         /**
@@ -46,7 +50,7 @@ export type Post = {
          */
         embed_id: string;
         /**
-         * The content block this embed sits with, when the author anchored it to one.
+         * The `id` of the content block this embed is anchored to. `null` when it is not anchored to a block, which is the case for embeds placed in the post editor.
          */
         block_id?: string | null;
         /**
