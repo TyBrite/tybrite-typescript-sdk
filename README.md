@@ -441,6 +441,11 @@ else if (features.feature_status.gift_cards === 'awaiting_data') renderGiftCardF
 
 // The merchant's shopping assistant, as they named it (each field null when unset).
 const { name, logo_url } = store.shopping_assistant;
+
+// The merchant's design system (null when the store has none or has switched it off).
+// Palette entries carry a #RRGGBB `hex` and a `role`; typography holds the merchant's own
+// descriptions, not CSS. Re-read /v1/store/info on the `store.design_system_updated` event.
+if (store.brand) applyBrand(store.brand.palette, store.brand.typography);
 ```
 
 ### marketplace

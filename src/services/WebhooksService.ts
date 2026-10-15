@@ -144,6 +144,10 @@ export class WebhooksService {
              * `GET /v1/store/policies/{slug}` now returns `404` — carries `slug`, `title`,
              * `version` and `unpublished_at`)
              *
+             * **Design system:** `store.design_system_updated` (the store's design system
+             * changed, or was switched on or off — carries `store_id`, `changed_fields` and
+             * `updated_at`; read the new values from `store.brand` in `GET /v1/store/info`)
+             *
              * **Feature availability:** `feature.status_changed` — a capability's
              * `feature_status` in `GET /v1/store/info` changed, e.g. the store publishes its
              * first post and `cms` becomes `available`. Carries `feature`,
@@ -380,7 +384,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked';
         },
     }): CancelablePromise<{
         success?: boolean;

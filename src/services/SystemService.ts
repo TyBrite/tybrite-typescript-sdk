@@ -57,7 +57,9 @@ export class SystemService {
      *
      * **Purpose:**
      * This endpoint consolidates store metadata that would normally require 10+ separate API calls:
-     * - Store basic info (name, currencies, timezone, the shopping assistant's name and logo)
+     * - Store basic info (name, currencies, timezone, the shopping assistant's name and logo, and the
+     * design system as `store.brand`, which is `null` when the store has none; the
+     * `store.design_system_updated` webhook event signals that it changed)
      * - Catalog overview (products, categories, collections, brands, specifications)
      * - Pricing configuration (dynamic pricing, customer tiers, rules)
      * - Active promotions (types, counts)

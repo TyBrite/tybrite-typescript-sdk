@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { PickupLocation } from './PickupLocation';
+import type { StoreBrand } from './StoreBrand';
 import type { StoreProfileSummary } from './StoreProfileSummary';
 export type StoreInfoResponse = {
     /**
@@ -34,6 +35,10 @@ export type StoreInfoResponse = {
              */
             usage_note?: string | null;
         }>;
+        /**
+         * The merchant's design system, as a storefront applies it to match the store's identity. Null when the store has no design system or has switched it off; it is never an empty object. Subscribe to the `store.design_system_updated` webhook event to learn when it changes.
+         */
+        brand?: (StoreBrand | null);
         /**
          * The name and logo the merchant has given their shopping assistant, for a storefront or an assistant shopping the store to present it the way the store does. Always present; each field is null when the merchant has not set it.
          */

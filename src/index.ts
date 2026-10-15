@@ -101,6 +101,7 @@ export type { ShippingCalculationRequest } from './models/ShippingCalculationReq
 export { ShippingOption } from './models/ShippingOption';
 export type { ShippingParcelInput } from './models/ShippingParcelInput';
 export type { StoreAddress } from './models/StoreAddress';
+export type { StoreBrand } from './models/StoreBrand';
 export type { StoreBusinessIdentity } from './models/StoreBusinessIdentity';
 export type { StoreContact } from './models/StoreContact';
 export { StoreInfoResponse } from './models/StoreInfoResponse';
