@@ -65,6 +65,7 @@ export type { OrderItem } from './models/OrderItem';
 export { OrderShippingAddress } from './models/OrderShippingAddress';
 export type { OrderStatusNote } from './models/OrderStatusNote';
 export type { Pagination } from './models/Pagination';
+export { PasswordPolicyError } from './models/PasswordPolicyError';
 export type { PaymentInitializeResponse } from './models/PaymentInitializeResponse';
 export { PaymentMethod } from './models/PaymentMethod';
 export type { PickupLocation } from './models/PickupLocation';

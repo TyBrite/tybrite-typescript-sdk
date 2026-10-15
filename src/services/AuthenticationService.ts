@@ -13,7 +13,12 @@ export class AuthenticationService {
      * Register customer account
      * Create a new customer account with email and password.
      * Returns user details and authentication tokens upon successful registration.
-     * The email must be a real, deliverable address — disposable and example domains (e.g. `example.com`) are rejected with `400 invalid_request`.
+     * The email must be a real, deliverable address — disposable and example domains (e.g. `example.com`) are rejected with `400 invalid_email`.
+     *
+     * **Password rule:** a password must be 8 to 72 characters long (counted as characters, not bytes) and must not
+     * be on the list of commonly used passwords, which is compared without regard to case. A password that breaks the rule
+     * is refused with `400 weak_password` and `details.rule` set to `too_short`, `too_long` or `common`. The rule is
+     * checked before the email is looked up, so the refusal is the same whether or not the email already has an account.
      *
      * **Multi-Store Support:**
      * - If the email is already registered at another store, a new customer record
@@ -48,7 +53,7 @@ export class AuthenticationService {
              */
             email: string;
             /**
-             * Password (minimum 8 characters)
+             * Password, 8 to 72 characters, not on the list of commonly used passwords.
              */
             password: string;
             /**
@@ -90,7 +95,10 @@ export class AuthenticationService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `The request was refused. \`code\` is \`invalid_request\` when \`email\` or \`password\` is missing,
+                \`invalid_email\` when the address is malformed or uses a disposable or example domain, and
+                \`weak_password\` when the password breaks the password rule (\`details.rule\` is \`too_short\`, \`too_long\` or \`common\`).
+                `,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
@@ -358,6 +366,10 @@ export class AuthenticationService {
      * Update password
      * Update user password (requires authentication).
      *
+     * The new password follows the same rule as registration: 8 to 72 characters, not on the list of commonly used
+     * passwords. A password that breaks the rule is refused with `400 weak_password` and `details.rule` set to
+     * `too_short`, `too_long` or `common`.
+     *
      * **⚠️ SECRET KEY REQUIRED**
      *
      * This endpoint requires a secret key (tybrite_sk_*). Publishable keys will return 403 Forbidden.
@@ -390,6 +402,9 @@ export class AuthenticationService {
          */
         xAuthToken: string,
         requestBody: {
+            /**
+             * New password, 8 to 72 characters, not on the list of commonly used passwords.
+             */
             password: string;
         },
     }): CancelablePromise<{
@@ -414,7 +429,9 @@ export class AuthenticationService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `The request was refused. \`code\` is \`invalid_request\` when \`password\` is missing and
+                \`weak_password\` when the password breaks the password rule (\`details.rule\` is \`too_short\`, \`too_long\` or \`common\`).
+                `,
                 401: `Invalid current password`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
