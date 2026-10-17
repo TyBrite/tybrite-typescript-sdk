@@ -65,7 +65,7 @@ Endpoints that act on a specific shopper's data (their profile, cart, wishlist, 
 
 | Header | What it is | When to use it |
 |--------|-----------|----------------|
-| `xAuthToken` | A Galactic Core session token from `client.authentication.*` (login / OTP / magic-link). | You let Galactic Core handle sign-in. |
+| `xAuthToken` | The store's sign-in token: the `access_token` of a session from `client.authentication.*` (sign-up confirmation, login, emailed code, password reset). It lasts 15 minutes, is accepted only by the store that issued it, and answers `401 invalid_token` once expired or revoked. | You let Galactic Core handle sign-in. |
 | `xExternalAuth` | A short HMAC assertion your backend signs after verifying the shopper in your own identity provider. | You run a backend and have already verified the shopper. |
 | `xIdpToken` | The shopper's **raw** identity-provider token (e.g. a Firebase ID token), which Galactic Core forwards to a verifier you register to validate. | You'd rather Galactic Core broker the verification (e.g. a thin storefront with only the provider's client-side token). Fail-closed: a rejected or unreachable verifier is treated as signed-out. |
 
@@ -78,7 +78,7 @@ The SDK is organized into services matching the API resources. Access them via t
 - **`products`**: Browse the catalog, collections and specifications. The **single-product detail** calls (`getProduct`, `getProductBySlug`) return the full object — long-form `description`, **SEO metadata** (`seo_title`, `seo_description`, `seo_keywords`), the full media gallery and published specifications — for rendering search-engine-friendly product pages. The **product list** (`listProducts`) is lean by default (identity, price, thumbnail, taxonomy, flags, and the review rating — `average_rating`, the mean of approved reviews or `null` when there are none, and `review_count`) so catalog grids stay fast and can show a rating under each card; request the heavy fields explicitly with `fields=` (e.g. `fields: 'name,price,description,seo_title'`) or pass `full: true` to get the complete object for every row. Filter the list by `categoryId`, `subcategoryId`, `search`, or **`brand`** (case-insensitive exact match). **`listBrands()`** returns the catalog's distinct brands with product counts (sorted by count) for building a "shop by brand" row — then pass a chosen brand to `listProducts({ brand })`. **`getProductCustomFields({ id })`** returns the merchant's own fields for a product — fields Galactic Core does not define, such as a care instruction, a country of origin or a fabric composition — each with a `field_label` to render as a heading, a `field_type` telling you the shape of `value` (a `number` arrives as a number, a `multiselect` as an array), and an optional `unit_type`. Only fields the merchant published are returned, because a custom field can hold a cost or an internal note; the merchant controls both the names and how many exist, so render the array rather than expecting fixed keys. A store's public catalog feed carries the full fields, so a catalog mirrored into another store keeps its SEO.
 - **`orders`**: Create, track, and manage orders with automatic inventory sync.
 - **`customers`**: Customer profiles, RFM analytics, account management, and saved billing/shipping addresses for reuse at checkout. Capture a shopper's marketing opt-in with `marketing_consent` on `createCustomer` / `register` (and update it later via `updateCustomer`). `updateCustomer` writes the shopper-owned profile fields only — `name`, `phone`, `address`, `status` and `marketing_consent`, plus `email` when the call is made with a secret key — and ignores any other field; an `email` another customer of the store already uses returns `409`.
-- **`authentication`**: Customer login, registration, and session management.
+- **`authentication`**: Shopper accounts and sessions. Sign-up is two steps: `register` emails a confirmation code (and link) and returns no session, whatever the address, and `verifyRegistration` creates the account and returns the first session (`resendRegistration` sends a new code). Sign in with `login` (password) or `sendMagicLink` then `verifyOtp` (emailed code; any account, with or without a password, unless the store has switched it off — see `store.auth.passwordless` in `client.system.getStoreInfo`). `forgotPassword` then `resetPassword` recovers a password, and `changePassword` changes or sets one. A session is `{ access_token, refresh_token, expires_in, expires_at, token_type: 'shopper' }`; `refreshToken` swaps the refresh token for a new pair (each refresh token works once), and `logout` ends the session. `getCurrentUser` reads the signed-in shopper. A login refusal is `invalid_credentials` for every cause, or `password_reset_required` after a correct password; a code refusal is `invalid_code`; an `xAuthToken` the store does not accept is `invalid_token`.
 - **`cartWishlist`**: Unified interface for shopping carts and wishlists. On a marketplace key the cart calls take `storeId` (required there): the merchant whose items the cart holds. A marketplace cart is held by `xSessionId` rather than a `customer_id`, and is never visible to the merchant's own storefront.
 - **`search`**: Semantic (vector-based) and keyword search functionality. Pass `personalize: true` together with a customer session (`x-auth-token`) to nudge results toward that shopper's preferences while keeping query relevance primary.
 - **`recommendations`**: AI-driven suggestions. Types: `similar`, `also-bought` (each item flagged as a complement or an alternative), `next` (the products a shopper is most likely to view or add next given their current session — pass `sessionId` and/or a `productId` anchor), `trending`, `new`, `personalized`, and `bundle` (complements ranked ahead of alternatives).
@@ -125,7 +125,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Store info (`client.system.getStoreInfo`), health | `pk` or `sk` |
 | Store profile & policies (`client.store.*`) | `pk` or `sk` |
 | Cart & wishlist (`client.cartWishlist.*`) | `pk` (browser) — **+ session** when a `customer_id` is supplied |
-| Auth — login / register / logout / OTP / reset (`client.authentication.*`) | **`sk` only** |
+| Auth — register / verify / login / logout / OTP / reset / change (`client.authentication.*`) | **`sk` only** (`getCurrentUser` accepts `pk` or `sk`) |
 | Create customer (`createCustomer`) | **`sk` only** |
 | Customer self — profile & addresses (`getCustomer`, `updateCustomer`, …) | `pk` **+ session** |
 | List / get orders (`listOrders`, `getOrder`) | **`sk` only** |
@@ -243,10 +243,36 @@ const cart = await client.cartWishlist.addToCart({
 ### authentication
 
 ```typescript
-const session = await client.authentication.login({
+// Sign-up: two steps. register sends a code and returns no session.
+await client.authentication.register({
+  requestBody: { email: 'shopper@tybritelabs.com', password: '...', redirect_to: 'https://shop.example.com/account?link=register' },
+});
+// → { status: 'verification_required', email, expires_in: 900 }   (identical for a new and an existing address)
+
+const { session, user, customer } = await client.authentication.verifyRegistration({
+  requestBody: { email: 'shopper@tybritelabs.com', code: '123456' },   // or { link_token } from the emailed link
+});
+// → { message, user, customer, session: { access_token, refresh_token, expires_in, expires_at, token_type: 'shopper' } }
+
+// Sign-in: password, or an emailed code.
+const signedIn = await client.authentication.login({
   requestBody: { email: 'shopper@tybritelabs.com', password: '...' },
 });
-// → { access_token, ... } — pass access_token as xAuthToken on customer-scoped calls
+// → pass signedIn.session.access_token as xAuthToken on customer-scoped calls
+//   refusals: 401 invalid_credentials (unknown address, wrong password, no password) | 401 password_reset_required | 429 rate_limited
+
+await client.authentication.sendMagicLink({ requestBody: { email: 'shopper@tybritelabs.com' } });
+// → { status: 'code_sent', expires_in: 900 }
+const viaCode = await client.authentication.verifyOtp({ requestBody: { email: 'shopper@tybritelabs.com', code: '123456' } });
+
+// Keep the session fresh: each refresh token works once, so store the new pair every time.
+const next = await client.authentication.refreshToken({ requestBody: { refresh_token: signedIn.session.refresh_token } });
+// → { message, session }   401 invalid_refresh_token means the shopper is signed out
+
+// Password recovery and change
+await client.authentication.forgotPassword({ requestBody: { email: 'shopper@tybritelabs.com' } });
+await client.authentication.resetPassword({ requestBody: { email: 'shopper@tybritelabs.com', code: '123456', new_password: '...' } });
+await client.authentication.changePassword({ xAuthToken: next.session.access_token, requestBody: { current_password: '...', new_password: '...' } });
 ```
 
 ### customers

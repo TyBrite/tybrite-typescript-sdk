@@ -111,6 +111,15 @@ export type StoreInfoResponse = {
          * `null` on a retail store, and on a wholesale store that has not stated a position. A buyer uses this to find the right tier of seller — buying direct from a manufacturer and buying from a wholesaler differ in price, minimum order quantity, and lead time.
          */
         vendor_type?: StoreInfoResponse.vendor_type;
+        /**
+         * How shoppers sign in to this store. A storefront renders its sign-in options from this object.
+         */
+        auth?: {
+            /**
+             * Whether a shopper can sign in with an emailed one-time code or link instead of a password. `true` unless the merchant has switched it off. When `false`, `POST /v1/auth/magic-link` and `POST /v1/auth/verify-otp` answer `403 passwordless_disabled`.
+             */
+            passwordless: boolean;
+        };
     };
     /**
      * Catalog overview (optional, included when requested)

@@ -226,7 +226,7 @@ export class MarketplaceService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 409: `The marketplace has not finished connecting its payment account, so it cannot take payment yet (\`provider_not_live\`); or the \`Idempotency-Key\` was already used with a different body (\`idempotency_conflict\`), names a checkout still being processed (\`idempotency_in_progress\`), or names a checkout that did not complete (\`idempotency_failed\` — retry with a new key).`,
@@ -353,7 +353,7 @@ export class MarketplaceService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 500: `Internal server error`,
@@ -435,7 +435,7 @@ export class MarketplaceService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 500: `Internal server error`,
