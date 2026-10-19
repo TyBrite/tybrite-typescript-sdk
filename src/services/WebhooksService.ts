@@ -77,7 +77,15 @@ export class WebhooksService {
              * unsubscribe link, or the merchant removed them). The payload object carries
              * `id`, `email`, `source` (the label of the signup box, or null), `status`, and
              * `subscribed_at` or `unsubscribed_at`; a status change adds
-             * `previous_attributes.status`. Endpoints opt in explicitly; these events are not
+             * `previous_attributes.status`. A subscriber who signed up through a lead form also
+             * carries `name`, `phone` (only with SMS consent), `form_slug` and `answers`.
+             *
+             * **Lead forms:** `lead_form.submitted` (every submission of a lead form, including a
+             * repeat from the same person). The payload object carries `id`, `form_slug`,
+             * `email`, `name`, `phone` (only with SMS consent), `answers` (the fields the form
+             * shares with apps), `consents`, `source` and `submitted_at`.
+             *
+             * Endpoints opt in explicitly to the newsletter and lead form events; they are not
              * part of the default subscription.
              *
              * **Inventory & catalog:** `product.created`, `product.updated`,
@@ -392,7 +400,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked';
         },
     }): CancelablePromise<{
         success?: boolean;

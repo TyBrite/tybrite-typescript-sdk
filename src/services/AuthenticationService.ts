@@ -76,9 +76,9 @@ export class AuthenticationService {
              */
             phone?: string;
             /**
-             * Whether the customer opted in to marketing communications at sign-up.
+             * Whether the customer opted in to marketing email at sign-up.
              * Defaults to false (opt-in). Pass the state of your sign-up form's
-             * marketing opt-in checkbox.
+             * email opt-in checkbox.
              *
              */
             marketing_consent?: boolean;

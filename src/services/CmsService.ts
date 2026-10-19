@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { LeadForm } from '../models/LeadForm';
+import type { LeadFormSubmission } from '../models/LeadFormSubmission';
 import type { Lookbook } from '../models/Lookbook';
 import type { Post } from '../models/Post';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -454,6 +456,169 @@ export class CmsService {
                 401: `Authentication failed - invalid or missing API key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Get a lead form
+     * Returns the published definition of a lead form: its title, the questions it asks beyond the
+     * email address, the consent wording to display, whether a challenge is asked for, and the
+     * name of the hidden field to render. A storefront draws the form from this response and sends
+     * the answers to `POST /v1/lead-forms/{slug}/submit`.
+     *
+     * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
+     *
+     * **Caching:** the response is cacheable and changes when the merchant edits the form. A form that
+     * requires a challenge on every submission is returned with `Cache-Control: private, no-store`
+     * and carries a per-request `form_token`.
+     *
+     * A form that is a draft, archived, or does not exist, and a form on a store whose plan does not
+     * include lead forms, answer `404`.
+     *
+     * @returns LeadForm The form definition.
+     * @throws ApiError
+     */
+    public getLeadForm({
+        slug,
+    }: {
+        /**
+         * The form's address, lowercase letters, digits and hyphens, starting with a letter.
+         */
+        slug: string,
+    }): CancelablePromise<LeadForm> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/lead-forms/{slug}',
+            path: {
+                'slug': slug,
+            },
+            errors: {
+                400: `The form address is not valid.`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `The form does not exist or is not available.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `The form could not be loaded.`,
+            },
+        });
+    }
+    /**
+     * Submit a lead form
+     * Records a signup through a lead form: the shopper's email address, their answers to the form's
+     * questions, and the consents they gave. The shopper is added to the store's subscribers, and the
+     * submission, with the form's labels and consent wording as they were at that moment, is kept for
+     * the merchant.
+     *
+     * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. No
+     * customer session is required.
+     *
+     * **Validation:** the form's field definitions decide what is accepted. A key in `answers` that
+     * the form does not define is ignored. Phone answers are converted to E.164 using the store's
+     * country when the shopper omits a country code. Consent is recorded only from the `consents`
+     * booleans; the wording stored is the form's own.
+     *
+     * **Uniform response:** a first signup and a repeat signup by the same email both return `200` with
+     * the same shape. Every submission appends to the form's history.
+     *
+     * **Spam protection:** the field named by `hp_field` on the form is rendered hidden; a submission
+     * that fills it is acknowledged with a normal `200` and discarded. A form may also require a
+     * challenge: send the widget's result as `captcha_token`. When a challenge is required and
+     * verification is unavailable, the request answers `503`.
+     *
+     * **Rate limits:** per address and per form, and per email address per form. A secret key is
+     * called from the merchant's server, so it should send the shopper's address in
+     * `X-Forwarded-Shopper-Ip`; without it, every request on that key counts as one address. The header is
+     * ignored on a publishable key, which is called from the shopper's own browser.
+     *
+     * **Idempotency:** a request that repeats an `Idempotency-Key` with the same body returns the
+     * original result without recording a second submission; the same key with a different body answers `409`.
+     *
+     * @returns LeadFormSubmission The submission was accepted.
+     * @throws ApiError
+     */
+    public submitLeadForm({
+        slug,
+        requestBody,
+        idempotencyKey,
+        xForwardedShopperIp,
+    }: {
+        /**
+         * The form's address.
+         */
+        slug: string,
+        /**
+         * Up to 16 KB of JSON, sent as `application/json`.
+         */
+        requestBody: {
+            /**
+             * The shopper's email address.
+             */
+            email: string;
+            /**
+             * Answers keyed by field `name`, at most 30. A `multiselect` answer is an array.
+             */
+            answers?: Record<string, any>;
+            /**
+             * The consents the shopper gave.
+             */
+            consents?: {
+                email?: boolean;
+                sms?: boolean;
+            };
+            /**
+             * The challenge widget's result. Required when the form's `captcha.required` is true, or when a refusal with reason `captcha_required` asks for it.
+             */
+            captcha_token?: string;
+            /**
+             * The `form_token` returned with the form definition, when it had one.
+             */
+            form_token?: string;
+            /**
+             * The hidden field named by the form's `hp_field`. Leave empty.
+             */
+            website_url?: string;
+            /**
+             * A label for where the signup happened. At most 200 characters.
+             */
+            source?: string;
+            /**
+             * The page the form was on. At most 500 characters.
+             */
+            page_url?: string;
+            /**
+             * Campaign parameters, up to 10 string entries.
+             */
+            utm?: Record<string, string>;
+        },
+        /**
+         * A unique string of 1 to 255 printable characters that identifies this submission.
+         */
+        idempotencyKey?: string,
+        /**
+         * The shopper's IP address. Honoured on a secret key only.
+         */
+        xForwardedShopperIp?: string,
+    }): CancelablePromise<LeadFormSubmission> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/lead-forms/{slug}/submit',
+            path: {
+                'slug': slug,
+            },
+            headers: {
+                'Idempotency-Key': idempotencyKey,
+                'X-Forwarded-Shopper-Ip': xForwardedShopperIp,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `The submission is not valid. \`details.field\` names the answer and \`details.reason\` says why.`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The store's plan does not include lead forms (\`details.reason\` is \`plan_required\`).`,
+                404: `The form does not exist or is not available.`,
+                409: `The \`Idempotency-Key\` was already used with a different submission.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `The form could not be submitted.`,
+                503: `The challenge could not be verified. The submission was not recorded; retry shortly.`,
             },
         });
     }

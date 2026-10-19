@@ -39,13 +39,20 @@ export class CustomersService {
              */
             external_id?: string;
             /**
-             * Whether the customer has opted in to marketing communications. Defaults
-             * to false (opt-in). Pass the state of your storefront's marketing opt-in
-             * checkbox. When true, the customer is eligible for subscription to the
-             * store's connected marketing tools.
+             * Whether the customer has opted in to marketing email. Defaults to false
+             * (opt-in). Pass the state of your storefront's email opt-in checkbox. When
+             * true, the customer is eligible for email subscription in the store's
+             * connected marketing tools. It does not cover SMS; see `sms_consent`.
              *
              */
             marketing_consent?: boolean;
+            /**
+             * Whether the customer has opted in to marketing text messages. A separate
+             * opt-in from `marketing_consent`. Defaults to false. Requires a `phone`;
+             * the request is rejected with 400 when `true` and no phone number is given.
+             *
+             */
+            sms_consent?: boolean;
         },
     }): CancelablePromise<{
         customer: Customer;
@@ -224,9 +231,13 @@ export class CustomersService {
             address?: string;
             status?: 'active' | 'inactive';
             /**
-             * Whether the shopper agrees to receive marketing messages from the store.
+             * Whether the shopper agrees to receive marketing email from the store.
              */
             marketing_consent?: boolean;
+            /**
+             * Whether the shopper agrees to receive marketing text messages from the store. Requires the customer to have a phone number; the request is rejected with 400 otherwise.
+             */
+            sms_consent?: boolean;
         },
     }): CancelablePromise<{
         customer: Customer;

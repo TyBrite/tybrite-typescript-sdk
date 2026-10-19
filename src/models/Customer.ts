@@ -36,13 +36,21 @@ export type Customer = {
      */
     external_id?: string | null;
     /**
-     * Whether the customer has opted in to marketing communications. Defaults to false
-     * (opt-in). Set this from your storefront's marketing opt-in checkbox at sign-up,
-     * checkout, or in the customer's account preferences. When true, the customer is
-     * eligible to be subscribed to the store's connected marketing tools.
+     * Whether the customer has opted in to marketing email. Defaults to false (opt-in).
+     * Set this from your storefront's email opt-in checkbox at sign-up, checkout, or in
+     * the customer's account preferences. When true, the customer is eligible to be
+     * subscribed to email in the store's connected marketing tools. It does not cover
+     * SMS; see `sms_consent`.
      *
      */
     marketing_consent?: boolean;
+    /**
+     * Whether the customer has opted in to marketing text messages. A separate opt-in
+     * from `marketing_consent`, and only settable for a customer with a phone number.
+     * Defaults to false.
+     *
+     */
+    sms_consent?: boolean;
     total_purchases?: number;
     /**
      * Timestamp of the customer's most recent purchase, or null if they have not purchased yet.

@@ -121,7 +121,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Discovery — most-viewed / carted / converting (`client.discovery.*`) | `pk` or `sk` (browser) |
 | Event capture (`client.events.recordEvent`) | `pk` (browser) |
 | Analytics (`client.analytics.collectAnalyticsEvent`) | `pk` (browser) |
-| Blog posts & lookbooks (`client.cms.*`) | `pk` or `sk` |
+| Blog posts, lookbooks, newsletter & lead forms (`client.cms.*`) | `pk` or `sk` |
 | Store info (`client.system.getStoreInfo`), health | `pk` or `sk` |
 | Store profile & policies (`client.store.*`) | `pk` or `sk` |
 | Cart & wishlist (`client.cartWishlist.*`) | `pk` (browser) — **+ session** when a `customer_id` is supplied |
@@ -384,6 +384,19 @@ const { posts: mostRead, window_days } = await client.cms.getTrendingPosts({ lim
 
 // Capture a newsletter signup from the storefront (email-keyed, idempotent):
 await client.cms.subscribeNewsletter({ requestBody: { email: 'shopper@tybritelabs.com', source: 'footer' } });
+
+// Render a merchant-defined lead form, then submit it. The form lists its fields, consent wording,
+// the hidden field to leave empty (hp_field) and whether a challenge is asked for:
+const form = await client.cms.getLeadForm({ slug: 'spring-lookbook' });
+await client.cms.submitLeadForm({
+  slug: 'spring-lookbook',
+  requestBody: {
+    email: 'john.doe@example.com',
+    answers: { first_name: 'John' },
+    consents: { email: true },
+  },
+  idempotencyKey: crypto.randomUUID(),
+});
 ```
 
 ### events
