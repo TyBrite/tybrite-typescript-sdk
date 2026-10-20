@@ -54,6 +54,7 @@ export type { LeadForm } from './models/LeadForm';
 export { LeadFormError } from './models/LeadFormError';
 export { LeadFormField } from './models/LeadFormField';
 export type { LeadFormSubmission } from './models/LeadFormSubmission';
+export type { LeadFormToken } from './models/LeadFormToken';
 export { Lookbook } from './models/Lookbook';
 export type { MarketplaceCheckoutQuote } from './models/MarketplaceCheckoutQuote';
 export type { MarketplaceCheckoutResponse } from './models/MarketplaceCheckoutResponse';

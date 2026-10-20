@@ -888,4 +888,97 @@ export class CartWishlistService {
             },
         });
     }
+    /**
+     * Ask to be told when a variant is back in stock
+     * Records a shopper's request for one email when a sold-out variant is available again. The email
+     * address is the only identity needed, so it works for an anonymous visitor and a signed-in customer
+     * alike; send `customer_id` with a customer credential to attach the request to a customer record.
+     *
+     * A request is not marketing consent. It subscribes the address to nothing and results in exactly one
+     * message, sent when the variant's stock goes from nothing to something. After that message the shopper
+     * can ask again.
+     *
+     * The response is the same `200` whether the address has asked before, already holds the maximum number
+     * of open requests for the store, or is new. The request is refused with `409` when the variant is in
+     * stock, with `404` when the variant is not sold online by the store, and with `404` (`not_available`)
+     * when the store has no way to deliver the message. Sandbox keys read their sandbox stock level and
+     * never trigger a message.
+     *
+     * **Auth / key type:** publishable key (`tybrite_pk_*`) or secret key (`tybrite_sk_*`). A customer
+     * credential is needed only when `customer_id` is sent.
+     *
+     * **Rate limits:** 20 requests per hour per IP address and 6 per hour per email address, each within
+     * one store.
+     *
+     * @returns any The request is recorded, or was already recorded.
+     * @throws ApiError
+     */
+    public notifyWhenAvailable({
+        id,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Variant UUID
+         */
+        id: string,
+        requestBody: {
+            /**
+             * Where to send the message. Stored lower-cased.
+             */
+            email: string;
+            /**
+             * Must be `true`. Records that the shopper asked for this one message.
+             */
+            consent: boolean;
+            /**
+             * Customer UUID, when the shopper is signed in. Requires a customer credential for the same customer.
+             */
+            customer_id?: string;
+        },
+        /**
+         * Customer session access_token from /v1/auth/login or /v1/auth/verify-otp. Needed only when `customer_id` is sent; the resolved customer must match it.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Needed only when `customer_id` is sent. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         * Format: `<base64url(JSON)>.<base64url(HMAC-SHA256(JSON))>` where the JSON is `{ "external_id": "...", "iat": <unix>, "exp": <unix> }` and the HMAC is keyed on the store's signing secret. Claim lifetime capped at 300 seconds.
+         *
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider (e.g. a Firebase ID token). Needed only when `customer_id` is sent. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         *
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        requested: boolean;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/variants/{id}/notify-when-available',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `The variant is not sold online by this store (\`not_found\`), or the store cannot send back-in-stock messages (\`not_available\`).`,
+                409: `The variant is in stock (\`in_stock\`).`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
 }

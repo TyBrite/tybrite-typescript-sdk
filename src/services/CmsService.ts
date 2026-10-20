@@ -4,6 +4,7 @@
 /* eslint-disable */
 import type { LeadForm } from '../models/LeadForm';
 import type { LeadFormSubmission } from '../models/LeadFormSubmission';
+import type { LeadFormToken } from '../models/LeadFormToken';
 import type { Lookbook } from '../models/Lookbook';
 import type { Post } from '../models/Post';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -463,14 +464,14 @@ export class CmsService {
      * Get a lead form
      * Returns the published definition of a lead form: its title, the questions it asks beyond the
      * email address, the consent wording to display, whether a challenge is asked for, and the
-     * name of the hidden field to render. A storefront draws the form from this response and sends
-     * the answers to `POST /v1/lead-forms/{slug}/submit`.
+     * name of the hidden field to render. A storefront draws the form from this response, requests a
+     * `form_token` from `POST /v1/lead-forms/{slug}/token` when the form is shown, and sends the
+     * answers to `POST /v1/lead-forms/{slug}/submit`.
      *
      * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      *
-     * **Caching:** the response is cacheable and changes when the merchant edits the form. A form that
-     * requires a challenge on every submission is returned with `Cache-Control: private, no-store`
-     * and carries a per-request `form_token`.
+     * **Caching:** the response is cacheable and changes when the merchant edits the form. It carries
+     * no per-visitor data; the `form_token` comes from its own endpoint.
      *
      * A form that is a draft, archived, or does not exist, and a form on a store whose plan does not
      * include lead forms, answer `404`.
@@ -502,6 +503,48 @@ export class CmsService {
         });
     }
     /**
+     * Get a lead form token
+     * Returns the signed token a submission must carry. Request it when the form is shown, so that it
+     * is at least two seconds old by the time the shopper submits. A token is valid for one form on one
+     * store for seven days and carries no data. The response is never cached.
+     *
+     * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
+     *
+     * **Rate limits:** per address and store. A secret key is called from the merchant's server and
+     * should send the shopper's address in `X-Forwarded-Shopper-Ip`.
+     *
+     * @returns LeadFormToken The token.
+     * @throws ApiError
+     */
+    public createLeadFormToken({
+        slug,
+        xForwardedShopperIp,
+    }: {
+        /**
+         * The form's address.
+         */
+        slug: string,
+        /**
+         * The shopper's IP address. Honoured on a secret key only.
+         */
+        xForwardedShopperIp?: string,
+    }): CancelablePromise<LeadFormToken> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/lead-forms/{slug}/token',
+            path: {
+                'slug': slug,
+            },
+            headers: {
+                'X-Forwarded-Shopper-Ip': xForwardedShopperIp,
+            },
+            errors: {
+                400: `The form address is not valid.`,
+                429: `Too many requests from this address.`,
+            },
+        });
+    }
+    /**
      * Submit a lead form
      * Records a signup through a lead form: the shopper's email address, their answers to the form's
      * questions, and the consents they gave. The shopper is added to the store's subscribers, and the
@@ -520,9 +563,12 @@ export class CmsService {
      * the same shape. Every submission appends to the form's history.
      *
      * **Spam protection:** the field named by `hp_field` on the form is rendered hidden; a submission
-     * that fills it is acknowledged with a normal `200` and discarded. A form may also require a
-     * challenge: send the widget's result as `captcha_token`. When a challenge is required and
-     * verification is unavailable, the request answers `503`.
+     * that fills it is acknowledged with a normal `200` and discarded. The same applies to a submission
+     * that carries a `form_token` that is forged, issued for another form, or older than seven days, one made within two seconds of the token being issued, and (once the platform requires it) one with no token, and one
+     * whose answers are mostly links or whose email address is a throwaway domain. Where the form
+     * reports `captcha.available`, it may also require a challenge: send the widget's result as
+     * `captcha_token`; when a challenge is required and verification is unavailable, the request answers
+     * `503`. Where `captcha.available` is false no challenge is asked for and the other protections apply.
      *
      * **Rate limits:** per address and per form, and per email address per form. A secret key is
      * called from the merchant's server, so it should send the shopper's address in
@@ -569,7 +615,7 @@ export class CmsService {
              */
             captcha_token?: string;
             /**
-             * The `form_token` returned with the form definition, when it had one.
+             * The token returned by `POST /v1/lead-forms/{slug}/token`. A submission with an invalid token is acknowledged and discarded; one with no token is accepted but held to a tighter per-address limit and answers `429` past it.
              */
             form_token?: string;
             /**

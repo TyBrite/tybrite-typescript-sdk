@@ -30,6 +30,10 @@ export type LeadForm = {
     };
     captcha: {
         /**
+         * True when a challenge can be shown and verified. When false, `required` and `on_demand` are false whatever the form's setting, and the other protections still apply.
+         */
+        available: boolean;
+        /**
          * True when every submission must carry a `captcha_token`.
          */
         required: boolean;
@@ -50,9 +54,5 @@ export type LeadForm = {
      * Where the merchant wants the shopper sent after a successful signup. Present only when set.
      */
     redirect_url?: string;
-    /**
-     * Present when `captcha.required` is true. Sent back unchanged on submit; a submission that arrives within two seconds of it being issued is acknowledged and discarded.
-     */
-    form_token?: string;
 };
 

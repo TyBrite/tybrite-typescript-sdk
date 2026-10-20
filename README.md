@@ -124,7 +124,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Blog posts, lookbooks, newsletter & lead forms (`client.cms.*`) | `pk` or `sk` |
 | Store info (`client.system.getStoreInfo`), health | `pk` or `sk` |
 | Store profile & policies (`client.store.*`) | `pk` or `sk` |
-| Cart & wishlist (`client.cartWishlist.*`) | `pk` (browser) — **+ session** when a `customer_id` is supplied |
+| Cart & wishlist (`client.cartWishlist.*`) | `pk` (browser) — **+ session** when a `customer_id` is supplied (includes `notifyWhenAvailable`, which needs a session only when it carries a `customer_id`) |
 | Auth — register / verify / login / logout / OTP / reset / change (`client.authentication.*`) | **`sk` only** (`getCurrentUser` accepts `pk` or `sk`) |
 | Create customer (`createCustomer`) | **`sk` only** |
 | Customer self — profile & addresses (`getCustomer`, `updateCustomer`, …) | `pk` **+ session** |
@@ -238,6 +238,14 @@ const cart = await client.cartWishlist.addToCart({
   xSessionId: 'session-uuid', // anonymous cart; or pass xAuthToken for a signed-in shopper
 });
 // → the updated cart with its line items and totals
+
+// A shopper asks to be emailed once when a sold-out variant is available again.
+await client.cartWishlist.notifyWhenAvailable({
+  id: 'variant-uuid',
+  requestBody: { email: 'shopper@example.com', consent: true },
+});
+// → { requested: true }   (the same answer for a new, a repeated and an at-the-limit request)
+//   refusals: 409 in_stock | 404 not_found | 404 not_available (the store cannot send the message) | 429 rate_limited
 ```
 
 ### authentication
@@ -822,6 +830,7 @@ A **product** is the catalog entry (the "Cotton Hoodie"); a **variant** is a spe
 | Operation | Pass |
 | :--- | :--- |
 | `cartWishlist.addToCart`, `addToWishlist` | **`variant_id`** (required) — a specific SKU. |
+| `cartWishlist.notifyWhenAvailable` | **`id`** — the variant the shopper is waiting for. |
 | `marketplace.marketplaceCheckout` items | **`variant_id`** (required). |
 | `orders.createOrder` items | **`variant_id`** preferred (the chosen SKU); `product_id` alone resolves the **default** variant. Send at least one — if both, `variant_id` wins. |
 | `events.record` | **Either** `variant_id` or `product_id` — the server resolves the product. |
