@@ -176,6 +176,10 @@ export type StoreInfoResponse = {
                     id?: string;
                     name?: string;
                     /**
+                     * URL-safe identifier for the category, unique within the store.
+                     */
+                    slug?: string | null;
+                    /**
                      * Category image URL, if the merchant set one.
                      */
                     image?: string | null;
@@ -198,6 +202,10 @@ export type StoreInfoResponse = {
                 list?: Array<{
                     id?: string;
                     name?: string;
+                    /**
+                     * URL-safe identifier for the subcategory, unique among subcategories that share its parent.
+                     */
+                    slug?: string | null;
                     /**
                      * Subcategory image URL, if the merchant set one.
                      */
