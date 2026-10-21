@@ -75,7 +75,7 @@ The last two are the two bring-your-own-auth modes — they differ only in **who
 
 The SDK is organized into services matching the API resources. Access them via the client instance (e.g., `client.products`).
 
-- **`products`**: Browse the catalog, collections and specifications. The **single-product detail** calls (`getProduct`, `getProductBySlug`) return the full object — long-form `description`, **SEO metadata** (`seo_title`, `seo_description`, `seo_keywords`), the full media gallery and published specifications — for rendering search-engine-friendly product pages. The **product list** (`listProducts`) is lean by default (identity, price, thumbnail, taxonomy, flags, and the review rating — `average_rating`, the mean of approved reviews or `null` when there are none, and `review_count`) so catalog grids stay fast and can show a rating under each card; request the heavy fields explicitly with `fields=` (e.g. `fields: 'name,price,description,seo_title'`) or pass `full: true` to get the complete object for every row. Filter the list by `categoryId`, `subcategoryId`, `search`, or **`brand`** (case-insensitive exact match). **`listBrands()`** returns the catalog's distinct brands with product counts (sorted by count) for building a "shop by brand" row — then pass a chosen brand to `listProducts({ brand })`. **`getProductCustomFields({ id })`** returns the merchant's own fields for a product — fields Galactic Core does not define, such as a care instruction, a country of origin or a fabric composition — each with a `field_label` to render as a heading, a `field_type` telling you the shape of `value` (a `number` arrives as a number, a `multiselect` as an array), and an optional `unit_type`. Only fields the merchant published are returned, because a custom field can hold a cost or an internal note; the merchant controls both the names and how many exist, so render the array rather than expecting fixed keys. A store's public catalog feed carries the full fields, so a catalog mirrored into another store keeps its SEO.
+- **`products`**: Browse the catalog, collections and specifications. The **single-product detail** calls (`getProduct`, `getProductBySlug`) return the full object — long-form `description`, **SEO metadata** (`seo_title`, `seo_description`, `seo_keywords`), the full media gallery and published specifications — for rendering search-engine-friendly product pages. The **product list** (`listProducts`) is lean by default (identity, price, thumbnail, taxonomy, flags, and the review rating — `average_rating`, the mean of approved reviews or `null` when there are none, and `review_count`) so catalog grids stay fast and can show a rating under each card; request the heavy fields explicitly with `fields=` (e.g. `fields: 'name,price,description,seo_title'`) or pass `full: true` to get the complete object for every row. Filter the list by `categoryId`, `subcategoryId`, `search`, or **`brand`** (case-insensitive exact match). Bound it with `minPrice`/`maxPrice`, filter by specification value with `spec`, order it with `sort` (`price_asc`, `price_desc`, `newest`), get the exact match count with `includeTotal`, and build a filter panel with **`listProductFacets()`**. **`listBrands()`** returns the catalog's distinct brands with product counts (sorted by count) for building a "shop by brand" row — then pass a chosen brand to `listProducts({ brand })`. **`getProductCustomFields({ id })`** returns the merchant's own fields for a product — fields Galactic Core does not define, such as a care instruction, a country of origin or a fabric composition — each with a `field_label` to render as a heading, a `field_type` telling you the shape of `value` (a `number` arrives as a number, a `multiselect` as an array), and an optional `unit_type`. Only fields the merchant published are returned, because a custom field can hold a cost or an internal note; the merchant controls both the names and how many exist, so render the array rather than expecting fixed keys. A store's public catalog feed carries the full fields, so a catalog mirrored into another store keeps its SEO.
 - **`orders`**: Create, track, and manage orders with automatic inventory sync.
 - **`customers`**: Customer profiles, RFM analytics, account management, and saved billing/shipping addresses for reuse at checkout. Capture a shopper's marketing opt-in with `marketing_consent` on `createCustomer` / `register` (and update it later via `updateCustomer`). `updateCustomer` writes the shopper-owned profile fields only — `name`, `phone`, `address`, `status` and `marketing_consent`, plus `email` when the call is made with a secret key — and ignores any other field; an `email` another customer of the store already uses returns `409`.
 - **`authentication`**: Shopper accounts and sessions. Sign-up is two steps: `register` emails a confirmation code (and link) and returns no session, whatever the address, and `verifyRegistration` creates the account and returns the first session (`resendRegistration` sends a new code). Sign in with `login` (password) or `sendMagicLink` then `verifyOtp` (emailed code; any account, with or without a password, unless the store has switched it off — see `store.auth.passwordless` in `client.system.getStoreInfo`). `forgotPassword` then `resetPassword` recovers a password, and `changePassword` changes or sets one. A session is `{ access_token, refresh_token, expires_in, expires_at, token_type: 'shopper' }`; `refreshToken` swaps the refresh token for a new pair (each refresh token works once), and `logout` ends the session. `getCurrentUser` reads the signed-in shopper. A login refusal is `invalid_credentials` for every cause, or `password_reset_required` after a correct password; a code refusal is `invalid_code`; an `xAuthToken` the store does not accept is `invalid_token`.
@@ -168,6 +168,37 @@ so. See the [Key usage by operation](#key-usage-by-operation) matrix below, plus
 const { brands } = await client.products.listBrands();
 // → [{ brand: 'Acme', product_count: 42 }, ...] — pair with listProducts({ brand }) for a brand page
 ```
+
+#### Filter, sort and facet a product list
+
+`listProducts` filters, sorts and counts on the server, and every option combines with `search`, `brand`, `categoryId`, `subcategoryId` and one `cursor`.
+
+```typescript
+// Products from $20 to $100 whose colour is Black or Navy, cheapest first, with the exact match count
+const page = await client.products.listProducts({
+  minPrice: '20',
+  maxPrice: '100',
+  spec: { color: ['Black', 'Navy'], material: ['Cotton'] }, // OR within a field, AND across fields
+  sort: 'price_asc', // 'featured' (default) | 'price_asc' | 'price_desc' | 'newest'
+  includeTotal: true, // adds pagination.total; omitted otherwise
+  limit: 24,
+});
+console.log(page.pagination.total, page.products.length);
+
+// Next page: the cursor belongs to this sort and these filters; a different sort or filter returns 400
+const next = await client.products.listProducts({
+  minPrice: '20', maxPrice: '100', spec: { color: ['Black', 'Navy'], material: ['Cotton'] },
+  sort: 'price_asc', limit: 24, cursor: page.pagination.next_cursor,
+});
+
+// The values a shopper can filter by, with a count for each (same filters, no cursor or sort)
+const facets = await client.products.listProductFacets({ minPrice: '20', maxPrice: '100' });
+// → { total, price: { min, max }, brands: { values: [{ value, count }], truncated },
+//     categories, subcategories, specs: [{ field, label, type, values: [{ value, count }], truncated }],
+//     display_currency, currency_symbol }
+```
+
+A product's price for the bounds and the price sorts is its lowest active variant price after sale pricing; a product with no price is excluded when a bound is set and comes last in both price orders. A facet list holds at most 20 values (`truncated` reports more). These options are not available on marketplace operator keys or together with `personalize` or `b2b`.
 
 ### taxonomy
 

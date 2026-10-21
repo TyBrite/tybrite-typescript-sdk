@@ -26,6 +26,14 @@ export class ProductsService {
      * operator key, pass `?store_id=<merchant>` to narrow results to a single merchant. Responses are
      * cursor-paginated; pass the returned `next_cursor` as `?cursor=` for the next page.
      *
+     * **Filtering, sorting and totals:** `min_price` and `max_price` bound the price, `spec[<field>]`
+     * filters on specification values, `sort` orders the list by price or recency, and `include_total=true`
+     * adds the exact number of matching products to `pagination`. Every filter combines with `search`,
+     * `brand`, `category_id` and `subcategory_id` and with the single `cursor`. Use
+     * `GET /v1/products/facets` to list the values a shopper can filter by, with a count for each.
+     * These parameters are not available on marketplace operator keys or together with `personalize`
+     * or `b2b`; those requests return `400`.
+     *
      * **Performance:**
      * - Default variant data included at root level (price, stock, sku)
      * - No variants array (50-70% smaller than detail endpoints)
@@ -52,6 +60,11 @@ export class ProductsService {
         brand,
         categoryId,
         subcategoryId,
+        minPrice,
+        maxPrice,
+        sort,
+        includeTotal,
+        spec,
         limit = 50,
         cursor,
         fields,
@@ -129,6 +142,60 @@ export class ProductsService {
          */
         subcategoryId?: string,
         /**
+         * Lowest price to include, as a decimal in the store's currency (for example `19.99`).
+         *
+         * A product's price for this filter is its lowest active variant price after sale pricing:
+         * the sale price when one is set, otherwise the regular price. A product with no price is
+         * excluded whenever `min_price` or `max_price` is set.
+         *
+         * Must be a non-negative number with at most four decimal places, and no greater than
+         * `max_price`; anything else returns `400`.
+         *
+         */
+        minPrice?: string,
+        /**
+         * Highest price to include, as a decimal in the store's currency. Priced the same way as
+         * `min_price`. Must be a non-negative number with at most four decimal places.
+         *
+         */
+        maxPrice?: string,
+        /**
+         * Order of the list.
+         *
+         * - `featured` (default): the store's standard order.
+         * - `price_asc`: lowest price first.
+         * - `price_desc`: highest price first.
+         * - `newest`: most recently created first.
+         *
+         * Products without a price come last in both price orders, and ties are broken by product id,
+         * so a product appears exactly once across pages. A `cursor` is valid only with the `sort` and
+         * filters of the request that returned it.
+         *
+         */
+        sort?: 'featured' | 'price_asc' | 'price_desc' | 'newest',
+        /**
+         * When `true`, `pagination.total` carries the exact number of products that match the current
+         * filters, independent of the page and the cursor. It is omitted otherwise.
+         *
+         */
+        includeTotal?: boolean,
+        /**
+         * Filter by specification value with `spec[<field>]=<value>`, for example
+         * `spec[color]=Black&spec[material]=Cotton`.
+         *
+         * - Repeat a field to accept several values: `spec[color]=Black&spec[color]=Navy` matches
+         * products whose `color` is Black or Navy.
+         * - Different fields must all match.
+         * - Matching is case-insensitive and exact. A product matches when any of its published
+         * specifications holds the value, including as one entry of a multi-value field.
+         *
+         * At most 10 fields, 10 values per field and 100 characters per value. A field name is 1 to 100
+         * letters, digits, underscores or hyphens. Field names and values are listed by
+         * `GET /v1/products/facets`.
+         *
+         */
+        spec?: Record<string, Array<string>>,
+        /**
          * Maximum number of products to return per page.
          *
          * **Validation:**
@@ -164,9 +231,9 @@ export class ProductsService {
          * **Example Pagination:**
          *
          * **Cursor Format:**
-         * - Base64-encoded string
-         * - Opaque to clients (do not parse or modify)
-         * - Valid only for the current query parameters
+         * - Opaque string (do not parse or modify)
+         * - Valid only for the `sort` and filters of the request that returned it; a cursor used with
+         * a different sort or different filters returns `400`
          *
          */
         cursor?: string,
@@ -275,6 +342,12 @@ export class ProductsService {
              * Whether more products are available
              */
             has_more?: boolean;
+            /**
+             * Exact number of products matching the current filters. Present only when
+             * `include_total=true`.
+             *
+             */
+            total?: number;
         };
     }> {
         return this.httpRequest.request({
@@ -285,6 +358,11 @@ export class ProductsService {
                 'brand': brand,
                 'category_id': categoryId,
                 'subcategory_id': subcategoryId,
+                'min_price': minPrice,
+                'max_price': maxPrice,
+                'sort': sort,
+                'include_total': includeTotal,
+                'spec': spec,
                 'limit': limit,
                 'cursor': cursor,
                 'fields': fields,
@@ -337,6 +415,163 @@ export class ProductsService {
                 'store_id': storeId,
             },
             errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List the values a product list can be filtered by
+     * Return, for the products the given filters match, how many products carry each brand, category,
+     * subcategory and specification value, together with the lowest and highest price. Use it to build
+     * the filter panel beside a product list: each value can be passed back to `GET /v1/products`
+     * (`brand`, `category_id`, `subcategory_id`, `spec[<field>]`).
+     *
+     * Accepts the filters of `GET /v1/products` (`search`, `brand`, `category_id`, `subcategory_id`,
+     * `min_price`, `max_price`, `spec[<field>]`) and counts the products that match all of them. It has no
+     * cursor, sort or page size; those parameters are ignored.
+     *
+     * **Limits.** Each list holds at most 20 values, ordered by count (highest first) then name;
+     * `truncated` is `true` when more values exist than are returned. At most 20 specification fields are
+     * returned.
+     *
+     * **Specification fields.** A field is listed when one of the store's specification templates defines
+     * it as a text, select, multiselect or boolean field and a matching product has a value for it. A text
+     * field with more than 50 distinct values is treated as an identifier and is not listed.
+     *
+     * **Price.** `price.min` and `price.max` are the lowest and highest product prices after sale pricing, in
+     * the store's currency (`display_currency`); both are `null` when nothing matches.
+     *
+     * Not available on marketplace operator keys, which return `400`.
+     *
+     * @returns any Value counts for the products the filters match.
+     * @throws ApiError
+     */
+    public listProductFacets({
+        search,
+        brand,
+        categoryId,
+        subcategoryId,
+        minPrice,
+        maxPrice,
+        spec,
+    }: {
+        /**
+         * Count only products whose name or SKU contains this text (case-insensitive).
+         */
+        search?: string,
+        /**
+         * Count only products of one brand (case-insensitive exact match).
+         */
+        brand?: string,
+        /**
+         * Count only products in this category or any of its subcategories. Accepts several ids, in the
+         * same forms as `GET /v1/products`.
+         *
+         */
+        categoryId?: string,
+        /**
+         * Count only products in this subcategory or any nested subcategory. Accepts several ids, in the
+         * same forms as `GET /v1/products`.
+         *
+         */
+        subcategoryId?: string,
+        /**
+         * Lowest price to include, as a decimal in the store's currency. Same rules as `GET /v1/products`.
+         */
+        minPrice?: string,
+        /**
+         * Highest price to include, as a decimal in the store's currency. Same rules as `GET /v1/products`.
+         */
+        maxPrice?: string,
+        /**
+         * Specification filter, `spec[<field>]=<value>`; repeat a field for alternatives. Same rules as
+         * `GET /v1/products`.
+         *
+         */
+        spec?: Record<string, Array<string>>,
+    }): CancelablePromise<{
+        /**
+         * Number of products the filters match.
+         */
+        total: number;
+        price: {
+            /**
+             * Lowest product price among the matching products.
+             */
+            min: number | null;
+            /**
+             * Highest product price among the matching products.
+             */
+            max: number | null;
+        };
+        brands: {
+            values: Array<{
+                value: string;
+                /**
+                 * Matching products with this brand.
+                 */
+                count: number;
+            }>;
+            /**
+             * Whether more values exist than are listed.
+             */
+            truncated: boolean;
+        };
+        categories: {
+            values: Array<{
+                id: string;
+                name: string;
+                count: number;
+            }>;
+            truncated: boolean;
+        };
+        subcategories: {
+            values: Array<{
+                id: string;
+                name: string;
+                count: number;
+            }>;
+            truncated: boolean;
+        };
+        /**
+         * Specification fields with the values the matching products carry, at most 20 fields.
+         */
+        specs: Array<{
+            /**
+             * The name to pass as `spec[<field>]`.
+             */
+            field: string;
+            label: string;
+            type: 'text' | 'select' | 'multiselect' | 'boolean';
+            values: Array<{
+                value: string;
+                /**
+                 * Matching products with this value.
+                 */
+                count: number;
+            }>;
+            truncated: boolean;
+        }>;
+        display_currency: string;
+        currency_symbol: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/products/facets',
+            query: {
+                'search': search,
+                'brand': brand,
+                'category_id': categoryId,
+                'subcategory_id': subcategoryId,
+                'min_price': minPrice,
+                'max_price': maxPrice,
+                'spec': spec,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
