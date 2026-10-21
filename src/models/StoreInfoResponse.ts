@@ -362,6 +362,28 @@ export type StoreInfoResponse = {
             total?: number;
             published?: number;
         };
+        /**
+         * The lead forms a storefront can render. Each `slug` is accepted by `GET /v1/lead-forms/{slug}`, which returns the form's fields and consent text.
+         */
+        lead_forms?: {
+            /**
+             * Whether the store collects leads through forms. When false, `list` is empty and the form endpoints answer 404.
+             */
+            available: boolean;
+            /**
+             * Published forms in the key's environment, most recently updated first.
+             */
+            list: Array<{
+                slug: string;
+                title: string;
+                description?: string | null;
+                /**
+                 * Increases whenever the form's fields or wording change.
+                 */
+                version: number;
+                updated_at: string;
+            }>;
+        };
     };
     /**
      * Feature flags (optional, included when requested). Each flag is a boolean answering "should the storefront show this capability right now?" — use them to decide which UI to render.
