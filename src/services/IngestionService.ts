@@ -28,6 +28,13 @@ export class IngestionService {
      * product (each row needs its own unique `sku`). Rows without a `product_group` are
      * single-variant products.
      *
+     * **Prices.** `price` is the in-store price of the row's variant. `online_price` and
+     * `online_sale_price` set the variant's online price and online sale price, so each variant of a
+     * product can sell online at its own price. A row without `online_price` sells online at its
+     * in-store price. The online sale price applies only when it is greater than zero and below the
+     * variant's online price. `sale_price` and `discount_price` are accepted as aliases of
+     * `online_sale_price`, and `web_price` as an alias of `online_price`.
+     *
      * **Partial success.** Rows are validated and applied independently — one bad row never
      * fails the whole batch. The response always carries a `summary` with created / updated /
      * skipped / failed counts and an `errors` array describing every rejected row (its

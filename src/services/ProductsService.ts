@@ -21,6 +21,13 @@ export class ProductsService {
      * **Currency:** All prices returned in store's default currency. For multi-currency support with
      * geographic detection, use the `/v1/prices/products` endpoint instead.
      *
+     * **Prices:** Each variant carries an online price, and optionally an online sale price. A variant
+     * without an online price sells at its in-store price. `price` is the variant's online price.
+     * `sale_price` is its online sale price and is present only when it is greater than zero and below
+     * `price`; a client strikes `price` exactly when `sale_price` is present. A listed product shows the
+     * `price` and `sale_price` of its lowest-priced variant, where a variant's price is its `sale_price`
+     * when present and its `price` otherwise. The in-store price is not returned.
+     *
      * **Marketplace:** When called with a marketplace operator key, this returns products aggregated
      * across all merchants in the marketplace rather than a single store's catalog. With a marketplace
      * operator key, pass `?store_id=<merchant>` to narrow results to a single merchant. Responses are
@@ -144,8 +151,9 @@ export class ProductsService {
         /**
          * Lowest price to include, as a decimal in the store's currency (for example `19.99`).
          *
-         * A product's price for this filter is its lowest active variant price after sale pricing:
-         * the sale price when one is set, otherwise the regular price. A product with no price is
+         * A product's price for this filter is the price of its lowest-priced active variant: the
+         * variant's online sale price when one applies, otherwise its online price. This is the same
+         * price the list shows, sorts by and reports in the facets range. A product with no price is
          * excluded whenever `min_price` or `max_price` is set.
          *
          * Must be a non-negative number with at most four decimal places, and no greater than
@@ -163,8 +171,8 @@ export class ProductsService {
          * Order of the list.
          *
          * - `featured` (default): the store's standard order.
-         * - `price_asc`: lowest price first.
-         * - `price_desc`: highest price first.
+         * - `price_asc`: lowest price first, by the product's lowest-priced variant.
+         * - `price_desc`: highest price first, by the product's lowest-priced variant.
          * - `newest`: most recently created first.
          *
          * Products without a price come last in both price orders, and ties are broken by product id,
@@ -242,7 +250,7 @@ export class ProductsService {
          *
          * **Allowed Fields:**
          * - **Core:** `id` (alias of `product_id`), `product_id`, `variant_id`, `name`, `sku`, `description`
-         * - **Pricing:** `price`, `selling_price`, `sale_price`, `display_currency`, `currency_symbol`
+         * - **Pricing:** `price`, `sale_price`, `display_currency`, `currency_symbol`
          * - **Inventory:** `stock`, `last_restocked` (`last_restocked` is not in the default response — request it explicitly)
          * - **Media:** `media`, `thumbnail_url`
          * - **SEO:** `product_slug`, `seo_title`, `seo_description`, `seo_keywords`
@@ -441,8 +449,9 @@ export class ProductsService {
      * it as a text, select, multiselect or boolean field and a matching product has a value for it. A text
      * field with more than 50 distinct values is treated as an identifier and is not listed.
      *
-     * **Price.** `price.min` and `price.max` are the lowest and highest product prices after sale pricing, in
-     * the store's currency (`display_currency`); both are `null` when nothing matches.
+     * **Price.** `price.min` and `price.max` are the lowest and highest product prices, in the store's
+     * currency (`display_currency`); both are `null` when nothing matches. A product's price is that of its
+     * lowest-priced variant, sale included, the same price `min_price`, `max_price` and `sort` use.
      *
      * Not available on marketplace operator keys, which return `400`.
      *
@@ -583,18 +592,24 @@ export class ProductsService {
      * Get product by ID or variant ID
      * Retrieve complete details for a single product using either its product ID or variant ID.
      *
+     * **Prices:** each variant's `price` is its online price (its in-store price when no online price is
+     * set) and `sale_price` is its online sale price, present only when it is greater than zero and below
+     * `price`; a client strikes `price` exactly when `sale_price` is present. `price_range` is the lowest
+     * and highest price a shopper pays across the variants, where a variant's price is its `sale_price`
+     * when present and its `price` otherwise. The in-store price is not returned.
+     *
      * **Response Structure:**
      * - **Simple products (no variants):** Flat structure with all data at root level
      * - **Multi-variant products:** Hierarchical structure with:
      * - Product-level data at root (name, description, brand, media, etc.)
-     * - Aggregate data (total_stock, price_range using selling_price)
+     * - Aggregate data (total_stock, price_range from each variant's effective price)
      * - Clean variants array with only variant-specific fields (no redundancy)
      *
      * **Field Filtering:**
      * Supports both root-level and nested variant filtering:
      * - Root filtering: ~ 38% bandwidth reduction
      * - Nested filtering: ~ 52% bandwidth reduction
-     * - Example: `fields=name,price_range,variants.sku,variants.selling_price,variants.stock`
+     * - Example: `fields=name,price_range,variants.sku,variants.price,variants.stock`
      *
      * **Currency:** Prices returned in store's default currency. For multi-currency support with
      * geographic detection, use the `/v1/prices/products/{id}` endpoint instead.
@@ -613,10 +628,10 @@ export class ProductsService {
      * **For Multi-Variant Products (has_variants=true):**
      * Returns hierarchical structure:
      * - Product-level fields at root (name, description, brand, media, etc.)
-     * - Aggregate data: total_stock, price_range (using selling_price)
+     * - Aggregate data: total_stock, price_range (the lowest and highest variant price, sale included)
      * - Flags: has_variants=true, variant_count
      * - Clean variants array with only variant-specific fields:
-     * - variant_id, sku, price, sale_price, selling_price
+     * - variant_id, sku, price, sale_price
      * - stock (last_restocked available via fields=variants.last_restocked)
      * - variant_attributes (color + color_hex, size, etc.)
      * - variant_name, is_default
@@ -624,7 +639,7 @@ export class ProductsService {
      * **Field Filtering:**
      * - Root-level: Exclude unnecessary fields (~ 38% reduction)
      * - Nested: Filter variant fields using dot notation (~ 52% reduction)
-     * - Example: `fields=name,price_range,variants.sku,variants.selling_price,variants.stock`
+     * - Example: `fields=name,price_range,variants.sku,variants.price,variants.stock`
      *
      * **SDK Usage:**
      *
@@ -660,7 +675,7 @@ export class ProductsService {
          *
          * **Root-Level Fields:**
          * - **Core:** `product_id`, `variant_id`, `name`, `sku`, `description`
-         * - **Pricing:** `price`, `selling_price`, `sale_price`, `price_range`, `display_currency`, `currency_symbol`
+         * - **Pricing:** `price`, `sale_price`, `price_range`, `display_currency`, `currency_symbol`
          * - **Inventory:** `stock`, `total_stock`, `last_restocked` (`last_restocked` is not in the default response — request it explicitly)
          * - **Media:** `media`, `thumbnail_url`
          * - **Metadata:** `brand`, `category_name`, `subcategory_name`, `attributes.*`
@@ -671,7 +686,8 @@ export class ProductsService {
          * Use dot notation to filter specific fields within the variants array:
          * - `variants.variant_id` - Variant identifier
          * - `variants.sku` - Variant SKU
-         * - `variants.selling_price` - Customer-facing price
+         * - `variants.price` - The variant's online price
+         * - `variants.sale_price` - The variant's online sale price, present when a sale applies
          * - `variants.stock` - Stock quantity
          * - `variants.variant_attributes` - Variant attributes (color, size, etc.). Where a colour is
          * set, `color` is its name and `color_hex` the matching `#RRGGBB` value, so a storefront can
@@ -695,7 +711,7 @@ export class ProductsService {
          * Nested variant filtering (~ 52% reduction):
          * ```
          * fields=product_id,name,brand,total_stock,price_range,
-         * variants.variant_id,variants.sku,variants.selling_price,
+         * variants.variant_id,variants.sku,variants.price,
          * variants.stock,variants.variant_attributes
          * ```
          *
@@ -821,17 +837,17 @@ export class ProductsService {
          * **Recommended Fields for PDPs:**
          * - SEO: `seo_title`, `seo_description`, `seo_keywords`, `product_slug`
          * - Core: `product_id`, `name`, `description`
-         * - Pricing: `price`, `selling_price`, `price_range` (for multi-variant)
+         * - Pricing: `price`, `sale_price`, `price_range` (for multi-variant)
          * - Media: `media`, `thumbnail_url`
          * - Metadata: `brand`, `category_name`, `attributes`, `tags`
          * - Inventory: `stock`, `total_stock` (for multi-variant)
-         * - Variants: `variants` or nested filtering (e.g., `variants.sku,variants.selling_price`)
+         * - Variants: `variants` or nested filtering (e.g., `variants.sku,variants.price`)
          *
          * **Nested Variant Filtering:**
          * For multi-variant products, use dot notation to filter variant fields:
          * ```
          * fields=product_id,name,description,price_range,
-         * variants.variant_id,variants.sku,variants.selling_price,
+         * variants.variant_id,variants.sku,variants.price,
          * variants.stock,variants.variant_attributes
          * ```
          *

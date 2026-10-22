@@ -198,7 +198,7 @@ const facets = await client.products.listProductFacets({ minPrice: '20', maxPric
 //     display_currency, currency_symbol }
 ```
 
-A product's price for the bounds and the price sorts is its lowest active variant price after sale pricing; a product with no price is excluded when a bound is set and comes last in both price orders. A facet list holds at most 20 values (`truncated` reports more). These options are not available on marketplace operator keys or together with `personalize` or `b2b`.
+Each variant carries an online price (`price`; its in-store price when none is set) and an optional online sale price (`sale_price`), which is present only when it is above zero and below `price`. A client strikes `price` exactly when `sale_price` is present. A listed product shows the `price` and `sale_price` of its lowest-priced variant, and that variant's price (the sale price when present, otherwise `price`) is the product's price for the bounds, the price sorts and the facets range. On a product detail, `price_range` is the lowest and highest variant price. The cart charges the same per-variant price (`unit_price`), and dynamic pricing applies on top of it. A product with no price is excluded when a bound is set and comes last in both price orders. A facet list holds at most 20 values (`truncated` reports more). These options are not available on marketplace operator keys or together with `personalize` or `b2b`.
 
 ### taxonomy
 

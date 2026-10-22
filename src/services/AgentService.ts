@@ -103,8 +103,9 @@ export class AgentService {
      * product attributes, brand and category — use `POST /v1/agent/fit` to check a product's published
      * specifications.
      *
-     * `price` is the catalogue selling price. The amount a shopper is charged, after dynamic pricing,
-     * promotions, shipping and tax, comes from `POST /v1/agent/quote`.
+     * `price` is the shopper price of the product's lowest-priced variant: its online sale price when one
+     * applies, otherwise its online price. `list_price` is that variant's online price. The amount a shopper
+     * is charged, after dynamic pricing, promotions, shipping and tax, comes from `POST /v1/agent/quote`.
      *
      * `in_stock_only` checks every variant of a multi-variant product before excluding it.
      *

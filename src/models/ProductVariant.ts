@@ -7,7 +7,7 @@
  * Product-level attributes (name, description, brand, etc.) are NOT duplicated here.
  *
  * **Field Filtering:**
- * Use dot notation to filter variant fields: variants.sku,variants.selling_price,variants.stock
+ * Use dot notation to filter variant fields: variants.sku,variants.price,variants.stock
  * This can reduce payload size by excluding non-default fields like last_restocked.
  *
  */
@@ -21,17 +21,13 @@ export type ProductVariant = {
      */
     sku?: string;
     /**
-     * Base price in major currency units (369.99 = $369.99), not minor units
+     * The variant's online price in major currency units (369.99 = $369.99), not minor units. It is the in-store price when no online price is set.
      */
     price?: number;
     /**
-     * Sale price in major currency units (369.99 = $369.99); null if not on sale
+     * The variant's online sale price in major currency units (349.99 = $349.99). Present only when the sale price is greater than zero and below `price`; null otherwise. A client strikes `price` exactly when `sale_price` is present.
      */
     sale_price?: number | null;
-    /**
-     * Actual customer-facing price in major currency units (considers sale_price)
-     */
-    selling_price?: number;
     /**
      * Available stock quantity for this variant
      */

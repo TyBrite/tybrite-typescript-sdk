@@ -123,7 +123,9 @@ export class OrdersService {
      * So the server independently recomputes the order from authoritative data and rejects any
      * mismatch — you cannot set your own prices or discounts:
      *
-     * - **Item prices** are recomputed from the live catalog. `unit_price` / `total_price` that don't
+     * - **Item prices** are recomputed from the live catalog. The catalog price of a line is the
+     * variant's online sale price when one applies, otherwise its online price (its in-store price
+     * when no online price is set). `unit_price` / `total_price` that don't
      * match the catalog price → **`400 price_mismatch`**. (The stored order always uses the catalog
      * price, never the value you send.)
      * - **`subtotal`, `tax_amount`, `total_amount`** must reconcile to `subtotal + tax + shipping −

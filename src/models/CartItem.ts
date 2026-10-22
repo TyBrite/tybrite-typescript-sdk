@@ -48,11 +48,11 @@ export type CartItem = {
     }>;
     quantity?: number;
     /**
-     * Price per unit
+     * Price charged per unit: the variant's online sale price when one applies, otherwise its online price (its in-store price when no online price is set).
      */
     unit_price?: number;
     /**
-     * Actual customer-facing price (includes sale price if applicable)
+     * The unit price charged. Equal to `unit_price`.
      */
     selling_price?: number;
     /**

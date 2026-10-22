@@ -27,6 +27,7 @@ export class PricingService {
      * - Volume/quantity-based discounts
      * - Region-specific pricing rules
      * - Time-based promotions
+     * - Rules adjust the variant's online price (its online sale price when one applies); a rule never reads the in-store price
      *
      * **Field Filtering:**
      * - Use `fields` parameter to reduce bandwidth by 50-90%
@@ -88,7 +89,7 @@ export class PricingService {
         /**
          * Comma-separated list of fields to return (reduces bandwidth by 50-90%).
          *
-         * **Allowed fields:** product_id, variant_id, name, sku, description, price, selling_price,
+         * **Allowed fields:** product_id, variant_id, name, sku, description, price,
          * stock, image, category_name, brand, has_variants, variant_count, total_stock,
          * base_price, resolved_price, display_price, base_currency, display_currency, currency_symbol,
          * exchange_rate, price_breakdown, price_breakdown.*, pricing_context, pricing_context.*
@@ -185,7 +186,7 @@ export class PricingService {
             name?: string;
             sku?: string;
             /**
-             * Price in store's base currency (before conversion)
+             * The price in the store's base currency before dynamic pricing and conversion, which is the variant's online sale price when one applies, otherwise its online price
              */
             base_price?: number;
             /**
@@ -350,6 +351,7 @@ export class PricingService {
      * - Volume/quantity-based discounts
      * - Region-specific pricing rules (applied per variant)
      * - Time-based promotions
+     * - Rules adjust the variant's online price (its online sale price when one applies); a rule never reads the in-store price
      *
      * **Field Filtering:**
      * - Root-level filtering: Reduce top-level fields
@@ -632,6 +634,7 @@ export class PricingService {
      * - Volume/quantity-based discounts
      * - Region-specific pricing rules (applied per variant)
      * - Time-based promotions
+     * - Rules adjust the variant's online price (its online sale price when one applies); a rule never reads the in-store price
      *
      * **Field Filtering:**
      * - Root-level filtering: Reduce top-level fields

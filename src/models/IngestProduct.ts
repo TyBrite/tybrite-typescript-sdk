@@ -48,9 +48,17 @@ export type IngestProduct = {
      */
     image?: string;
     /**
-     * Selling price. Must be greater than 0.
+     * In-store selling price of this variant. Must be greater than 0. It is also the online price when `online_price` is not set.
      */
     price: number;
+    /**
+     * Online price of this variant. Optional; the variant sells online at `price` when it is omitted. Each variant of a product carries its own online price.
+     */
+    online_price?: number;
+    /**
+     * Online sale price of this variant. Optional. It applies only when it is greater than 0 and below the variant's online price; a client strikes the online price exactly when a sale price is present.
+     */
+    online_sale_price?: number;
     /**
      * Unit cost. Optional.
      */

@@ -17,7 +17,7 @@
  * **Field Filtering:**
  * - Root-level filtering: Reduce top-level fields
  * - Nested filtering: Filter specific variant fields using dot notation
- * - Example: fields=name,price_range,variants.sku,variants.selling_price,variants.stock
+ * - Example: fields=name,price_range,variants.sku,variants.price,variants.stock
  *
  * **Channel and logistics fields:**
  * `condition`, `gtin`, `mpn`, `weight_grams` and `dimensions_cm` describe an
@@ -153,17 +153,13 @@ export type Product = {
      */
     sku?: string | null;
     /**
-     * Base price in major currency units (369.99 = $369.99), not minor units. Only present for simple products or the list endpoint.
+     * The online price in major currency units (369.99 = $369.99), not minor units. It is the variant's online price, or its in-store price when no online price is set. On the list endpoint it is the price of the product's lowest-priced variant. Only present for simple products or the list endpoint.
      */
     price?: number | null;
     /**
-     * Sale price in major currency units (369.99 = $369.99) if on sale
+     * The online sale price in major currency units (349.99 = $349.99). Present only when the sale price is greater than zero and below `price`, and null otherwise. A client strikes `price` exactly when `sale_price` is present. On the list endpoint it belongs to the same variant as `price`.
      */
     sale_price?: number | null;
-    /**
-     * Actual customer-facing price (considers sale_price)
-     */
-    selling_price?: number | null;
     /**
      * Available stock quantity (only present for simple products or list endpoint)
      */
@@ -209,7 +205,7 @@ export type Product = {
      */
     total_stock?: number | null;
     /**
-     * Price range across variants using selling_price (only present for multi-variant products)
+     * Lowest and highest price a shopper pays across the variants, where a variant's price is its `sale_price` when present and its `price` otherwise (only present for multi-variant products)
      */
     price_range?: any | null;
     /**

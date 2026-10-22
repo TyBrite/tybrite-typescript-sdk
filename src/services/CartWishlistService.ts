@@ -12,6 +12,11 @@ export class CartWishlistService {
      * Get cart
      * Retrieve cart contents for customer or session.
      *
+     * **Prices:** each line's `unit_price` is the price charged for one unit of its variant: the variant's
+     * online sale price when one applies, otherwise its online price (its in-store price when no online
+     * price is set). `selling_price` carries the same value, and `total_price` is `unit_price` ×
+     * `quantity`. Dynamic pricing, promotions and discounts apply on top of these prices at checkout.
+     *
      * **Auth / key type:** publishable key (`tybrite_pk_*`) or secret key
      * (`tybrite_sk_*`) — both accepted. Anonymous (session-only) carts need just the
      * key; authenticated carts (`customer_id`) also require a customer session token
@@ -199,7 +204,9 @@ export class CartWishlistService {
     /**
      * Add to cart
      * Add item to cart with automatic stock checking. If the same variant
-     * already exists in the cart, the quantity is incremented.
+     * already exists in the cart, the quantity is incremented. The line's `unit_price` is the variant's
+     * online sale price when one applies, otherwise its online price (its in-store price when no online
+     * price is set).
      *
      * **Auth / key type:** publishable or secret key. This is a storefront write
      * that is deliberately pk-accessible (it originates in the browser). Anonymous
