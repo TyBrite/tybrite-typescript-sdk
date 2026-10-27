@@ -3,13 +3,17 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * The result of a direct wholesale order. `settlement` is `terms` (a terms invoice was issued — `invoice_id`, `invoice_number`, and `due_date` are present) or `pay_now` (the order awaits payment — `order_id`, `order_number`, and `amount` are present; complete payment through the standard payment flow using `order_id`). `purchase_order_id`, `po_number`, and `currency` are always present.
+ * The result of a direct wholesale order. `settlement` is `terms` (a terms invoice was issued — `invoice_id`, `invoice_number`, and `due_date` are present) or `pay_now` (the order awaits payment — `order_id`, `order_number`, and `amount` are present; complete payment through the standard payment flow using `order_id`) or `pending_approval` (the total reaches the store's approval threshold, so no order or invoice exists until a second approver signs it off — `approval_id` is present). `purchase_order_id`, `po_number`, and `currency` are always present.
  */
 export type B2bDirectOrder = {
     /**
-     * How the order settles — on terms (invoice) or pay now (awaiting payment).
+     * How the order settles — on terms (invoice), pay now (awaiting payment), or held for approval.
      */
     settlement: B2bDirectOrder.settlement;
+    /**
+     * The approval request (pending_approval only).
+     */
+    approval_id?: string | null;
     purchase_order_id: string;
     po_number: string;
     currency?: string;
@@ -48,11 +52,12 @@ export type B2bDirectOrder = {
 };
 export namespace B2bDirectOrder {
     /**
-     * How the order settles — on terms (invoice) or pay now (awaiting payment).
+     * How the order settles — on terms (invoice), pay now (awaiting payment), or held for approval.
      */
     export enum settlement {
         TERMS = 'terms',
         PAY_NOW = 'pay_now',
+        PENDING_APPROVAL = 'pending_approval',
     }
 }
 

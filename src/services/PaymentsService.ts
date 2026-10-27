@@ -97,6 +97,10 @@ export class PaymentsService {
      * less than the order is worth. Pass the order's real `total_amount`; don't compute or alter it
      * client-side.
      *
+     * An order that is already paid is refused with **`409 order_already_paid`**, and a cancelled order
+     * with **`409 order_not_payable`**. An order is charged only in its own currency: omit `currency`
+     * to use it, and a different `currency` is rejected with **`400 payment_currency_mismatch`**.
+     *
      * **Provider-Specific Flows:**
      *
      * **Stripe (redirect):**

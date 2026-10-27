@@ -577,6 +577,10 @@ export class CmsService {
      * `X-Forwarded-Shopper-Ip`; without it, every request on that key counts as one address. The header is
      * ignored on a publishable key, which is called from the shopper's own browser.
      *
+     * **Advertising conversions:** a secret key should also send the shopper's country in
+     * `X-Forwarded-Shopper-Country`. A submission from the European Economic Area, or from a country that is not
+     * known, is stored but never reported to advertising conversion partners.
+     *
      * **Idempotency:** a request that repeats an `Idempotency-Key` with the same body returns the
      * original result without recording a second submission; the same key with a different body answers `409`.
      *
@@ -588,6 +592,7 @@ export class CmsService {
         requestBody,
         idempotencyKey,
         xForwardedShopperIp,
+        xForwardedShopperCountry,
     }: {
         /**
          * The form's address.
@@ -645,6 +650,10 @@ export class CmsService {
          * The shopper's IP address. Honoured on a secret key only.
          */
         xForwardedShopperIp?: string,
+        /**
+         * The shopper's two-letter country code. Honoured on a secret key only. When the country is not known (the header is absent, malformed or `XX`), the submission is stored but is not reported to advertising conversion partners.
+         */
+        xForwardedShopperCountry?: string,
     }): CancelablePromise<LeadFormSubmission> {
         return this.httpRequest.request({
             method: 'POST',
@@ -655,6 +664,7 @@ export class CmsService {
             headers: {
                 'Idempotency-Key': idempotencyKey,
                 'X-Forwarded-Shopper-Ip': xForwardedShopperIp,
+                'X-Forwarded-Shopper-Country': xForwardedShopperCountry,
             },
             body: requestBody,
             mediaType: 'application/json',

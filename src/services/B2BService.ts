@@ -225,7 +225,7 @@ export class B2BService {
      * Accepts a sent quote and creates a purchase order from it. The purchase order
      * awaits the supplier's confirmation before an invoice is issued.
      *
-     * @returns any Quote accepted, purchase order created
+     * @returns any Quote accepted and purchase order created. When the quote total reaches the store's approval threshold the response is `{ quote_id, approval_pending: true, approval_id }` and the purchase order is created once the approval is granted.
      * @throws ApiError
      */
     public acceptQuote({

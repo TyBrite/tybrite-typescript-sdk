@@ -2709,7 +2709,9 @@ export class AgentService {
      *
      * The basket is re-priced first. If anything the shopper pays has changed — a line price, the discount,
      * shipping, tax or the total — the response is `409 quote_changed` with the new quote in `error.details`,
-     * and nothing is placed; show the shopper the new figures and create a new intent. Otherwise the order is
+     * and nothing is placed; show the shopper the new figures and create a new intent. When the intent holds no
+     * stock and an item is no longer available in the quantity quoted, the response is `409 out_of_stock`;
+     * nothing is placed or charged and the intent stays pending. Otherwise the order is
      * placed with payment pending, using the held stock, and the response carries what
      * `POST /v1/payments/initialize` needs to take payment, plus the store's payment methods.
      *
