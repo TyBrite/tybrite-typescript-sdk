@@ -2,19 +2,42 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+/**
+ * A store connection returns the key pair fields (`sk`, `pk`, `pair_id`, `store_id`, `environment`,
+ * `signing_secret`, optionally `webhook_endpoint`). A request with the identity scopes (`openid`,
+ * `email`, `profile`) also returns `user`, and `store_role` when a store was linked. An identity-only
+ * exchange returns just `user`, `scopes` and `client_id`: no keys are issued.
+ *
+ */
 export type ConnectTokenResponse = {
+    /**
+     * The signed-in person, present when the `openid` scope was granted. `email` and `email_verified`
+     * appear with the `email` scope, `name` with the `profile` scope. `sub` is the stable user id; link
+     * accounts on it, never on the email address.
+     *
+     */
+    user?: {
+        sub: string;
+        email?: string | null;
+        email_verified?: boolean;
+        name?: string | null;
+    };
+    /**
+     * The person's role on the linked store. Present with `user` when a store was linked; only the store's owner can link it.
+     */
+    store_role?: ConnectTokenResponse.store_role;
     /**
      * Secret key. Store this securely server-side — it will not be shown again.
      * Use it for all server-side API calls on behalf of the merchant.
      *
      */
-    sk: string;
+    sk?: string;
     /**
      * Publishable key. Safe to use client-side (browser/mobile).
      * Use it for catalogue reads and the actions a shopper takes for themselves, such as cart and wishlist.
      *
      */
-    pk: string;
+    pk?: string;
     /**
      * Request-signing secret for THIS connection. Store it securely server-side alongside the
      * secret key — it will not be shown again. Use it to sign write requests that require a
@@ -28,15 +51,15 @@ export type ConnectTokenResponse = {
     /**
      * Unique identifier for this key pair. Store it — required to call `POST /v1/connect/revoke`.
      */
-    pair_id: string;
+    pair_id?: string;
     /**
      * The UUID of the store the merchant authorized access to.
      */
-    store_id: string;
+    store_id?: string;
     /**
      * Environment the key pair is scoped to.
      */
-    environment: ConnectTokenResponse.environment;
+    environment?: ConnectTokenResponse.environment;
     /**
      * The permission scopes granted by the merchant.
      */
@@ -77,6 +100,12 @@ export type ConnectTokenResponse = {
     };
 };
 export namespace ConnectTokenResponse {
+    /**
+     * The person's role on the linked store. Present with `user` when a store was linked; only the store's owner can link it.
+     */
+    export enum store_role {
+        OWNER = 'owner',
+    }
     /**
      * Environment the key pair is scoped to.
      */

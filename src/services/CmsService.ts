@@ -540,7 +540,9 @@ export class CmsService {
             },
             errors: {
                 400: `The form address is not valid.`,
+                401: `Authentication failed - invalid or missing API key`,
                 429: `Too many requests from this address.`,
+                500: `The token could not be issued.`,
             },
         });
     }

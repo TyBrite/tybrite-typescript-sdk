@@ -30,6 +30,7 @@ export class GcConnectService {
         scope,
         state,
         environment = 'sandbox',
+        storeHint,
     }: {
         /**
          * Registered client identifier assigned when your application was approved.
@@ -50,6 +51,13 @@ export class GcConnectService {
          * `gift_cards:read`, `messaging:read`, `messaging:write`, `returns:read`, `returns:write`,
          * `promotions:read`, `recommendations:read`, `search:read`, `store:read`
          *
+         * Sign-in scopes: `openid`, `email`, `profile` return the signed-in person in the token
+         * response. With no other scope the request is identity-only: any user can approve it, no store
+         * is linked and no keys are issued. Combined with store scopes the person must own the store
+         * they link, and a user who owns none is redirected with `error=access_denied` and
+         * `error_description=no_owned_store`. `team:read` lets the key pair call `GET /v1/connect/team`
+         * and must accompany another store scope.
+         *
          */
         scope: string,
         /**
@@ -65,6 +73,12 @@ export class GcConnectService {
          *
          */
         environment?: 'sandbox' | 'production',
+        /**
+         * A store the consent screen preselects. Honoured only when the signed-in user owns that store;
+         * otherwise ignored.
+         *
+         */
+        storeHint?: string,
     }): CancelablePromise<ConnectAuthorizeResponse> {
         return this.httpRequest.request({
             method: 'GET',
@@ -75,6 +89,7 @@ export class GcConnectService {
                 'scope': scope,
                 'state': state,
                 'environment': environment,
+                'store_hint': storeHint,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
@@ -110,6 +125,14 @@ export class GcConnectService {
     }: {
         requestBody: {
             /**
+             * Identity-only requests only. When true the request is approved only if the person already
+             * agreed to share the same identity scopes with this application; otherwise `409
+             * consent_required` is returned so the page shows the consent screen. A request with store
+             * scopes is never approved silently.
+             *
+             */
+            silent?: boolean;
+            /**
              * Registered client identifier.
              */
             client_id: string;
@@ -126,13 +149,16 @@ export class GcConnectService {
              */
             state: string;
             /**
-             * Environment for the provisioned key pair.
+             * Environment for the provisioned key pair. Required with store scopes.
              */
-            environment: 'sandbox' | 'production';
+            environment?: 'sandbox' | 'production';
             /**
-             * UUID of the store the merchant is authorizing access to.
+             * UUID of the store the merchant is authorizing access to. Required with store scopes. When the
+             * request includes the sign-in scopes or `team:read`, the signed-in user must own the store;
+             * otherwise `403 access_denied` is returned.
+             *
              */
-            store_id: string;
+            store_id?: string;
         },
     }): CancelablePromise<{
         /**
@@ -152,6 +178,7 @@ export class GcConnectService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
+                409: `The request needs an explicit approval (\`consent_required\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
@@ -316,6 +343,44 @@ export class GcConnectService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/connect/sessions',
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List the linked store's team
+     * Returns the owner and the active team members of the store the key belongs to, with each person's
+     * role. Use it to offer the store's team a place in your application.
+     *
+     * **Authentication:** The connection's secret key (`tybrite_sk_*`). The connection must have been
+     * granted the `team:read` scope at consent; otherwise `403 insufficient_scope` is returned.
+     *
+     * **Rate limit:** 120 requests/hour per API key.
+     *
+     * @returns any The store's team
+     * @throws ApiError
+     */
+    public getConnectTeam(): CancelablePromise<{
+        members: Array<{
+            /**
+             * The person's stable user id, the same value as `user.sub` in the token response.
+             */
+            sub: string;
+            email?: string | null;
+            name?: string | null;
+            /**
+             * `owner`, or the member's role on the store (for example `manager` or `cashier`).
+             */
+            role: string;
+        }>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/connect/team',
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,

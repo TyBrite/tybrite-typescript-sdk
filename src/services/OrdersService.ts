@@ -491,12 +491,7 @@ export class OrdersService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
-                Common causes:
-                - Email already registered to another customer at this store
-                - Item already exists in wishlist
-                - Idempotency-Key reused with a different request body
-                `,
+                409: `The \`Idempotency-Key\` was already used with a different request body (\`idempotency_key_reused\`), or the request conflicts with an existing order number (\`conflict\`). Send a new key for a different request.`,
                 422: `The store runs its own order-validation rule and that rule rejected the order. The \`message\` carries the reason the store gave. No order is created. This is also returned when the store requires validation but the rule could not be reached, so an order is never created unchecked.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
@@ -608,7 +603,7 @@ export class OrdersService {
      * - `estimated_delivery`: Estimated delivery date/time
      * - `shipped_at`: Timestamp when order was shipped
      * - `delivered_at`: Timestamp when order was delivered
-     * - `shipping_metadata`: Fulfilment details such as a purchased label's carrier and tracking (replaces the stored object)
+     * - `shipping_metadata`: Fulfilment details such as carrier and tracking, merged into the stored object (purchased-label details are locked)
      *
      * **Status transitions:**
      * - `payment_status`: `pending` → `paid` or `failed`; `failed` → `paid`. A `paid` order
@@ -707,9 +702,9 @@ export class OrdersService {
              */
             reservation_ids?: Array<string>;
             /**
-             * Fulfilment details to store on the order, such as the carrier, service, label URL and tracking details of a purchased shipping label. The object replaces the order's stored `shipping_metadata` in full rather than being merged into it, so include any existing keys that should be kept.
+             * Fulfilment details to add to the order, such as the carrier, service and tracking number. The keys sent are merged into the stored `shipping_metadata`; keys not sent are kept. The details of a label purchased through the platform (`shippo`, `label`, `label_url`, `transaction_id`, `rate_id`) cannot be set here and answer 409 `shipping_label_locked`.
              */
-            shipping_metadata?: any | null;
+            shipping_metadata?: Record<string, any>;
         },
     }): CancelablePromise<(Order & {
         /**
@@ -748,10 +743,11 @@ export class OrdersService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                409: `The requested status change is not allowed from the order's current state (\`invalid_transition\`), or the order changed while the request was being applied (\`order_changed\`). The order is left as it was.`,
+                409: `The requested status change is not allowed from the order's current state (\`invalid_transition\`), or the order changed while the request was being applied (\`order_changed\`), or the \`Idempotency-Key\` was already used with a different request body or for a different order (\`idempotency_key_reused\`), or the verified payment belongs to another order, is in another currency or is already attached to another order (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`), or \`shipping_metadata\` tries to set purchased-label details (\`shipping_label_locked\`). The order is left as it was.`,
                 422: `You marked the order paid with a \`payment_reference\`, but the payment method the merchant added does not report that reference as paid. The order is left unchanged rather than accepted on an unverified claim.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
+                503: `The payment reference could not be checked at this moment (\`verification_unavailable\`). The order is left unchanged; retry shortly.`,
             },
         });
     }

@@ -143,7 +143,7 @@ Which key each operation needs. **`pk`** = publishable (browser-safe, read + car
 | Webhook endpoints & events (`client.webhooks.*`) | **`sk` only** |
 | Catalog ingestion push (`ingestProducts`) | **`sk` only + HMAC** · sample/test (`getIngestSample`, `testIngest`) → no key |
 | Public store files — catalog feed, llms.txt, agent.json (`client.feeds.*`) | No key |
-| GC Connect — authorize / token / revoke (`client.gcConnect.*`) | Public (OAuth client credentials) · list sessions → `sk` |
+| GC Connect — authorize / token / revoke (`client.gcConnect.*`) | Public (OAuth client credentials) · list sessions → `sk` · team (`getConnectTeam`) → the connection's key pair with the `team:read` scope |
 | Marketplace — checkout, checkout quote, info, profile, wallet (`client.marketplace.*`) | Operator key (profile and wallet also **+ one shopper credential**: `x-auth-token`/`X-Customer-Token` or `x-external-auth`) |
 | B2B — RFQ / quote / PO / invoice (`client.b2B.*`) | `pk` or `sk` **+ buyer session** (`x-auth-token`/`x-external-auth`/`x-idp-token`) · creates need `Idempotency-Key` · wholesale stores |
 | Agent tools — search, product context, compare, fit, alternatives, quote, cart drafts, store policies (`client.agent.*`) | `pk` or `sk` |
@@ -666,6 +666,18 @@ const request = await client.gcConnect.getConnectAuthorize({
   state: 'csrf-token',
 });
 // → the consent request details to render before the merchant approves access
+```
+
+The `openid`, `email` and `profile` scopes return the signed-in person (`user`: `sub`, `email`,
+`email_verified`, `name`) in the token response. A request made of those scopes alone is
+identity-only: any Galactic Core user can approve it, no store is linked and no keys are issued
+(`sk`, `pk`, `pair_id`, `store_id` and `environment` are absent from the response). Combined with
+store scopes, the person must own the store they link, and the response also carries `store_role`.
+`storeHint` preselects a store on the consent screen when the signed-in user owns it.
+
+```typescript
+// With the `team:read` scope (alongside another store scope), list the linked store's people.
+const team = await client.gcConnect.getConnectTeam();
 ```
 
 
