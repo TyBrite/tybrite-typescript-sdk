@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ProductFulfilment } from './ProductFulfilment';
 /**
  * Represents a single product variant with only variant-specific fields.
  * Product-level attributes (name, description, brand, etc.) are NOT duplicated here.
@@ -49,6 +50,14 @@ export type ProductVariant = {
      */
     is_default?: boolean;
     /**
+     * How this variant is delivered. A variant can differ from its product, for example an event ticket sold beside a shipped souvenir.
+     */
+    fulfilment_kind?: ProductVariant.fulfilment_kind;
+    /**
+     * Delivery summary of this variant. Absent when `fulfilment_kind` is `shipped`.
+     */
+    fulfilment?: ProductFulfilment;
+    /**
      * Array of media objects specific to this variant
      */
     media?: Array<{
@@ -60,4 +69,16 @@ export type ProductVariant = {
         is_primary?: boolean;
     }>;
 };
+export namespace ProductVariant {
+    /**
+     * How this variant is delivered. A variant can differ from its product, for example an event ticket sold beside a shipped souvenir.
+     */
+    export enum fulfilment_kind {
+        SHIPPED = 'shipped',
+        DIGITAL = 'digital',
+        CODE = 'code',
+        EVENT_TICKET = 'event_ticket',
+        SERVICE = 'service',
+    }
+}
 

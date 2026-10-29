@@ -21,6 +21,13 @@ export class ProductsService {
      * **Currency:** All prices returned in store's default currency. For multi-currency support with
      * geographic detection, use the `/v1/prices/products` endpoint instead.
      *
+     * **Delivery kinds:** Every product and variant carries `fulfilment_kind` (`shipped`, `digital`,
+     * `code`, `event_ticket` or `service`). A variant that is not shipped also carries a `fulfilment`
+     * object with its public terms of sale; on an event ticket these include the sale window, the
+     * entry window, `max_per_order` and `available`, the number of units that can still be bought
+     * (`null` when unlimited). A listed product shows the default variant's kind and summary. A
+     * response that carries a limited `available` figure is cached for seconds rather than minutes.
+     *
      * **Prices:** Each variant carries an online price, and optionally an online sale price. A variant
      * without an online price sells at its in-store price. `price` is the variant's online price.
      * `sale_price` is its online sale price and is present only when it is greater than zero and below
@@ -259,6 +266,7 @@ export class ProductsService {
          * - **Nested:** `attributes.*`, `shipping_info.*`, `variant_attributes.*`
          * - **Timestamps:** `created_at`, `updated_at`
          * - **Flags:** `has_variants`, `is_default`
+         * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`
          * - **Reviews:** `average_rating`, `review_count` (list only)
          *
          * **Bandwidth Savings:**
@@ -611,6 +619,15 @@ export class ProductsService {
      * - Nested filtering: ~ 52% bandwidth reduction
      * - Example: `fields=name,price_range,variants.sku,variants.price,variants.stock`
      *
+     * **Delivery kinds:** `fulfilment_kind` states how the product is delivered. Each variant also
+     * carries its own `fulfilment_kind`, and a variant that is not shipped carries a `fulfilment`
+     * object with its public terms of sale. On an event ticket these are the sale window
+     * (`sale_starts_at`, `sale_ends_at`), the entry window (`valid_from`, `valid_until`),
+     * `admits_per_unit`, `group_mode`, `max_per_order`, `entry_label`, `check_in` and `available`,
+     * the number of units that can still be bought (`null` when unlimited; omitted when it could not
+     * be read). A response that carries a limited `available` figure is cached for seconds rather
+     * than minutes, and checkout re-checks the figure.
+     *
      * **Currency:** Prices returned in store's default currency. For multi-currency support with
      * geographic detection, use the `/v1/prices/products/{id}` endpoint instead.
      *
@@ -680,6 +697,7 @@ export class ProductsService {
          * - **Media:** `media`, `thumbnail_url`
          * - **Metadata:** `brand`, `category_name`, `subcategory_name`, `attributes.*`
          * - **Flags:** `has_variants`, `variant_count`, `is_default`
+         * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`
          * - **Variants:** `variants` (includes all variant fields)
          *
          * **Nested Variant Filtering (52% bandwidth reduction):**
@@ -694,6 +712,8 @@ export class ProductsService {
          * render a swatch rather than infer one from the name. Either may be absent.
          * - `variants.variant_name` - Variant display name
          * - `variants.is_default` - Default variant flag
+         * - `variants.fulfilment_kind` - How the variant is delivered
+         * - `variants.fulfilment` - The variant's delivery summary, with `available` places for event tickets
          * - `variants.*` - All variant fields (same as just `variants`)
          *
          * **Bandwidth Savings:**
@@ -768,6 +788,15 @@ export class ProductsService {
      *
      * **Field Filtering:**
      * Supports root-level and nested variant filtering for bandwidth optimization.
+     *
+     * **Delivery kinds:** `fulfilment_kind` states how the product is delivered. Each variant also
+     * carries its own `fulfilment_kind`, and a variant that is not shipped carries a `fulfilment`
+     * object with its public terms of sale. On an event ticket these are the sale window
+     * (`sale_starts_at`, `sale_ends_at`), the entry window (`valid_from`, `valid_until`),
+     * `admits_per_unit`, `group_mode`, `max_per_order`, `entry_label`, `check_in` and `available`,
+     * the number of units that can still be bought (`null` when unlimited; omitted when it could not
+     * be read). A response that carries a limited `available` figure is cached for seconds rather
+     * than minutes, and checkout re-checks the figure.
      *
      * **Currency:** Prices returned in store's default currency. For multi-currency support with
      * geographic detection, use the `/v1/prices/products/{id}` endpoint instead.

@@ -117,6 +117,30 @@ export class OrdersService {
      * - Requests with invalid/missing signatures return 401 Unauthorized
      * - Timestamps older than 5 minutes are rejected to prevent replay attacks
      *
+     * **Orders with nothing to ship**
+     *
+     * An order whose items are all downloads, codes, event tickets or services needs no delivery address
+     * and is quoted no delivery charge. The method is derived from the items (`fulfillment_method` `none`),
+     * so `shipping_address` can be left out and `shipping_amount` is 0. A mixed basket is quoted for its
+     * shipped items only. Each item's kind is stored on the line as `fulfilment_kind`, and the delivery of
+     * each purchased unit is tracked after payment.
+     *
+     * - **Billing location.** Because nothing ships, `billing_address.country_code` and
+     * `billing_address.postal_code` decide the tax; without them the order is refused with
+     * `400 billing_location_required`.
+     * - **Event tickets.** Checkout refuses a ticket whose sale has not opened or has closed
+     * (`409 ticket_sale_closed`), an event that has ended (`409 ticket_event_ended`), more units than
+     * `max_per_order` (`400 ticket_limit_exceeded`) and a sold-out ticket type or full venue
+     * (`409 insufficient_stock`). `409 not_available` marks an item that can no longer be sold by the
+     * store. `items[].attendee_names` names the people on group tickets.
+     * - **Line fields.** `items[].custom_fields` answers the merchant's fields for the line. A required
+     * field that is empty on an event ticket or a code is refused with `400 line_field_required`, with
+     * `details.item_index` and `details.field_name`.
+     * - **Free orders.** A zero-total order of downloads and event tickets is created paid with
+     * `payment_method` `free`, for a signed-in shopper identified by `x-auth-token`,
+     * `x-external-auth` or a `customer_id` linked to a shopper account. Otherwise it is refused with
+     * `409 account_required`.
+     *
      * **🛡️ Server-side price validation (anti-tampering)**
      *
      * HMAC proves the body wasn't altered in transit; it does **not** prove the amounts are honest.
@@ -185,6 +209,9 @@ export class OrdersService {
         xTimestamp,
         xSignature,
         requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Unique key to prevent duplicate orders (e.g., order-{timestamp}-{random})
@@ -204,7 +231,7 @@ export class OrdersService {
         xSignature: string,
         requestBody: {
             /**
-             * Customer UUID (optional - guest checkout supported)
+             * Customer UUID. Optional: an order without one is a guest checkout. Required when `subscribe_save` is sent, because a subscription belongs to a signed-in shopper.
              */
             customer_id?: string;
             /**
@@ -220,9 +247,17 @@ export class OrdersService {
              */
             customer_phone?: string;
             /**
-             * Billing address. Required.
+             * Billing address. Required. On an order with nothing to ship (`fulfillment_method` `none`) it is the tax destination, so `country_code` (two letters) and `postal_code` are required, and the store may also ask for `street` and `city`; a request without them is refused with `400 billing_location_required`.
              */
             billing_address: {
+                /**
+                 * Two-letter country code. Also read from `country` when that is two letters.
+                 */
+                country_code?: string;
+                /**
+                 * Postal code. Also read from `zip`.
+                 */
+                postal_code?: string;
                 street?: string;
                 city?: string;
                 state?: string;
@@ -230,7 +265,7 @@ export class OrdersService {
                 country?: string;
             };
             /**
-             * Shipping address. Required for a delivery order. On a pickup order it is not needed: the collection location's address is stored as the order's shipping address, with `type: pickup`.
+             * Shipping address. Required for a delivery order. On a pickup order it is not needed: the collection location's address is stored as the order's shipping address, with `type: pickup`. It is not needed either when nothing in the order ships, and none is stored.
              */
             shipping_address?: {
                 street?: string;
@@ -275,11 +310,19 @@ export class OrdersService {
                  * Product variant options (e.g., color, size)
                  */
                 product_options?: any | null;
+                /**
+                 * Values for the merchant's fields on this line, as `{ field_name: value }`: an attendee's details on an event ticket, the holder of a licence. At most 50 fields. A required field the line leaves empty on an event ticket or a code is refused with `400 line_field_required`.
+                 */
+                custom_fields?: any | null;
+                /**
+                 * Event tickets only. The name printed on each ticket. A `per_person` group ticket needs one name for every person admitted (`quantity` times `admits_per_unit`); a `one_code` ticket needs one holder name per unit. When omitted, the buyer's name is used. Each name is 1 to 200 characters.
+                 */
+                attendee_names?: any[] | null;
             }>;
             /**
-             * Payment method identifier (required)
+             * Payment method identifier (required). `free` is for an order whose `total_amount` is 0 and whose items are all downloads or event tickets; the order is created paid, for a signed-in shopper (see `x-auth-token`). It may be omitted on such an order. Any other zero-total order is refused.
              */
-            payment_method: 'card' | 'stripe' | 'paypal' | 'paystack' | 'mpesa' | 'cash';
+            payment_method: 'card' | 'stripe' | 'paypal' | 'paystack' | 'mpesa' | 'cash' | 'free';
             /**
              * Payment status (defaults to pending)
              */
@@ -417,9 +460,9 @@ export class OrdersService {
                 mass_unit?: string;
             };
             /**
-             * How the shopper receives the order: delivered to `shipping_address`, or collected at one of the store's locations.
+             * How the shopper receives the order: delivered to `shipping_address` (`delivery`, the default when something ships), collected at one of the store's locations (`pickup`), or `none` when nothing ships. The server derives the method from the items. When every item is a download, a code, an event ticket or a service, the order is stored as `none` whatever was sent; when any item ships, `none` is refused with `400 fulfillment_method_invalid`.
              */
-            fulfillment_method?: 'delivery' | 'pickup';
+            fulfillment_method?: 'delivery' | 'pickup' | 'none';
             /**
              * The location to collect from, on a pickup order — a location `id` from `pickup_locations` (`GET /v1/shipping/zones`) or from a pickup option's `location` (`POST /v1/shipping/calculate`). When omitted on a pickup order, the store's primary pickup location is used.
              */
@@ -448,9 +491,85 @@ export class OrdersService {
              * Advertising privacy-consent state captured at checkout, used to decide whether a conversion may be reported to an ad platform for this shopper's region (required for EEA shoppers; UK/Swiss records are not dropped for a missing signal). Always forward the true captured values — never guess.
              */
             ad_consent?: any | null;
+            /**
+             * Subscribes the shopper to the lines of this order that a Subscribe & Save offer covers.
+             * The order is priced and charged as a normal order with the offer's first-order discount.
+             * The subscription starts when the order is paid, never before, and its later deliveries
+             * are created as separate orders on the interval the shopper chose.
+             *
+             * - A subscription belongs to a signed-in shopper: send the shopper's `customer_id`. An
+             * order without one is refused with `409 account_required`.
+             * - The offer decides which lines are subscribed; an offer that is not live, or that
+             * covers none of the order's lines, is refused with `400 subscribe_save_not_applicable`.
+             * Use `POST /v1/subscribe-save/quote` to show the shopper the price before ordering.
+             * - `discount_amount` is checked against the discount the offer grants, together with any
+             * promotions the offer allows to stack. It may be lower, never higher
+             * (`400 discount_invalid`).
+             * - When the offer includes free shipping, `shipping_amount` is `0`.
+             * - To save the shopper's card for the later deliveries, request it when the payment is
+             * started (`save_payment_method` on `POST /v1/payments/initialize`).
+             *
+             */
+            subscribe_save?: {
+                /**
+                 * The offer the shopper chose, from `GET /v1/subscribe-save/offers`.
+                 */
+                offer_id: string;
+                /**
+                 * The unit of the delivery interval. The interval must be one the offer lists.
+                 */
+                interval_unit: 'week' | 'month';
+                /**
+                 * How many units between deliveries. `interval_unit` `month` with `interval_count` `1` is every month.
+                 */
+                interval_count: number;
+                /**
+                 * The shopper's explicit acceptance of the Subscribe & Save terms. Store it exactly as shown to the shopper; it is kept with the subscription as the record of what was agreed. The box is never pre-ticked.
+                 */
+                consent: {
+                    /**
+                     * The wording the shopper saw next to the subscribe button.
+                     */
+                    text: string;
+                    /**
+                     * Your identifier for this version of the wording.
+                     */
+                    text_version: string;
+                    /**
+                     * When the shopper accepted. Must not be in the future.
+                     */
+                    accepted_at: string;
+                };
+            };
         },
+        /**
+         * The signed-in shopper's session token. Identifies the buyer of a free order (`total_amount` 0), which is created for a signed-in shopper only. The shopper must be the order's `customer_id` when one is sent. Send at most one shopper credential.
+         */
+        xAuthToken?: string,
+        /**
+         * A shopper assertion signed with the store's signing secret, for stores that run their own sign-in: `external_id`, `iat` and `exp` (at most 300 seconds apart). Identifies the buyer of a free order like `x-auth-token`. Send at most one shopper credential; sending more than one returns `400`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified through the store's Auth verifier (fail-closed: a rejected or unreachable verifier is `401`). Identifies the buyer of a free order like `x-auth-token`. Send at most one shopper credential.
+         */
+        xIdpToken?: string,
     }): CancelablePromise<Order | {
         order: Order;
+        /**
+         * Present only on the response that creates a guest order whose customer record this order
+         * created. A one-time credential for `POST /v1/auth/claim-account`, which lets the guest set a
+         * password on the order confirmation and own the order in a new account. It is returned
+         * once, is not returned when a create is replayed with the same `Idempotency-Key`, and
+         * expires at `claim_token_expires_at`. Treat it as a secret: keep it on the confirmation page
+         * and send it nowhere else.
+         *
+         */
+        claim_token?: string;
+        /**
+         * When `claim_token` stops working. Present with it.
+         */
+        claim_token_expires_at?: string;
         /**
          * Present only when store credit was applied to this order. The
          * amount of the customer's store credit spent against the order.
@@ -483,6 +602,9 @@ export class OrdersService {
                 'Idempotency-Key': idempotencyKey,
                 'X-Timestamp': xTimestamp,
                 'X-Signature': xSignature,
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -491,11 +613,16 @@ export class OrdersService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                409: `The \`Idempotency-Key\` was already used with a different request body (\`idempotency_key_reused\`), or the request conflicts with an existing order number (\`conflict\`). Send a new key for a different request.`,
-                422: `The store runs its own order-validation rule and that rule rejected the order. The \`message\` carries the reason the store gave. No order is created. This is also returned when the store requires validation but the rule could not be reached, so an order is never created unchecked.`,
+                409: `The \`Idempotency-Key\` was already used with a different request body (\`idempotency_key_reused\`), or the request conflicts with an existing order number (\`conflict\`). Send a new key for a different request.
+                Creating an order as already paid also checks the payment: the verified payment belongs to another order, is in another currency, or its \`payment_reference\` is already attached to another order of the store (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`). No order is created.
+                A \`subscribe_save\` order without a \`customer_id\` is refused with \`account_required\`: a subscription needs a signed-in shopper, so have the shopper sign in or create an account and send their \`customer_id\`. A free order (\`total_amount\` 0) without a signed-in shopper is refused the same way.
+                An event ticket that cannot be bought is refused with \`ticket_sale_closed\` (sales not open or closed), \`ticket_event_ended\`, or \`insufficient_stock\` (the ticket type is sold out or the venue is full); \`not_available\` marks an item the store can no longer sell.`,
+                422: `The store runs its own order-validation rule and that rule rejected the order (\`order_rejected\`). The \`message\` carries the reason the store gave. No order is created. This is also returned when the store requires validation but the rule could not be reached, so an order is never created unchecked.
+                Creating an order as already paid with a \`payment_reference\` also verifies the payment with the provider: a reference the provider does not report as paid is refused (\`payment_not_verified\`), and so is a verified payment that does not cover the order total (\`amount_mismatch\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
                 502: `Shipping could not be checked right now (\`shipping_unavailable\`). No order is created.`,
+                503: `Creating the order as already paid needs the payment verified, and the payment could not be verified at this moment (\`verification_unavailable\`). No order is created; retry shortly with the same \`Idempotency-Key\`.`,
             },
         });
     }
@@ -744,7 +871,7 @@ export class OrdersService {
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 409: `The requested status change is not allowed from the order's current state (\`invalid_transition\`), or the order changed while the request was being applied (\`order_changed\`), or the \`Idempotency-Key\` was already used with a different request body or for a different order (\`idempotency_key_reused\`), or the verified payment belongs to another order, is in another currency or is already attached to another order (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`), or \`shipping_metadata\` tries to set purchased-label details (\`shipping_label_locked\`). The order is left as it was.`,
-                422: `You marked the order paid with a \`payment_reference\`, but the payment method the merchant added does not report that reference as paid. The order is left unchanged rather than accepted on an unverified claim.`,
+                422: `You marked the order paid with a \`payment_reference\`, but the payment provider does not report that reference as paid (\`payment_not_verified\`), or the verified payment does not cover the order total (\`amount_mismatch\`). The order is left unchanged rather than accepted on an unverified claim.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
                 503: `The payment reference could not be checked at this moment (\`verification_unavailable\`). The order is left unchanged; retry shortly.`,

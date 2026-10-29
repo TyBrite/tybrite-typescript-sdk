@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ProductFulfilment } from './ProductFulfilment';
 /**
  * Represents a product in the catalog. Response structure varies based on endpoint and variant configuration:
  *
@@ -117,6 +118,14 @@ export type Product = {
      */
     tags?: any[] | null;
     /**
+     * How the product is delivered. `shipped` is a physical item; `digital` is a file download; `code` is a licence key or voucher code; `event_ticket` is an entry ticket; `service` is delivered by the merchant and needs no shipping. On a product this is the default variant's kind; each variant carries its own.
+     */
+    fulfilment_kind?: Product.fulfilment_kind;
+    /**
+     * Delivery summary of the product's default variant. Absent when `fulfilment_kind` is `shipped`.
+     */
+    fulfilment?: ProductFulfilment;
+    /**
      * The product's category in the Google Shopping taxonomy, as the merchant assigned it. Sales channels use this to file the listing; it is independent of `category_name`, which is the store's own taxonomy.
      */
     google_product_category?: string | null;
@@ -230,6 +239,16 @@ export type Product = {
     variants?: any[] | null;
 };
 export namespace Product {
+    /**
+     * How the product is delivered. `shipped` is a physical item; `digital` is a file download; `code` is a licence key or voucher code; `event_ticket` is an entry ticket; `service` is delivered by the merchant and needs no shipping. On a product this is the default variant's kind; each variant carries its own.
+     */
+    export enum fulfilment_kind {
+        SHIPPED = 'shipped',
+        DIGITAL = 'digital',
+        CODE = 'code',
+        EVENT_TICKET = 'event_ticket',
+        SERVICE = 'service',
+    }
     /**
      * The condition the item is sold in. Sales channels require this on a listing and reject a value outside the three. Defaults to `new`.
      */

@@ -35,9 +35,12 @@ export type Order = {
     discount_amount?: number;
     total_amount?: number;
     billing_address?: Address;
-    shipping_address?: OrderShippingAddress;
     /**
-     * Whether the order is delivered to the shopper or collected at one of the store's locations.
+     * Where the order goes. `null` on an order with `fulfillment_method` `none`, where nothing is shipped.
+     */
+    shipping_address?: (OrderShippingAddress | null);
+    /**
+     * Whether the order is delivered to the shopper, collected at one of the store's locations, or has nothing to ship (`none`: downloads, codes, event tickets and services only).
      */
     fulfillment_method?: Order.fulfillment_method;
     /**
@@ -121,11 +124,12 @@ export namespace Order {
         MANUAL = 'manual',
     }
     /**
-     * Whether the order is delivered to the shopper or collected at one of the store's locations.
+     * Whether the order is delivered to the shopper, collected at one of the store's locations, or has nothing to ship (`none`: downloads, codes, event tickets and services only).
      */
     export enum fulfillment_method {
         DELIVERY = 'delivery',
         PICKUP = 'pickup',
+        NONE = 'none',
     }
     /**
      * Whether this order was created in the live or test environment. Sandbox orders are isolated from production data.

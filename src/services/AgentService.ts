@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { ShopperSubscription } from '../models/ShopperSubscription';
+import type { SubscribeSaveOffer } from '../models/SubscribeSaveOffer';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class AgentService {
@@ -2274,6 +2276,545 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 404: `Resource not found`,
                 409: `Not active (already cancelled, completed or expired)`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Subscribe & Save offers on a product
+     * The Subscribe & Save offers that cover a product: each offer's label, the delivery intervals it allows,
+     * its discount, any different discount on the first delivery, the minimum number of deliveries, the yearly
+     * skip limit and whether shipping is free. The list is empty when the store offers none.
+     *
+     * With `variant_id`, each offer also carries `per_delivery`: the price of one delivery of that variant
+     * (times `quantity`) for the first delivery and for every later one, worked out from the variant's live
+     * catalogue price. These prices cover the items only; shipping and tax are added at checkout. Without
+     * `variant_id`, `per_delivery` is null.
+     *
+     * A subscription is started with `POST /v1/agent/me/shopper-subscriptions`.
+     * @returns any The offers
+     * @throws ApiError
+     */
+    public getSubscribeSaveOffersForProduct({
+        id,
+        variantId,
+        quantity = 1,
+    }: {
+        /**
+         * The product.
+         */
+        id: string,
+        /**
+         * A variant of the product. When given, `per_delivery` is filled in.
+         */
+        variantId?: string,
+        /**
+         * Units of the variant in each delivery.
+         */
+        quantity?: number,
+    }): CancelablePromise<{
+        data: {
+            product_id?: string;
+            variant_id?: string | null;
+            offers?: Array<(SubscribeSaveOffer & {
+                /**
+                 * The price of one delivery of the variant under this offer; null without `variant_id`.
+                 */
+                per_delivery?: any | null;
+            })>;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/agent/products/{id}/subscribe-save',
+            path: {
+                'id': id,
+            },
+            query: {
+                'variant_id': variantId,
+                'quantity': quantity,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List the shopper's Subscribe & Save subscriptions
+     * The shopper's Subscribe & Save subscriptions with this store, newest first: status, delivery interval,
+     * the date of the next delivery, the items, the terms the shopper accepted, and the saved card's brand and
+     * last four digits. Requires the shopper's credential and personalization consent.
+     * @returns any The subscriptions
+     * @throws ApiError
+     */
+    public listAgentShopperSubscriptions({
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            subscriptions?: Array<ShopperSubscription>;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/agent/me/shopper-subscriptions',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The shopper has not granted personalization consent (\`consent_required\`), or the key lacks the \`agent:read\` scope.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Start a Subscribe & Save subscription
+     * Prepares the first order of a Subscribe & Save subscription as a hosted checkout and returns the link
+     * the shopper opens. The items are priced for the address with the offer's first-delivery discount, and
+     * the stock is held for 30 minutes, as for any checkout intent.
+     *
+     * The shopper confirms the order on the store's own checkout page, never through the API. The page shows
+     * the terms in `subscribe_save.terms`: the items, the price per delivery with the discount, the interval,
+     * that it renews until cancelled, how to cancel, the minimum number of deliveries and the dates of the
+     * first charge and the next delivery. The shopper ticks an unticked consent box, and the exact wording
+     * accepted is recorded with the subscription. Confirming a subscription with the confirmation token
+     * through `POST /v1/agent/checkout-intents/{id}/confirm` answers `409 hosted_confirmation_required`.
+     *
+     * The card used for the first payment is kept for the later deliveries where the store's payment provider
+     * allows it; otherwise the shopper is sent a payment link for each delivery. The subscription begins when
+     * the first order is paid, never before.
+     *
+     * Requires the shopper's credential and personalization consent. A request without a shopper credential
+     * answers `409 account_required`. A replay of the same `Idempotency-Key` returns the same intent with
+     * `confirmation_token` and `confirmation_url` null.
+     * @returns any A replay of an earlier request with the same `Idempotency-Key`; the token and link are null.
+     * @throws ApiError
+     */
+    public createAgentShopperSubscription({
+        idempotencyKey,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Unique per subscription. A retry with the same key returns the same checkout.
+         */
+        idempotencyKey: string,
+        requestBody: {
+            /**
+             * An offer from `GET /v1/agent/products/{id}/subscribe-save`.
+             */
+            offer_id: string;
+            interval_unit: 'week' | 'month';
+            /**
+             * With `interval_unit`, one of the intervals the offer allows.
+             */
+            interval_count: number;
+            /**
+             * The first order. The lines the offer covers become the subscription; any others are bought once.
+             */
+            items: Array<{
+                variant_id: string;
+                quantity: number;
+            }>;
+            /**
+             * Where the first order is delivered. `line1` (or coordinates) and `country` are required.
+             */
+            shipping_address: {
+                name?: string;
+                line1?: string;
+                line2?: string;
+                city?: string;
+                state?: string;
+                postal_code?: string;
+                country?: string;
+                latitude?: number;
+                longitude?: number;
+            };
+            /**
+             * Optional. A subscription is always confirmed on the hosted page.
+             */
+            confirmation_mode?: 'hosted';
+        },
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<any> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/shopper-subscriptions',
+            headers: {
+                'Idempotency-Key': idempotencyKey,
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The shopper has not granted personalization consent (\`consent_required\`), or the key lacks the \`agent:write\` scope.`,
+                409: `Not possible as asked. \`account_required\`: no shopper credential was sent. \`subscribe_save_not_applicable\`
+                (400): the offer does not cover the items or is no longer available. \`items_unavailable\`,
+                \`shipping_not_deliverable\`, \`quote_incomplete\`, \`hold_limit_reached\` and \`idempotency_conflict\` are
+                as for any checkout intent.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Pause a Subscribe & Save subscription
+     * Pauses one of the shopper's subscriptions. No delivery is prepared or charged while it is paused. With
+     * `until`, deliveries resume on that day (from tomorrow, up to a year ahead); without it, the subscription
+     * stays paused until the shopper resumes it. Only an active subscription can be paused. Requires the
+     * shopper's credential and personalization consent.
+     * @returns any The subscription, paused
+     * @throws ApiError
+     */
+    public pauseAgentShopperSubscription({
+        id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        requestBody,
+    }: {
+        /**
+         * The subscription.
+         */
+        id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        requestBody?: {
+            /**
+             * The day deliveries resume.
+             */
+            until?: string;
+        },
+    }): CancelablePromise<{
+        data: {
+            subscription?: ShopperSubscription;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/shopper-subscriptions/{id}/pause',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Skip the next Subscribe & Save delivery
+     * Skips the next delivery of one of the shopper's subscriptions; the delivery after it stays on schedule.
+     * The offer may limit how many deliveries can be skipped in a year, and a delivery that is already being
+     * prepared cannot be skipped. Requires the shopper's credential and personalization consent.
+     * @returns any The subscription, with its new next delivery date
+     * @throws ApiError
+     */
+    public skipAgentShopperSubscription({
+        id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The subscription.
+         */
+        id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            subscription?: ShopperSubscription;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/shopper-subscriptions/{id}/skip',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Cancel a Subscribe & Save subscription
+     * Cancels one of the shopper's subscriptions. When the offer has a minimum number of deliveries that has
+     * not yet been reached, the cancellation is requested now and takes effect after the last of them;
+     * `cancel_effective_on` is that date, and the subscription's own `cancel_effective_on` carries it too.
+     * Otherwise it takes effect at once.
+     *
+     * Send `preview: true` to learn the effective date and the deliveries still owed without cancelling, so
+     * the shopper can be told before they decide. Requires the shopper's credential and personalization consent.
+     * @returns any The cancellation, or with `preview: true` what it would do
+     * @throws ApiError
+     */
+    public cancelAgentShopperSubscription({
+        id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        requestBody,
+    }: {
+        /**
+         * The subscription.
+         */
+        id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        requestBody?: {
+            reason?: string;
+            /**
+             * Return the effective date without cancelling.
+             */
+            preview?: boolean;
+        },
+    }): CancelablePromise<{
+        data: {
+            subscription?: ShopperSubscription;
+            /**
+             * When the cancellation takes effect.
+             */
+            cancel_effective_on?: string | null;
+            /**
+             * True when nothing was cancelled.
+             */
+            preview?: boolean;
+            /**
+             * With `preview`, the deliveries still owed before the cancellation takes effect.
+             */
+            deliveries_remaining?: number;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/shopper-subscriptions/{id}/cancel',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Change a Subscribe & Save subscription
+     * Changes how often one of the shopper's subscriptions delivers, or what it delivers. Send either
+     * `interval_unit` with `interval_count` (one of the intervals the offer allows), or `items`, the full new
+     * list of products and quantities (each covered by the offer). The next delivery date is recalculated from
+     * the last delivery. A store can turn off item changes for shoppers, in which case `items` answers
+     * `409`. Requires the shopper's credential and personalization consent.
+     * @returns any The subscription, changed
+     * @throws ApiError
+     */
+    public updateAgentShopperSubscription({
+        id,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The subscription.
+         */
+        id: string,
+        requestBody: {
+            interval_unit?: 'week' | 'month';
+            interval_count?: number;
+            items?: Array<{
+                product_id: string;
+                variant_id?: string;
+                quantity: number;
+            }>;
+        },
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            subscription?: ShopperSubscription;
+        };
+        evidence: Array<Record<string, any>>;
+        computed_at: string;
+        currency?: string | null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/shopper-subscriptions/{id}/update',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

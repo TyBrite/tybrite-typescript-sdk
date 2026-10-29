@@ -221,6 +221,76 @@ export class AuthenticationService {
         });
     }
     /**
+     * Create an account from a guest order
+     * Turn a guest order into an account. The guest sets a password on the order confirmation page and
+     * receives a signed-in session for a new account that owns that order and saves its shipping address.
+     *
+     * The credential is the `claim_token` returned once by `POST /v1/orders` when the order was created.
+     * The account is bound to the order's email address; no other address can be claimed. A token works once
+     * and expires (7 days by default; the store can change this or turn the feature off).
+     *
+     * The token proves possession of the order confirmation, not of the mailbox, so the account starts with
+     * `email_verified: false`. It becomes verified when the shopper signs in with an emailed code or resets
+     * their password; at that moment every session issued before is revoked and, unless the password was just
+     * replaced, a new password is required at the next password sign-in.
+     *
+     * **Refusals.** A token that is wrong, spent, expired, for another store or environment, or for an
+     * unknown order answers `404 not_found`, identically. Once the token is valid:
+     * `409 account_exists` when the address already has an account at this store (nothing is linked; the
+     * shopper signs in), and `409 claim_unavailable` when the address already has other orders with this
+     * store (the shopper registers with an emailed code, which proves the mailbox and brings the orders
+     * together). A weak password is `400 weak_password`, checked first, as on registration.
+     *
+     * Only the order for this token is claimed. Other guest orders for the same address are not linked.
+     *
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`), called from the
+     * storefront's server. Publishable keys answer `403 forbidden`.
+     *
+     * **Attempt limits:** 10 attempts per order per hour and 600 per store per hour; past either, the call
+     * answers `429 rate_limited` with a `Retry-After` header. After 10 wrong tokens an order's token is
+     * locked.
+     *
+     * @returns ShopperSignedIn Account created and signed in.
+     * @throws ApiError
+     */
+    public claimAccountFromOrder({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The order the token was issued for.
+             */
+            order_id: string;
+            /**
+             * The `claim_token` from the order's create response.
+             */
+            claim_token: string;
+            /**
+             * The new account's password. Same rule as registration.
+             */
+            password: string;
+            /**
+             * The shopper's name. Defaults to the name on the order.
+             */
+            name?: string;
+        },
+    }): CancelablePromise<ShopperSignedIn> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/auth/claim-account',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `\`invalid_request\` for a missing field; \`weak_password\` when the password breaks the rule.`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                409: `\`account_exists\` (the address already has an account here) or \`claim_unavailable\` (the address already has other orders here).`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
      * Login with email and password
      * Authenticate with an email address and password. Returns the shopper, the customer record and a
      * session.

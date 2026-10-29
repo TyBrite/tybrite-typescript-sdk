@@ -108,6 +108,49 @@ export class WebhooksService {
              * nothing until it goes live. Subscribe to these if you render prices and need to
              * re-read when the rules behind them change.
              *
+             * **Subscribe & Save subscriptions:** `shopper_subscription.created` (a shopper
+             * subscribed), `shopper_subscription.activated` (the subscription became active),
+             * `shopper_subscription.paused`, `shopper_subscription.resumed`,
+             * `shopper_subscription.skipped` (one delivery was skipped),
+             * `shopper_subscription.renewal_upcoming` (the shopper was reminded that a renewal is
+             * due, with `due_on`), `shopper_subscription.renewed` (a renewal was paid; carries
+             * `order_id`, `amount_cents` and `currency`), `shopper_subscription.renewal_failed`
+             * (a renewal payment failed; carries `attempts`, `last_error_code` and
+             * `next_attempt_at`), `shopper_subscription.action_required` (the shopper must
+             * confirm and pay a renewal), `shopper_subscription.past_due` (renewals kept failing),
+             * `shopper_subscription.cancelled`, `shopper_subscription.ended` (the subscription
+             * reached its end) and `shopper_subscription.updated` (the interval, address, payment
+             * method, pause date or cancellation request changed, or a past-due subscription
+             * recovered). The payload object carries `id`, `customer_id`, `offer_id`, `status`,
+             * `interval_unit`, `interval_count`, `next_run_on`, `renewal_mode`,
+             * `cycles_completed`, `cancel_effective_on` and `created_source`; events about a single
+             * renewal carry `subscription_id` and `cycle_no` instead. Payment details are never
+             * included. Each renewal order also emits the ordinary `order.*` events.
+             *
+             * **Subscribe & Save offers:** `subscribe_save_offer.created`,
+             * `subscribe_save_offer.activated` (the offer went live or resumed),
+             * `subscribe_save_offer.paused` and `subscribe_save_offer.archived`. An offer awaiting
+             * approval emits nothing while it is a draft; `subscribe_save_offer.created` arrives
+             * when it leaves draft. The payload object carries `id`, `name`, `display_label`,
+             * `status`, `discount_type`, `discount_value`, `first_order_discount_value`,
+             * `intervals`, `applies_to`, `starts_at`, `ends_at`, `free_shipping` and `min_cycles`.
+             *
+             * **Product fulfilment:** `order_item.fulfilled` (one unit of a download, code,
+             * event-ticket or service line was delivered; carries `delivered_at`),
+             * `order_item.fulfilment_failed` (a delivery did not complete after repeated attempts;
+             * carries `attempts`) and `order_item.fulfilment_voided` (a unit was cancelled, for
+             * example by a refund; carries `voided_at` and `void_reason`). A line of quantity 3
+             * emits one event per unit. The payload object carries `id`, `order_id`,
+             * `order_item_id`, `sale_id`, `sale_item_id` (the order pair for an online order, the
+             * sale pair for an in-store sale; the other pair is `null`), `unit_no`, `kind`,
+             * `product_id` and `variant_id`. `event_ticket.checked_in` (a ticket was admitted at the
+             * door; a multi-day pass fires once per day) carries `id`, `order_id`, `fulfilment_id`,
+             * `variant_id`, `event_name`, `entry_label`, `holder_name`, `admits`, `check_in_count`
+             * and `checked_in_at`. `code_pool.low` (a code pool is at or below its alert level, at
+             * most once a day) carries `name`, `remaining`, `low_stock_alert` and `alerted_at`. Links,
+             * codes, files and ticket tokens are never included. These events fire for production
+             * orders only.
+             *
              * **Content & collections:** `collection.created`, `collection.updated`
              * (a product collection was added, its homepage placement / banner changed, **or
              * its membership changed** — products added, removed, or re-ordered). A membership
@@ -400,7 +443,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked' | 'shopper_subscription.created' | 'shopper_subscription.renewed' | 'shopper_subscription.renewal_failed' | 'shopper_subscription.cancelled' | 'subscribe_save_offer.activated' | 'order_item.fulfilled' | 'order_item.fulfilment_failed' | 'order_item.fulfilment_voided' | 'event_ticket.checked_in' | 'code_pool.low';
         },
     }): CancelablePromise<{
         success?: boolean;

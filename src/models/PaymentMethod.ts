@@ -21,6 +21,14 @@ export type PaymentMethod = {
      * Present and `true` when this method is the store's own payment provider rather than one of the built-in ones. It is initialized and verified through exactly the same endpoints; the flag is there so a storefront can label or order it differently if it wants to.
      */
     custom_provider?: boolean;
+    /**
+     * Stripe only. How a payment can be taken: `redirect` (a hosted checkout page) and, when the store's publishable key is set, `embedded` (cards, Apple Pay, Google Pay and Link on the storefront's own page; initialize with `mode: embedded`).
+     */
+    modes?: Array<'redirect' | 'embedded'>;
+    /**
+     * Stripe only, present when `modes` includes `embedded`. The store's publishable key, which is public by design, so a storefront can show wallet buttons before an order exists and create the order on confirm. Payments taken this way accept cards, wallets and Link, with no redirect-based methods.
+     */
+    publishable_key?: string;
 };
 export namespace PaymentMethod {
     /**

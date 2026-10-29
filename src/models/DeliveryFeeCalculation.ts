@@ -28,7 +28,7 @@ export type DeliveryFeeCalculation = {
      */
     distance_meters?: number | null;
     /**
-     * True when no delivery charge applies to this order (`fee` is 0).
+     * True when the store's rate delivers this order free (`fee` is 0 under a configured rate). Always false when `configured` is false: a store with no delivery rates has not offered free delivery.
      */
     is_free?: boolean;
     /**
@@ -36,7 +36,7 @@ export type DeliveryFeeCalculation = {
      */
     free_threshold?: number | null;
     /**
-     * Whether the store has any delivery rates. False means delivery is not charged through the store's rates at all.
+     * Whether the store has any delivery rates. False means the store has not set up delivery charges through us: `fee` is 0, `is_free` is false, and a storefront shows no delivery price or free-delivery message at all.
      */
     configured?: boolean | null;
     /**
@@ -78,6 +78,14 @@ export type DeliveryFeeCalculation = {
      */
     options?: Array<ShippingOption>;
     /**
+     * The lowest-fee available entry of `options` (the delivery options; the pickup options when there is no delivery), in the shape of a `ShippingOption`. Null when nothing is available, and null when the request named only a country and the store's rules are map zones and distance rates (a price would be a guess); show no delivery price then. Use it for "Delivery from £3.95" on a product page.
+     */
+    cheapest_option?: ShippingOption;
+    /**
+     * The store's delivery-day settings, for rendering `delivery_window` dates. Absent on a carrier-options-only request.
+     */
+    delivery?: any | null;
+    /**
      * When the store delivers from whichever of its locations is nearest the shopper, the location this order would leave from; distance tiers are measured from it. Null otherwise.
      */
     fulfilled_from?: any | null;
@@ -98,6 +106,22 @@ export type DeliveryFeeCalculation = {
         amount?: number;
         currency?: string;
         estimated_days?: number | null;
+        /**
+         * Present when `estimated_days` is; equal to it.
+         */
+        min_days?: number;
+        /**
+         * Present when `estimated_days` is; equal to it.
+         */
+        max_days?: number;
+        /**
+         * The calendar dates for `estimated_days`, computed the way a store option's window is. Present when `estimated_days` is.
+         */
+        delivery_window?: {
+            from?: string;
+            to?: string;
+            dispatch_date?: string;
+        };
         /**
          * Where the option came from — the store's carrier account, or its custom shipping extension.
          */

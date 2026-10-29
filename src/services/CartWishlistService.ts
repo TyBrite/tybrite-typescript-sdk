@@ -988,4 +988,151 @@ export class CartWishlistService {
             },
         });
     }
+    /**
+     * Record a guest's contact details at checkout
+     * Records the email address a guest enters at the first step of checkout, with the cart they are buying and
+     * whether they agreed to hear from the store. The store uses it to follow up when the checkout is left
+     * unfinished: a `checkout.abandoned` event carrying the address is emitted after the store's waiting period,
+     * and, when `marketing_consent` is `true`, the store can send the shopper one reminder email containing a link
+     * back to their cart.
+     *
+     * Send the cart as `cart_id` (the cart's `X-Session-Id`) or as `lines`. Calling again for the same address and
+     * cart updates the one record, so the storefront can call it each time the details change. The response is the
+     * same for a new and a repeated record.
+     *
+     * `marketing_consent` is required and must be exactly what the shopper chose: an unticked box is `false`.
+     * A box that is ticked in advance is not consent. A later call with `false` withdraws it.
+     *
+     * `recovery_url` is the storefront page the reminder link opens, and must be on one of the store's own storefront
+     * addresses (`https`, no port; a test key may also use `http` and `localhost`). Any other address is refused with
+     * `400` (`recovery_url_not_allowed`). The reminder appends a `cart_recovery` query parameter to it; pass that value
+     * to `POST /v1/cart/checkout-recover` to restore the cart.
+     *
+     * **Auth / key type:** publishable key (`tybrite_pk_*`) or secret key (`tybrite_sk_*`). No customer credential
+     * is needed. Test keys write test records, which never send email.
+     *
+     * **Rate limits:** 60 requests per hour per IP address and 20 per hour per email address, each within one store.
+     *
+     * @returns any The details are recorded, or were already recorded.
+     * @throws ApiError
+     */
+    public captureCheckoutContact({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The guest's email address. Stored lower-cased.
+             */
+            email: string;
+            /**
+             * The guest's name, used to greet them in the reminder.
+             */
+            name?: string;
+            /**
+             * The cart's session id (the `X-Session-Id` the storefront uses for cart calls). Its current items are recorded. Send this or `lines`.
+             */
+            cart_id?: string;
+            /**
+             * The items being bought, when the storefront holds the cart itself. Send this or `cart_id`. Variants the store does not sell online are dropped.
+             */
+            lines?: Array<{
+                variant_id: string;
+                quantity: number;
+            }>;
+            /**
+             * Whether the shopper ticked the box agreeing to hear from the store. Without `true` no reminder is sent.
+             */
+            marketing_consent: boolean;
+            /**
+             * The storefront page the reminder link opens. Must be on one of the store's own storefront addresses.
+             */
+            recovery_url: string;
+        },
+    }): CancelablePromise<{
+        /**
+         * Identifies the record. The same for every call for this address and cart.
+         */
+        capture_id: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/cart/checkout-contact',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `The request is not valid. \`code\` is \`invalid_request\`, \`cart_empty\` (none of the items are sold by the
+                store), or \`recovery_url_not_allowed\`.
+                `,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Restore the cart behind a recovery link
+     * Returns the items of the cart a reminder email linked to, priced from the store's current catalogue. Pass the
+     * `cart_recovery` query parameter of the page the shopper arrived on as `token`. The storefront re-adds the
+     * returned items with `POST /v1/cart/items`.
+     *
+     * The token is the only credential. A token that is unknown, expired (30 days) or issued to another store
+     * answers the same `404`. The response carries no email address or name.
+     *
+     * **Auth / key type:** publishable key (`tybrite_pk_*`) or secret key (`tybrite_sk_*`). Test keys read test records.
+     *
+     * **Rate limits:** 60 requests per hour per IP address, within one store.
+     *
+     * @returns any The cart's items.
+     * @throws ApiError
+     */
+    public recoverCheckoutCart({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The `cart_recovery` value from the reminder link.
+             */
+            token: string;
+        },
+    }): CancelablePromise<{
+        lines: Array<{
+            variant_id?: string;
+            product_id?: string;
+            name?: string;
+            /**
+             * Absent when the product has a single variant.
+             */
+            variant_name?: string;
+            sku?: string;
+            /**
+             * The quantity in the original cart.
+             */
+            quantity?: number;
+            /**
+             * The current price of one unit.
+             */
+            unit_price?: number;
+            image_url?: string;
+            /**
+             * Whether the store can supply `quantity` now.
+             */
+            available?: boolean;
+        }>;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/cart/checkout-recover',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
 }

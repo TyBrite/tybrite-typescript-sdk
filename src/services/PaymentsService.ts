@@ -110,6 +110,19 @@ export class PaymentsService {
      * 4. Stripe redirects to success/cancel URL
      * 5. Verify payment status with `/v1/payments/verify`
      *
+     * **Stripe (embedded):**
+     * 1. Initialize payment with `mode: "embedded"`, amount, currency, email and the `order_id`
+     * 2. Mount the Stripe payment form in your page with the returned `publishable_key` and `client_secret`
+     * 3. The customer pays in place (card, Apple Pay, Google Pay or Link)
+     * 4. The order settles from Stripe's confirmation; verify with `/v1/payments/verify` using the
+     * `reference` or the `payment_intent_id`
+     * 5. Repeating the request with the same `Idempotency-Key` while the payment is still open returns the
+     * same `client_secret` with `idempotent: true`
+     *
+     * The `publishable_key` and `client_secret` are for the browser; they are never the secret key. A
+     * publishable key from a different mode than the secret key (test and live) is refused with
+     * `409 provider_misconfigured`. Apple Pay appears on the hosts registered for the store in Payments settings.
+     *
      * **PayPal (popup):**
      * 1. Initialize payment with amount and currency
      * 2. Use the returned `client_id` and `paypal_order_id` to render the PayPal Buttons popup in your frontend
@@ -236,6 +249,20 @@ export class PaymentsService {
              * Webhook callback URL (Paystack only)
              */
             callback_url?: string;
+            /**
+             * Keep the shopper's card so the store can charge it for the later deliveries of a Subscribe &
+             * Save subscription. Honoured only when `order_id` names an order that carries `subscribe_save`
+             * and was placed by a signed-in shopper, and only for `stripe` and `paystack`; it is
+             * ignored otherwise. The shopper sees the processor's own page and agrees to the card being
+             * kept there; the card details never reach your site or this API. The response's
+             * `renewal_mode` says how the later deliveries will be paid.
+             *
+             */
+            save_payment_method?: boolean;
+            /**
+             * Stripe only. `redirect` (the default) returns a hosted `checkout_url`. `embedded` returns a `client_secret` and `publishable_key` so the storefront can take the payment on its own page (cards, Apple Pay, Google Pay, Link) and needs no `success_url` or `cancel_url`. Any other provider rejects `embedded` with `400 invalid_request`.
+             */
+            mode?: 'redirect' | 'embedded';
         },
     }): CancelablePromise<(PaymentInitializeResponse | Record<string, any>)> {
         return this.httpRequest.request({
@@ -253,7 +280,7 @@ export class PaymentsService {
                 401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
-                409: `\`provider_not_live\` — the payment method is still configured with test credentials and cannot take a real payment; the store must switch it to live mode first (a sandbox request is not affected). \`idempotency_in_progress\` — another request with the same \`Idempotency-Key\` is still being initialized; retry shortly with the same key.`,
+                409: `\`provider_not_live\` — the payment method is still configured with test credentials and cannot take a real payment; the store must switch it to live mode first (a sandbox request is not affected). \`provider_not_test_mode\` — a sandbox request names a payment method that is connected with live credentials, so a test key cannot use it; use a live key, or connect the method in test mode. \`idempotency_in_progress\` — another request with the same \`Idempotency-Key\` is still being initialized; retry shortly with the same key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
                 502: `A payment method the merchant added themselves did not complete the request. Retry, or fall back to another method.`,

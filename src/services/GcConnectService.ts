@@ -49,7 +49,8 @@ export class GcConnectService {
          * `orders:read`, `orders:write`, `customers:read`, `customers:write`, `payments:read`,
          * `cart:write`, `cms:read`, `shipping:read`, `reviews:read`, `reviews:write`,
          * `gift_cards:read`, `messaging:read`, `messaging:write`, `returns:read`, `returns:write`,
-         * `promotions:read`, `recommendations:read`, `search:read`, `store:read`
+         * `promotions:read`, `recommendations:read`, `search:read`, `store:read`,
+         * `shopper_subscriptions:read`, `shopper_subscriptions:write`, `fulfilment:read`
          *
          * Sign-in scopes: `openid`, `email`, `profile` return the signed-in person in the token
          * response. With no other scope the request is identity-only: any user can approve it, no store

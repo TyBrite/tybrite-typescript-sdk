@@ -29,6 +29,18 @@ export type ShippingOption = {
      */
     estimate: string | null;
     /**
+     * The fewest delivery days, counted on the store's delivery weekdays after dispatch. Absent when the store has set no delivery days for this option.
+     */
+    min_days?: number | null;
+    /**
+     * The most delivery days; equal to `min_days` when the store gave one number.
+     */
+    max_days?: number | null;
+    /**
+     * The calendar dates the order is expected to arrive, computed for now in the store's timezone (`delivery.timezone`): dispatch is today when today is a delivery weekday and the store's cutoff has not passed, otherwise the next delivery weekday. Public holidays are not considered. Absent when the option has no delivery days.
+     */
+    delivery_window?: any | null;
+    /**
      * False when the option exists but does not apply to this basket — a pickup location whose `minimum_order` is above `order_total`. An unavailable option cannot be ordered with.
      */
     available: boolean;

@@ -75,8 +75,15 @@ export class ShippingService {
      *
      * **Location:** `latitude` + `longitude`, or a `place_name` (geocoded). `country_code` and
      * `postal_code` may accompany either; they match zones defined by country and postcode, and a value
-     * sent here takes precedence over the one found by geocoding. With no location, `address_to` +
-     * `parcel` returns carrier options only, with `fee` null.
+     * sent here takes precedence over the one found by geocoding. A `country_code` alone (optionally with
+     * `postal_code`) is also a location: it prices zones that cover the country and the store's
+     * "everywhere else" rate without geocoding, which is enough for "Delivery to the United Kingdom from
+     * £3.95" on a product page. Zones drawn on a map and distance rates need coordinates and are skipped.
+     * When the store has no zone that a country can match (its rules are map zones and distance rates
+     * only), a country alone cannot be priced: the answer is `200` with `configured: true`, `fee: null`,
+     * `cheapest_option: null` and `options` holding only the pickup locations, and no "everywhere else" price
+     * is given. Show no delivery price in that case; send coordinates to price it.
+     * With no location at all, `address_to` + `parcel` returns carrier options only, with `fee` null.
      *
      * **Basket:** `order_total` is the merchandise after discounts, before tax and shipping; free-delivery
      * thresholds and minimum orders are measured against it. `items` lists the basket's variants and
@@ -88,7 +95,18 @@ export class ShippingService {
      * whole countries or postcode prefixes; otherwise the distance tier matching its distance from the
      * store (a range includes its start and stops just before its end); otherwise the store's
      * "everywhere else" rate. A matched rate is free when `order_total` reaches its free-delivery
-     * threshold. A store with no rates at all charges nothing (`applied_rule: none`).
+     * threshold. A store with no rates at all charges nothing (`applied_rule: none`) and answers
+     * `configured: false` with `is_free: false`: it has set up no delivery charges through us, so a
+     * storefront shows no delivery price and no free-delivery message. `configured: false` never means free
+     * delivery.
+     *
+     * **Delivery dates:** an option carries `min_days` and `max_days` (delivery days after dispatch) and a
+     * `delivery_window` of calendar dates, when the store has set delivery days. Dates are computed once,
+     * here, in the store's timezone (`delivery.timezone`): an order placed before the store's dispatch cutoff
+     * (`delivery.dispatch_cutoff`) on a delivery weekday dispatches that day, otherwise on the next delivery
+     * weekday, and days are counted on the store's delivery weekdays. Public holidays are not considered.
+     * A carrier option (`rates[]`) with only `estimated_days` carries `min_days` = `max_days` = that value and
+     * the same computed window. `cheapest_option` is the lowest-fee available option.
      *
      * **Options:** `options[]` lists everything the shopper can choose between. The first delivery
      * option, `id: place`, is the matched rate itself ("Standard delivery"); its fee is also returned as

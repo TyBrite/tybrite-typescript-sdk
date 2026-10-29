@@ -6,6 +6,8 @@ import type { BestPromotion } from '../models/BestPromotion';
 import type { Promotion } from '../models/Promotion';
 import type { PromotionCalculation } from '../models/PromotionCalculation';
 import type { PromotionCartItem } from '../models/PromotionCartItem';
+import type { SubscribeSaveOffer } from '../models/SubscribeSaveOffer';
+import type { SubscribeSaveQuote } from '../models/SubscribeSaveQuote';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class PromotionsService {
@@ -295,6 +297,116 @@ export class PromotionsService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List the Subscribe & Save offers for a product
+     * Returns the Subscribe & Save offers that are live for a product, highest discount value first. An offer
+     * lets a shopper subscribe to a recurring delivery of the product at a discount. Show the offers
+     * next to the add-to-cart button, let the shopper pick one and an interval, and send the choice
+     * with the order (`subscribe_save` on `POST /v1/orders`).
+     *
+     * The list is empty when the product has no live offer, or when the store's plan does not include
+     * Subscribe & Save. An offer that is paused, archived, scheduled or past its end is not returned.
+     * Pass `variant_id` to see only the offers that cover that variant.
+     *
+     * The response is cached for a short time. An offer paused in that window may still be listed; the
+     * quote and the order both check that it is live, so it cannot be bought.
+     *
+     * Works with a publishable key.
+     *
+     * @returns any The live offers for the product.
+     * @throws ApiError
+     */
+    public listSubscribeSaveOffers({
+        productId,
+        variantId,
+    }: {
+        /**
+         * The product to list offers for.
+         */
+        productId: string,
+        /**
+         * Narrow to the offers that cover this variant of the product.
+         */
+        variantId?: string,
+    }): CancelablePromise<{
+        offers: Array<SubscribeSaveOffer>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/subscribe-save/offers',
+            query: {
+                'product_id': productId,
+                'variant_id': variantId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Quote the price of a Subscribe & Save offer
+     * Returns what a set of items costs under one Subscribe & Save offer: the price of the first
+     * delivery, the price of each later delivery, the discount on each, and whether shipping is free.
+     * Amounts are in the smallest unit of the store's currency.
+     *
+     * Prices come from the store's catalogue; a price in the request is not read. An item without a
+     * `variant_id` is priced at the product's default variant. Only the items the offer covers are
+     * priced; `available` is `false` when the offer is not live or covers none of the items.
+     *
+     * The quote does not apply dynamic pricing rules or promotions, and later deliveries are priced
+     * again at the catalogue price on the day they are charged. Nothing is reserved or saved: the
+     * quote is the same function that prices the order.
+     *
+     * Not cached. Works with a publishable key.
+     *
+     * @returns SubscribeSaveQuote The quote.
+     * @throws ApiError
+     */
+    public quoteSubscribeSave({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The offer to quote, from `GET /v1/subscribe-save/offers`.
+             */
+            offer_id: string;
+            /**
+             * The items to quote, at most 50.
+             */
+            items: Array<{
+                product_id: string;
+                /**
+                 * The variant to price. Omit for the product's default variant.
+                 */
+                variant_id?: string;
+                quantity: number;
+            }>;
+            /**
+             * Sent together with `interval_count` to check that the offer allows the interval; the response echoes it as `interval`.
+             */
+            interval_unit?: 'week' | 'month';
+            interval_count?: number;
+        },
+    }): CancelablePromise<SubscribeSaveQuote> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/subscribe-save/quote',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },

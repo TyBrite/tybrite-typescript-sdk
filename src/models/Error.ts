@@ -6,7 +6,10 @@ export type Error = {
     error: {
         code: string;
         message: string;
-        details?: string;
+        /**
+         * Further detail about the error: a sentence, or for some errors an object (for example the `missing` list of `billing_location_required` or the `item_index` and `field_name` of `line_field_required`).
+         */
+        details?: (string | Record<string, any>);
         /**
          * Additional guidance on how to resolve the error.
          */

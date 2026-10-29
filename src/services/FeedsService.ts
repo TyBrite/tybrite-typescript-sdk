@@ -178,6 +178,10 @@ export class FeedsService {
             human_confirmation_required?: boolean;
             intents?: string;
         };
+        /**
+         * Present and true when the store offers Subscribe & Save, so an assistant can look for offers on a product with `GET /v1/agent/products/{id}/subscribe-save`. Absent otherwise.
+         */
+        subscribe_save?: boolean;
     }> {
         return this.httpRequest.request({
             method: 'GET',

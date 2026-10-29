@@ -4,9 +4,10 @@
 /* eslint-disable */
 import type { ShippingCalculationByCarrierAddress } from './ShippingCalculationByCarrierAddress';
 import type { ShippingCalculationByCoordinates } from './ShippingCalculationByCoordinates';
+import type { ShippingCalculationByCountry } from './ShippingCalculationByCountry';
 import type { ShippingCalculationByPlace } from './ShippingCalculationByPlace';
 /**
- * Input for a shipping fee calculation. Provide GPS coordinates (latitude + longitude), a place_name to geocode, or — for carrier options only — address_to with a parcel.
+ * Input for a shipping fee calculation. Provide GPS coordinates (latitude + longitude), a place_name to geocode, a country_code alone, or — for carrier options only — address_to with a parcel.
  */
-export type ShippingCalculationRequest = (ShippingCalculationByCoordinates | ShippingCalculationByPlace | ShippingCalculationByCarrierAddress);
+export type ShippingCalculationRequest = (ShippingCalculationByCoordinates | ShippingCalculationByPlace | ShippingCalculationByCountry | ShippingCalculationByCarrierAddress);
 
