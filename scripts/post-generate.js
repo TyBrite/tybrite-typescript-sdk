@@ -170,11 +170,11 @@ async function promptVersionUpdate() {
 
   console.log(`📦 Current version: ${currentVersion}`);
   console.log('\n🔢 Version update options:');
-  console.log('  1. Press ENTER to auto-increment patch version (X.Y.Z+1)');
+  console.log('  1. Press ENTER (or type "skip") to keep the current version: the version changes only when the owner asks');
   console.log('  2. Enter major version (e.g., "2" for 2.0.0)');
   console.log('  3. Enter major.minor (e.g., "1.5" for 1.5.0)');
   console.log('  4. Enter full version (e.g., "1.2.3")');
-  console.log('  5. Type "skip" to keep current version\n');
+  console.log('  5. Type "patch" to increment the patch version (X.Y.Z+1)\n');
 
   const rl = readline.createInterface({
     input: process.stdin,
@@ -182,16 +182,16 @@ async function promptVersionUpdate() {
   });
 
   return new Promise((resolve) => {
-    rl.question('Enter version (or press ENTER for auto-increment): ', (answer) => {
+    rl.question('Enter version (or press ENTER to keep it): ', (answer) => {
       rl.close();
       
       const input = answer.trim();
       let newVersion;
 
-      if (!input || input === '') {
-        // Auto-increment patch
+      if (input.toLowerCase() === 'patch') {
+        // Increment patch, only on an explicit request
         newVersion = `${major}.${minor}.${patch + 1}`;
-      } else if (input.toLowerCase() === 'skip') {
+      } else if (!input || input.toLowerCase() === 'skip') {
         console.log(`⏭️  Keeping version ${currentVersion}`);
         resolve(false);
         return;

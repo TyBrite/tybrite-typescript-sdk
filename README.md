@@ -350,7 +350,7 @@ const customer = await client.customers.getCustomer({ id: 'customer-uuid', xAuth
 const { fulfilments } = await client.customers.listShopperFulfilments({ id: 'customer-uuid', xAuthToken: session.access_token });
 // → [{ id, kind: 'digital', status: 'delivered', downloads: [{ asset_id, file_name, download_url }] },
 //    { id, kind: 'code', codes: { count: 1, masked: ['••••••••'], reveal_url } },
-//    { id, kind: 'event_ticket', tickets: [{ holder_name, entry_label, qr_payload }] }, ...]
+//    { id, kind: 'event_ticket', tickets: [{ holder_name, entry_label, qr_payload, qr_svg }] }, ...]
 
 const { codes } = await client.customers.revealShopperFulfilmentCodes({
   id: 'customer-uuid',

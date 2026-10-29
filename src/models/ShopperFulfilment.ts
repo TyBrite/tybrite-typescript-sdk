@@ -75,6 +75,10 @@ export type ShopperFulfilment = {
          * The text to encode as the ticket's QR code; `null` on a voided ticket.
          */
         qr_payload?: string | null;
+        /**
+         * An SVG image of the ticket's QR code encoding `qr_payload`; `null` on a voided ticket. It scales to its container, so it can be inlined directly.
+         */
+        qr_svg?: string | null;
     }>;
     /**
      * The confirmation note of a `service` unit.
