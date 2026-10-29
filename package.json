@@ -1,6 +1,6 @@
 {
   "name": "@tybrite-labs/sdk",
-  "version": "1.0.14",
+  "version": "1.0.15",
   "description": "TypeScript SDK for Galactic Core, programmable commerce infrastructure: storefront, marketplace and wholesale (B2B) commerce, plus tools for AI shopping assistants — catalog, pricing, cart, checkout, orders, payments, customers, search, recommendations, promotions, gift cards, returns, reviews, messaging, content, shipping, tax and webhooks.",
   "homepage": "https://docs.tybritelabs.com",
   "repository": {
