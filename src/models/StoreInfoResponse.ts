@@ -125,6 +125,24 @@ export type StoreInfoResponse = {
      * Catalog overview (optional, included when requested)
      */
     catalog?: {
+        /**
+         * The delivery kinds the store sells online, counted across its whole live catalogue. A store that sells one kind (most do) can build its checkout around it; `nothing_to_ship` means no product needs a delivery address, so checkout asks only for a billing country and postcode. A mixed catalogue decides per cart from each product's `fulfilment_kind`.
+         */
+        fulfilment?: {
+            kinds?: Array<'shipped' | 'digital' | 'code' | 'event_ticket' | 'service'>;
+            /**
+             * Online products per delivery kind.
+             */
+            product_counts?: Record<string, number>;
+            /**
+             * At least one online product is shipped.
+             */
+            ships_physical?: boolean;
+            /**
+             * The store sells online products and none of them is shipped.
+             */
+            nothing_to_ship?: boolean;
+        };
         products?: {
             total?: number;
             has_variants?: number;
