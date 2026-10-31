@@ -330,8 +330,11 @@ export class GcConnectService {
      * Returns all active third-party tool connections for the authenticated
      * store. Powers the **Integrations → Developer → Connected Apps** panel.
      *
-     * **Authentication:** Secret key (`tybrite_sk_*`) required.
-     * Publishable keys return 403.
+     * **Authentication:** Secret key (`tybrite_sk_*`) or a merchant session
+     * required. Publishable keys return 403, and so does a key issued to a
+     * connected app (it carries granular scopes and cannot list the store's
+     * other connections). A secret key lists the connections of its own
+     * environment.
      *
      * **Rate limit:** 120 requests/hour per API key.
      *

@@ -155,15 +155,15 @@ export class ReviewsService {
              */
             rating: number;
             /**
-             * Optional short headline for the review.
+             * Optional short headline for the review. At most 120 characters unless the store sets another limit.
              */
             title?: string;
             /**
-             * Optional full review text.
+             * Optional full review text. At most 5,000 characters unless the store sets another limit.
              */
             body?: string;
             /**
-             * Optional array of image or video URLs attached to the review.
+             * Optional array of image or video URLs attached to the review. Each must be an https link on the platform's media host; at most 5 unless the store sets another limit. Any other host is refused with 400.
              */
             media_urls?: Array<string>;
         },

@@ -192,8 +192,9 @@ export class MessagingService {
     }
     /**
      * Update thread
-     * Update thread status, priority, or toggle the archived/muted/pinned state.
-     * Requires a secret key.
+     * Archive, mute or pin the customer's own thread, or close it (`status: closed`).
+     * A customer cannot change a thread's priority or set any other status; those
+     * requests are refused with `403`, and a value outside the allowed list is `400`.
      *
      * @returns any Thread updated successfully
      * @throws ApiError
@@ -211,8 +212,14 @@ export class MessagingService {
         xAuthToken: string,
         id: string,
         requestBody: {
-            status?: 'active' | 'resolved' | 'closed' | 'escalated' | 'pending';
-            priority?: 'urgent' | 'high' | 'normal' | 'low';
+            /**
+             * The only status a customer can set. Closing a thread removes it from the store's open inbox.
+             */
+            status?: 'closed';
+            /**
+             * A customer cannot change a thread's priority. A valid priority (`low`, `normal`, `high`, `urgent`) is refused with `403`; any other value is `400`.
+             */
+            priority?: string;
             /**
              * Set to true to archive, false to unarchive
              */
@@ -455,6 +462,11 @@ export class MessagingService {
      * session token in `x-auth-token` when you pass `customer_id` (the token must
      * own that customer, otherwise `403`).
      *
+     * With a customer session token (and no `customer_id`) the thread belongs to
+     * that customer. With neither it is a guest thread the store can answer by
+     * email. The thread and the first message are created together or not at all.
+     * `order_id` and `product_id` must belong to the store.
+     *
      * **`thread_type`** classifies the inquiry: `general`, `order_inquiry`,
      * `product_inquiry`, `support`, `complaint`, `delivery`, `return`, `refund`,
      * or `technical`.
@@ -482,7 +494,10 @@ export class MessagingService {
             message: string;
             order_id?: string;
             product_id?: string;
-            priority?: 'urgent' | 'high' | 'normal' | 'low';
+            /**
+             * `urgent` is set by the store, not by the customer.
+             */
+            priority?: 'high' | 'normal' | 'low';
             thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical';
         },
         /**
