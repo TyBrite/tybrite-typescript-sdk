@@ -465,6 +465,14 @@ export class MessagingService {
      * With a customer session token (and no `customer_id`) the thread belongs to
      * that customer. With neither it is a guest thread the store can answer by
      * email. The thread and the first message are created together or not at all.
+     * A guest thread needs `customer_email`: the store's replies are emailed there with a
+     * link the guest uses to read the conversation and answer (`viewGuestThread`,
+     * `replyToGuestThread`).
+     *
+     * **Priority:** a shopper cannot set it. A publishable key, or any request carrying a
+     * customer credential, that sends `priority` is refused `403` and the thread starts as
+     * `normal`. A secret key with no customer credential may send `low`, `normal`, `high`
+     * or `urgent`.
      * `order_id` and `product_id` must belong to the store.
      *
      * **`thread_type`** classifies the inquiry: `general`, `order_inquiry`,
@@ -495,9 +503,9 @@ export class MessagingService {
             order_id?: string;
             product_id?: string;
             /**
-             * `urgent` is set by the store, not by the customer.
+             * Server-side callers only (a secret key with no customer credential). Any value from a publishable key or a request with a customer credential is refused with `403`; the thread then starts as `normal`.
              */
-            priority?: 'high' | 'normal' | 'low';
+            priority?: 'low' | 'normal' | 'high' | 'urgent';
             thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical';
         },
         /**
@@ -874,6 +882,96 @@ export class MessagingService {
                 426: `Upgrade Required — the request reached the endpoint without a WebSocket upgrade. Reconnect
                 with the \`Upgrade: websocket\` header.
                 `,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Read a guest conversation from its email link
+     * Returns a guest conversation (one started without a customer account) to the person who holds
+     * the link in the store's reply email. The 64-character `token` from that link is the only
+     * credential for the conversation; the API key identifies the store.
+     *
+     * The token opens one conversation of the key's own store and environment. It expires 30 days
+     * after the email that carried it, and stops working when the store rotates it or the
+     * conversation is closed. Every failure (malformed, unknown, expired, rotated, closed,
+     * another store's) is the same `404` with no other detail. Internal notes and the guest's
+     * contact details are never returned. At most 120 reads an hour per address and 60 per token.
+     *
+     * @returns any The conversation, oldest message first (the latest 100).
+     * @throws ApiError
+     */
+    public viewGuestThread({
+        requestBody,
+    }: {
+        requestBody: {
+            /**
+             * The token from the link in the reply email.
+             */
+            token: string;
+        },
+    }): CancelablePromise<{
+        thread?: {
+            subject?: string;
+            status?: string;
+            /**
+             * The name replies are sent under.
+             */
+            store_name?: string;
+            store_logo?: string | null;
+        };
+        messages?: Array<{
+            id?: string;
+            from?: 'you' | 'store';
+            sender_name?: string | null;
+            message?: string;
+            created_at?: string;
+        }>;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/messaging/guest-thread/view',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Reply on a guest conversation from its email link
+     * Posts the guest's message on the conversation the link opens. The token rules are those of
+     * `viewGuestThread`. A resolved conversation reopens. At most 20 replies an hour per address, 12
+     * per token and 10 per conversation; past that the answer is `429`.
+     *
+     * @returns any Reply posted
+     * @throws ApiError
+     */
+    public replyToGuestThread({
+        requestBody,
+    }: {
+        requestBody: {
+            token: string;
+            message: string;
+        },
+    }): CancelablePromise<{
+        message?: {
+            id?: string;
+            created_at?: string;
+        };
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/messaging/guest-thread/reply',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
