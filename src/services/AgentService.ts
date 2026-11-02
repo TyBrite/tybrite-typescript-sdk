@@ -252,6 +252,12 @@ export class AgentService {
      * reports what was debited. A failed call keeps no credits. It is limited to 60 calls a minute per client
      * and 1,000 an hour per key, in addition to the standard limits.
      *
+     * **A publishable key spends the store's credits too.** A publishable key is public, so anyone holding it can
+     * make these calls, and each one debits the merchant's balance (and can trigger the merchant's automatic
+     * top-up). The merchant sets a daily limit on that spend, counted over the last 24 hours; once it is reached
+     * the key receives `403 helpers_unavailable`, the same answer as any other refusal. A secret key is not
+     * limited by it.
+     *
      * **With a marketplace operator key** the call is paid from the marketplace operator's own AI
      * credits, never a seller's. A secret key receives the reason a call is refused: `403 helpers_unavailable`
      * with `details.reason` when the operator has not switched hosted helpers on, `402 insufficient_credits`
@@ -985,7 +991,8 @@ export class AgentService {
      * price. Every amount in the draft comes from the quote. `over_budget` reports whether the quoted total
      * exceeds the budget.
      *
-     * It debits the store's AI credits for both model steps; `usage` reports the total.
+     * It debits the store's AI credits for both model steps; `usage` reports the total. A publishable key is
+     * subject to the merchant's daily limit on public helper spend, as described on `POST /v1/agent/interpret`.
      *
      * **With a marketplace operator key** the candidates come only from that marketplace's sellers, each
      * selection names its seller (`merchant_store_id`), and the draft is priced with the marketplace quote
@@ -1164,6 +1171,9 @@ export class AgentService {
      * Get a cart draft
      * A draft with a fresh quote: prices, promotion, availability, and — when the draft was created with an
      * address — shipping and tax, all re-read now.
+     *
+     * The quote's `shipping_address` is returned to a secret key and to the shopper credential the draft belongs to;
+     * with a publishable key alone, or for a draft that belongs to no shopper, it is `null`.
      *
      * With a marketplace operator key only that marketplace's drafts are found, and the fresh quote is the
      * marketplace quote, broken down per seller.
@@ -3259,6 +3269,15 @@ export class AgentService {
      * The token is single use: a second confirmation returns `409 intent_not_pending`. A wrong token returns
      * `403 invalid_token` and discloses nothing about the intent.
      *
+     * **Guest confirmations ask for a code.** Unless the merchant has turned the setting off, a confirmation with
+     * no shopper credential and an intent that was not prepared for a signed-in shopper is completed only with a
+     * six-digit code emailed to `contact.email`. The first call sends the code and answers
+     * `409 person_proof_required` (the address it went to is masked in `error.details.sent_to`; the code is valid
+     * for 15 minutes); send the same request again with the code as `person_proof`. A wrong code returns
+     * `403 invalid_person_proof` (five tries per code, then `429 too_many_attempts`); at most five codes are sent
+     * per intent (`429 too_many_codes`). A different `contact.email` than the code went to starts a new code.
+     * Confirming with the shopper's credential never asks for a code.
+     *
      * **With a marketplace operator key** `contact.email` and `contact.name` are always required, and a
      * shopper credential (`x-auth-token` or `x-external-auth`), when sent, is recorded on the purchase. The
      * basket is re-priced through the marketplace checkout; a change returns `409 quote_changed`, and a seller
@@ -3290,6 +3309,10 @@ export class AgentService {
                 name?: string;
                 phone?: string;
             };
+            /**
+             * The six-digit code emailed to a guest after the first confirmation. Not needed with a shopper credential, or when the merchant has turned the guest check off.
+             */
+            person_proof?: string;
             /**
              * The payment method the shopper intends to use, recorded on the order.
              */
@@ -3477,7 +3500,7 @@ export class AgentService {
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `The token does not match`,
+                403: `The token does not match, or the emailed code does not (\`invalid_token\`, \`invalid_person_proof\`)`,
                 404: `Not found`,
                 409: `The price changed, or the intent is no longer pending or has expired`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
@@ -3490,6 +3513,12 @@ export class AgentService {
      * Cancels a pending intent and releases its stock hold at once. The answer is the cancelled intent, with the
      * shopper's personal data returned on the same terms as `GET /v1/agent/checkout-intents/{id}`.
      *
+     * Who may cancel: a secret key may cancel any intent. An intent prepared for a signed-in shopper, and an
+     * intent created with `confirmation_mode` `hosted`, is cancelled with a publishable key only by sending its
+     * `confirmation_token` in the body or the credential of the shopper it was prepared for; anything else returns
+     * `403 forbidden` (a wrong token returns `403 invalid_token`). A guest intent in `token` mode is cancelled with a
+     * publishable key and its id.
+     *
      * A marketplace intent holds no stock before confirmation, so cancelling it only closes it. A marketplace
      * key finds only its own marketplace's intents.
      * @returns any The cancelled intent
@@ -3500,6 +3529,7 @@ export class AgentService {
         xAuthToken,
         xExternalAuth,
         xIdpToken,
+        requestBody,
     }: {
         /**
          * The checkout intent.
@@ -3517,6 +3547,12 @@ export class AgentService {
          * A raw token from the store's own identity provider. With a publishable key, a token for the intent's own customer returns the shipping address and `customer_id`. Provide at most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xIdpToken?: string,
+        requestBody?: {
+            /**
+             * The intent's confirmation token. Required with a publishable key and no shopper credential when the intent was prepared for a signed-in shopper or is hosted.
+             */
+            confirmation_token?: string;
+        },
     }): CancelablePromise<{
         data: {
             id?: string;
@@ -3638,9 +3674,12 @@ export class AgentService {
                 'x-external-auth': xExternalAuth,
                 'x-idp-token': xIdpToken,
             },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
+                403: `The intent needs its confirmation token or the shopper it was prepared for`,
                 404: `Not found`,
                 409: `The intent is no longer pending`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,

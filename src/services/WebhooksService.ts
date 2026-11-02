@@ -52,6 +52,16 @@ export class WebhooksService {
              * **Order lifecycle:** `order.created`, `order.paid`, `order.fulfilled`,
              * `order.shipped`, `order.cancelled`, `order.refunded`, `order.updated`
              *
+             * **Card disputes:** `order.disputed` (the shopper's bank disputed the card payment
+             * for an order or an in-store sale) and `order.dispute_closed` (the dispute ended).
+             * The order stays `paid`: a dispute does not change its payment status. The payload
+             * object carries `id`, `order_id`, `sale_id` (one of the two is set), `amount`,
+             * `currency`, `reason`, `status` (`needs_response` or `under_review` while open,
+             * `won`, `lost` or `closed` once ended), `evidence_due_at` (when the evidence is due,
+             * or `null`), `opened_at`, `closed_at` and `outcome` (`won`, `lost` or `closed`, or
+             * `null` while open). A dispute on a marketplace order is announced to the
+             * marketplace only.
+             *
              * **In-store sales:** `sale.completed`, `sale.refunded` — a sale rung up at the
              * point of sale rather than online. Subscribe to these alongside the order events
              * to receive every sale a store makes, whichever channel it came through.
@@ -443,7 +453,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked' | 'shopper_subscription.created' | 'shopper_subscription.renewed' | 'shopper_subscription.renewal_failed' | 'shopper_subscription.cancelled' | 'subscribe_save_offer.activated' | 'order_item.fulfilled' | 'order_item.fulfilment_failed' | 'order_item.fulfilment_voided' | 'event_ticket.checked_in' | 'code_pool.low';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked' | 'shopper_subscription.created' | 'shopper_subscription.renewed' | 'shopper_subscription.renewal_failed' | 'shopper_subscription.cancelled' | 'subscribe_save_offer.activated' | 'order_item.fulfilled' | 'order_item.fulfilment_failed' | 'order_item.fulfilment_voided' | 'event_ticket.checked_in' | 'code_pool.low' | 'order.disputed' | 'order.dispute_closed';
         },
     }): CancelablePromise<{
         success?: boolean;

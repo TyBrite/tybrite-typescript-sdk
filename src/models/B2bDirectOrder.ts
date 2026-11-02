@@ -3,13 +3,17 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * The result of a direct wholesale order. `settlement` is `terms` (a terms invoice was issued — `invoice_id`, `invoice_number`, and `due_date` are present) or `pay_now` (the order awaits payment — `order_id`, `order_number`, and `amount` are present; complete payment through the standard payment flow using `order_id`) or `pending_approval` (the total reaches the store's approval threshold, so no order or invoice exists until a second approver signs it off — `approval_id` is present). `purchase_order_id`, `po_number`, and `currency` are always present.
+ * The result of a direct wholesale order. `settlement` is `terms` (a terms invoice was issued — `invoice_id`, `invoice_number`, and `due_date` are present) or `pay_now` (the order awaits payment — `order_id`, `order_number`, and `amount` are present; complete payment through the standard payment flow using `order_id`) or `pending_approval` (the total reaches the store's approval threshold, so no order or invoice exists until a second approver signs it off — `approval_id` is present). A pay-now order held for approval gets its payable order, with `order_id`, once the buyer's approver approves it. Sending the same `Idempotency-Key` again returns the same fields with `idempotent_replay` true, including a purchase order that has since been cancelled. A line may hold at most the store's per-line quantity limit (1,000,000 unless the store sets another); more is refused. `purchase_order_id`, `po_number`, and `currency` are always present.
  */
 export type B2bDirectOrder = {
     /**
-     * How the order settles — on terms (invoice), pay now (awaiting payment), or held for approval.
+     * How the order settles — on terms (invoice), pay now (awaiting payment), or held for approval. `awaiting_confirmation` and `rejected` appear only when an `Idempotency-Key` is replayed: the order was approved and waits for the supplier to confirm it, or the buyer's approver rejected it.
      */
     settlement: B2bDirectOrder.settlement;
+    /**
+     * True when this answer repeats an earlier request with the same Idempotency-Key.
+     */
+    idempotent_replay?: boolean;
     /**
      * The approval request (pending_approval only).
      */
@@ -52,12 +56,14 @@ export type B2bDirectOrder = {
 };
 export namespace B2bDirectOrder {
     /**
-     * How the order settles — on terms (invoice), pay now (awaiting payment), or held for approval.
+     * How the order settles — on terms (invoice), pay now (awaiting payment), or held for approval. `awaiting_confirmation` and `rejected` appear only when an `Idempotency-Key` is replayed: the order was approved and waits for the supplier to confirm it, or the buyer's approver rejected it.
      */
     export enum settlement {
         TERMS = 'terms',
         PAY_NOW = 'pay_now',
         PENDING_APPROVAL = 'pending_approval',
+        AWAITING_CONFIRMATION = 'awaiting_confirmation',
+        REJECTED = 'rejected',
     }
 }
 

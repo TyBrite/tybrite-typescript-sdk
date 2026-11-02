@@ -135,7 +135,8 @@ export class SystemService {
          * **Cache Duration:** 5 minutes (300 seconds)
          *
          * With `cache=false` the response is built from the store's current data, including the
-         * `features` flags and their `feature_status`, and `X-Cache` is `MISS`.
+         * `features` flags and their `feature_status`, `X-Cache` is `MISS`, and the response carries
+         * `Cache-Control: no-store`, so no cache between the API and the caller keeps it.
          *
          * **When to Bypass Cache:**
          * - After updating store configuration

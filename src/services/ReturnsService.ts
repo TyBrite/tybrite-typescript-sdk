@@ -92,9 +92,9 @@ export class ReturnsService {
              */
             eligible: boolean;
             /**
-             * Why not, when `eligible` is false. `window_closed` (the period has passed) or `returns_disabled` (the store does not accept returns). Null when eligible.
+             * Why not, when `eligible` is false. `window_closed` (the period has passed), `returns_disabled` (the store does not accept returns) or `not_paid` (the order was never paid, or was cancelled). Null when eligible.
              */
-            reason?: 'window_closed' | 'returns_disabled';
+            reason?: 'window_closed' | 'returns_disabled' | 'not_paid';
             /**
              * The store's return window, or null when it has stated none.
              */

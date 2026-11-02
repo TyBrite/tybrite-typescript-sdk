@@ -44,6 +44,10 @@ export type Order = {
      */
     fulfillment_method?: Order.fulfillment_method;
     /**
+     * `b2b` for a wholesale order placed by a buyer account, `retail` for every other order. The `order.created`, `order.paid`, `order.fulfilled`, `order.cancelled`, `order.updated` and `order.refunded` events carry the same field.
+     */
+    order_type?: Order.order_type;
+    /**
      * The location the shopper collects from, on a pickup order. Null on a delivery order.
      */
     pickup_location_id?: string | null;
@@ -130,6 +134,13 @@ export namespace Order {
         DELIVERY = 'delivery',
         PICKUP = 'pickup',
         NONE = 'none',
+    }
+    /**
+     * `b2b` for a wholesale order placed by a buyer account, `retail` for every other order. The `order.created`, `order.paid`, `order.fulfilled`, `order.cancelled`, `order.updated` and `order.refunded` events carry the same field.
+     */
+    export enum order_type {
+        RETAIL = 'retail',
+        B2B = 'b2b',
     }
     /**
      * Whether this order was created in the live or test environment. Sandbox orders are isolated from production data.

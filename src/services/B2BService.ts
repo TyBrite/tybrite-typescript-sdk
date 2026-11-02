@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { B2bApprovalDecisionResponse } from '../models/B2bApprovalDecisionResponse';
+import type { B2bApprovalListResponse } from '../models/B2bApprovalListResponse';
 import type { B2bDirectOrderResponse } from '../models/B2bDirectOrderResponse';
 import type { B2bInvoice } from '../models/B2bInvoice';
 import type { B2bInvoicePaymentResponse } from '../models/B2bInvoicePaymentResponse';
@@ -581,6 +583,122 @@ export class B2BService {
                 403: `The key is publishable, or the customer has no wholesale account with this store.`,
                 404: `Resource not found`,
                 409: `The invoice is already paid or was voided.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * List the approvals the signed-in approver can decide
+     * Returns the purchases waiting for a decision on the wholesale accounts the signed-in person is an
+     * approver or admin of, for a buyer that orders through the API with no store of its own. Each
+     * entry says whether this person may decide it now: the person who placed an order never can.
+     *
+     * A buyer that has its own store decides from that store instead, so its approvals are not listed.
+     *
+     * Requires the approver's identity (exactly one of x-auth-token, x-external-auth or x-idp-token).
+     *
+     * @returns B2bApprovalListResponse The approvals this person can see, newest first.
+     * @throws ApiError
+     */
+    public listB2BApprovals({
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Buyer session token (GC-native). Provide this or x-external-auth.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the approver. Provide this or x-auth-token.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<B2bApprovalListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/b2b/approvals',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            errors: {
+                400: `The request names more than one identity header, or its identity cannot be read.`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The key is publishable, or the wholesale feature is not enabled for this store.`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error`,
+            },
+        });
+    }
+    /**
+     * Approve or reject a held purchase
+     * Records the decision of the signed-in approver on a purchase held at the supplier's approval
+     * threshold, for a buyer that orders through the API with no store of its own. The decider is the
+     * person behind the credential; nothing in the request names one.
+     *
+     * Only an active approver or admin of that wholesale account can decide it, and never the person who
+     * placed the order. Approving a pay-now purchase makes the order payable; rejecting it releases
+     * nothing. Deciding an approval that is already decided returns it unchanged.
+     *
+     * Requires a secret key and the approver's identity (exactly one of x-auth-token, x-external-auth or
+     * x-idp-token).
+     *
+     * @returns B2bApprovalDecisionResponse The decision was recorded, or the approval had already been decided.
+     * @throws ApiError
+     */
+    public decideB2BApproval({
+        id,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        id: string,
+        requestBody: {
+            decision: 'approved' | 'rejected';
+            /**
+             * An optional note kept with the decision.
+             */
+            reason?: string;
+        },
+        /**
+         * Buyer session token (GC-native). Provide this or x-external-auth.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the approver. Provide this or x-auth-token.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<B2bApprovalDecisionResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/b2b/approvals/{id}/decision',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `The decision is neither \`approved\` nor \`rejected\`.`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The key is publishable, the person is not an approver of this account, or they placed the order themselves.`,
+                404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
