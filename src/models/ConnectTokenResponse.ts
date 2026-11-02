@@ -12,8 +12,8 @@
 export type ConnectTokenResponse = {
     /**
      * The signed-in person, present when the `openid` scope was granted. `email` and `email_verified`
-     * appear with the `email` scope, `name` with the `profile` scope. `sub` is the stable user id; link
-     * accounts on it, never on the email address.
+     * appear with the `email` scope, `name` and `picture` with the `profile` scope. `sub` is the stable
+     * user id; link accounts on it, never on the email address.
      *
      */
     user?: {
@@ -21,6 +21,10 @@ export type ConnectTokenResponse = {
         email?: string | null;
         email_verified?: boolean;
         name?: string | null;
+        /**
+         * The person's profile photo as an absolute https URL that can be fetched without authentication, or null when they have none.
+         */
+        picture?: string | null;
     };
     /**
      * The person's role on the linked store. Present with `user` when a store was linked; only the store's owner can link it.
