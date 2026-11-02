@@ -3280,6 +3280,9 @@ export class AgentService {
      *
      * **With a marketplace operator key** `contact.email` and `contact.name` are always required, and a
      * shopper credential (`x-auth-token` or `x-external-auth`), when sent, is recorded on the purchase. The
+     * guest code applies to a marketplace key as well: a confirmation with no shopper credential answers
+     * `409 person_proof_required` and is completed with the emailed code, unless the marketplace operator has
+     * turned the guest check off (it is on by default and is the operator's setting, not the caller's). The
      * basket is re-priced through the marketplace checkout; a change returns `409 quote_changed`, and a seller
      * that has run out returns `409 items_unavailable`. Otherwise one marketplace order is placed across the
      * sellers, each seller's stock is held for the payment window, and the response carries `order_group` and
@@ -3310,7 +3313,7 @@ export class AgentService {
                 phone?: string;
             };
             /**
-             * The six-digit code emailed to a guest after the first confirmation. Not needed with a shopper credential, or when the merchant has turned the guest check off.
+             * The six-digit code emailed to a guest after the first confirmation. Not needed with a shopper credential, or when the merchant (with a marketplace key, the marketplace operator) has turned the guest check off.
              */
             person_proof?: string;
             /**
@@ -3502,7 +3505,7 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `The token does not match, or the emailed code does not (\`invalid_token\`, \`invalid_person_proof\`)`,
                 404: `Not found`,
-                409: `The price changed, or the intent is no longer pending or has expired`,
+                409: `The price changed, the intent is no longer pending or has expired, or a guest confirmation needs its emailed code (\`person_proof_required\`; the masked address is in \`error.details.sent_to\`)`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error`,
             },
@@ -3520,7 +3523,10 @@ export class AgentService {
      * publishable key and its id.
      *
      * A marketplace intent holds no stock before confirmation, so cancelling it only closes it. A marketplace
-     * key finds only its own marketplace's intents.
+     * key finds only its own marketplace's intents. A marketplace secret key cancels any of them. A publishable
+     * marketplace key cancels an intent only by sending its `confirmation_token` in the body: a marketplace intent
+     * is never prepared for a signed-in shopper, so no shopper credential takes the token's place, and the id
+     * alone returns `403 forbidden` (a wrong token returns `403 invalid_token`).
      * @returns any The cancelled intent
      * @throws ApiError
      */
