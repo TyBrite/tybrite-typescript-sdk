@@ -47,7 +47,9 @@ export class FeedsService {
                 'token': token,
             },
             errors: {
-                404: `The store has no public feed (not opted in, or wrong/missing token).`,
+                401: `The feed token is missing or wrong.`,
+                403: `The store is on a trial or its subscription has lapsed, so it does not publish a feed.`,
+                404: `The store has no public feed (not opted in, or unknown store code).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
@@ -77,7 +79,9 @@ export class FeedsService {
                 'token': token,
             },
             errors: {
-                404: `The store has no public feed.`,
+                401: `The feed token is missing or wrong.`,
+                403: `The store is on a trial or its subscription has lapsed, so it does not publish a feed.`,
+                404: `The store has no public feed (not opted in, or unknown store code).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
@@ -91,7 +95,7 @@ export class FeedsService {
      *
      * `{store}` is the store id or store code. The file is published by default; a wholesale store
      * publishes it only once the merchant turns it on, and the merchant can turn it off at any time.
-     * A store on a trial or with a lapsed subscription returns 404. No API key required.
+     * A store on a trial or with a lapsed subscription returns 403 `feed_not_available_on_trial`. No API key required.
      *
      * AI assistants look for `/llms.txt` at the root of a site, so a storefront typically forwards its
      * own `/llms.txt` to this address.
@@ -111,6 +115,7 @@ export class FeedsService {
                 'store': store,
             },
             errors: {
+                403: `The store is on a trial or its subscription has lapsed.`,
                 404: `The store does not publish an llms.txt.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
@@ -138,6 +143,7 @@ export class FeedsService {
                 'store': store,
             },
             errors: {
+                403: `The store is on a trial or its subscription has lapsed.`,
                 404: `The store does not publish an llms.txt.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
@@ -193,6 +199,7 @@ export class FeedsService {
                 403: `The store is on a trial or its plan has lapsed`,
                 404: `The store does not publish a descriptor, or does not exist`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `The descriptor is temporarily unavailable.`,
             },
         });
     }

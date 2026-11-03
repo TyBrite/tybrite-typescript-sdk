@@ -60,6 +60,7 @@ export class ShippingService {
             method: 'GET',
             url: '/v1/shipping/zones',
             errors: {
+                304: `Unchanged since the \`If-None-Match\` ETag.`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
@@ -135,12 +136,20 @@ export class ShippingService {
      */
     public calculateShipping({
         requestBody,
+        rateSourceFormat = 'provider',
     }: {
         requestBody: ShippingCalculationRequest,
+        /**
+         * How `rate_source` names a carrier-account source. `provider` (the default) uses `shippo`; `neutral` uses `carrier`. A request may send either spelling wherever a rate source is accepted.
+         */
+        rateSourceFormat?: 'provider' | 'neutral',
     }): CancelablePromise<DeliveryFeeCalculation> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/shipping/calculate',
+            query: {
+                'rate_source_format': rateSourceFormat,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -169,11 +178,11 @@ export class ShippingService {
         number,
     }: {
         /**
-         * Carrier token (e.g. usps, ups, fedex).
+         * Carrier token (e.g. usps, ups, fedex). At most 50 characters.
          */
         carrier: string,
         /**
-         * The tracking number.
+         * The tracking number. At most 100 characters.
          */
         number: string,
     }): CancelablePromise<{
@@ -197,7 +206,7 @@ export class ShippingService {
                 'number': number,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when the carrier exceeds 50 characters or the tracking number 100; \`provider_not_configured\` when the store has not connected a carrier account.`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,

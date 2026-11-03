@@ -124,7 +124,7 @@ export class WebhooksService {
              * `shopper_subscription.skipped` (one delivery was skipped),
              * `shopper_subscription.renewal_upcoming` (the shopper was reminded that a renewal is
              * due, with `due_on`), `shopper_subscription.renewed` (a renewal was paid; carries
-             * `order_id`, `amount_cents` and `currency`), `shopper_subscription.renewal_failed`
+             * `order_id`, `amount` (major currency units) and `currency`), `shopper_subscription.renewal_failed`
              * (a renewal payment failed; carries `attempts`, `last_error_code` and
              * `next_attempt_at`), `shopper_subscription.action_required` (the shopper must
              * confirm and pay a renewal), `shopper_subscription.past_due` (renewals kept failing),
@@ -591,11 +591,16 @@ export class WebhooksService {
      */
     public retryWebhookEvent({
         id,
+        offset,
     }: {
         /**
          * Event ID
          */
         id: string,
+        /**
+         * Position of the first subscribed endpoint to retry. A retry reaches a bounded number of endpoints per call; send the response's next_offset to continue.
+         */
+        offset?: number,
     }): CancelablePromise<{
         event_id?: string;
         /**
@@ -613,6 +618,9 @@ export class WebhooksService {
             url: '/v1/webhook_events/{id}/retry',
             path: {
                 'id': id,
+            },
+            query: {
+                'offset': offset,
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,

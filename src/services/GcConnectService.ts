@@ -347,13 +347,30 @@ export class GcConnectService {
      * @returns any Active connections for this store
      * @throws ApiError
      */
-    public listConnectSessions(): CancelablePromise<{
+    public listConnectSessions({
+        storeId,
+        environment,
+    }: {
+        /**
+         * Required with a merchant session (`400 invalid_request` without it); the store must be one the session's user owns or belongs to (`403 forbidden` otherwise). Ignored with a secret key.
+         */
+        storeId?: string,
+        /**
+         * With a merchant session, restricts the list to one environment. A secret key lists its own environment.
+         */
+        environment?: 'production' | 'sandbox',
+    }): CancelablePromise<{
         sessions: Array<ConnectSession>;
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/connect/sessions',
+            query: {
+                'store_id': storeId,
+                'environment': environment,
+            },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,

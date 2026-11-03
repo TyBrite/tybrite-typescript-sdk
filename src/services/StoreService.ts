@@ -27,13 +27,24 @@ export class StoreService {
      * @returns any The store profile
      * @throws ApiError
      */
-    public getStoreProfile(): CancelablePromise<{
+    public getStoreProfile({
+        cache = true,
+    }: {
+        /**
+         * Set to `false` to bypass the cache and read fresh data.
+         */
+        cache?: boolean,
+    }): CancelablePromise<{
         profile: StoreProfile;
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/store/profile',
+            query: {
+                'cache': cache,
+            },
             errors: {
+                304: `Unchanged since the \`If-None-Match\` ETag.`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
@@ -56,13 +67,24 @@ export class StoreService {
      * @returns any The published documents
      * @throws ApiError
      */
-    public listStorePolicies(): CancelablePromise<{
+    public listStorePolicies({
+        cache = true,
+    }: {
+        /**
+         * Set to `false` to bypass the cache and read fresh data.
+         */
+        cache?: boolean,
+    }): CancelablePromise<{
         policies: Array<StorePolicySummary>;
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/store/policies',
+            query: {
+                'cache': cache,
+            },
             errors: {
+                304: `Unchanged since the \`If-None-Match\` ETag.`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
@@ -109,6 +131,7 @@ export class StoreService {
                 'version': version,
             },
             errors: {
+                304: `Unchanged since the \`If-None-Match\` ETag.`,
                 400: `The slug or version is malformed.`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,

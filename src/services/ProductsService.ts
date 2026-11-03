@@ -265,7 +265,7 @@ export class ProductsService {
          * - **Metadata:** `brand`, `featured`, `featured_order`, `tags`, `is_active`
          * - **Nested:** `attributes.*`, `shipping_info.*`, `variant_attributes.*`
          * - **Timestamps:** `created_at`, `updated_at`
-         * - **Flags:** `has_variants`, `is_default`
+         * - **Flags:** `has_variants`
          * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`
          * - **Reviews:** `average_rating`, `review_count` (list only)
          *
@@ -699,7 +699,7 @@ export class ProductsService {
          * - **Inventory:** `stock`, `total_stock`, `last_restocked` (`last_restocked` is not in the default response — request it explicitly)
          * - **Media:** `media`, `thumbnail_url`
          * - **Metadata:** `brand`, `category_name`, `subcategory_name`, `attributes.*`
-         * - **Flags:** `has_variants`, `variant_count`, `is_default`
+         * - **Flags:** `has_variants`, `variant_count`
          * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`
          * - **Variants:** `variants` (includes all variant fields)
          *

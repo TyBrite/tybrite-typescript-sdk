@@ -17,6 +17,7 @@ export type MarketplaceShippingRate = {
 export namespace MarketplaceShippingRate {
     export enum source {
         SHIPPO = 'shippo',
+        CARRIER = 'carrier',
         CUSTOM = 'custom',
     }
 }

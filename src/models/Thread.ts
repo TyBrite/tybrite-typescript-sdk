@@ -12,6 +12,10 @@ export type Thread = {
     store_avatar?: string | null;
     order_id?: string | null;
     product_id?: string | null;
+    /**
+     * The earlier conversation this one was opened from, for example a dispute about a product the shopper had already written to the store about. Null when it was not opened from another.
+     */
+    source_thread_id?: string | null;
     subject?: string;
     /**
      * `dispute` is a conversation about a dispute over an order.

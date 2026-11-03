@@ -90,6 +90,16 @@ export class SandboxService {
          */
         shifted?: Record<string, any>;
         /**
+         * What the shift made past due and expired.
+         */
+        expired?: {
+            stock_reservations?: number;
+        };
+        /**
+         * The expiry and rollup jobs run for this store's sandbox after the shift.
+         */
+        crons_run?: Array<string>;
+        /**
          * Areas intentionally not affected, with the reason.
          */
         not_shifted?: Record<string, any>;
@@ -503,7 +513,7 @@ export class SandboxService {
     /**
      * List sandbox stock levels
      * Lists the sandbox stock levels set for your store, each with the variant's live stock beside
-     * it. A variant with no level reads live stock with a test key.
+     * it. A variant with no level reads live stock with a test key. Returns at most 1,000 levels, most recently changed first.
      *
      * **Requires a secret test key** (`tybrite_sk_test_*`).
      *

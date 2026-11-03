@@ -147,8 +147,9 @@ export class SystemService {
          * - When you need real-time data
          *
          * **Cache Headers:**
-         * - `X-Cache: HIT` - Response served from cache
-         * - `X-Cache: MISS` - Response fetched from database
+         * - `X-Cache: HIT` - Response served from the edge cache (`HIT-304` for a 304 on an ETag match)
+         * - `X-Cache: MISS` - Response read fresh (`cache=false`)
+         * - The header can be absent on other 200 responses
          * - `Cache-Control: public, max-age=300` - Browser/CDN caching
          *
          * **SDK Usage:**

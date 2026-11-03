@@ -128,6 +128,7 @@ export type { ShippingCalculationByPlace } from './models/ShippingCalculationByP
 export type { ShippingCalculationRequest } from './models/ShippingCalculationRequest';
 export { ShippingOption } from './models/ShippingOption';
 export type { ShippingParcelInput } from './models/ShippingParcelInput';
+export type { ShopperCustomer } from './models/ShopperCustomer';
 export { ShopperFulfilment } from './models/ShopperFulfilment';
 export { ShopperPaymentMethod } from './models/ShopperPaymentMethod';
 export { ShopperSession } from './models/ShopperSession';

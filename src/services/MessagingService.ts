@@ -286,7 +286,7 @@ export class MessagingService {
     }
     /**
      * Get messages in a thread
-     * Returns messages in a thread. Soft-deleted messages are excluded by default.
+     * Returns messages in a thread. Soft-deleted messages are always excluded.
      * Supports cursor-based pagination and sort order (default: oldest first).
      *
      * @returns any Success
@@ -392,8 +392,6 @@ export class MessagingService {
      * **Body field:** the message text goes in `message`. (Note the sibling
      * `editMessage` endpoint uses `message_content` instead.)
      *
-     * **SDK**
-     *
      * @returns any Message sent
      * @throws ApiError
      */
@@ -482,9 +480,12 @@ export class MessagingService {
      *
      * **`thread_type`** classifies the inquiry: `general`, `order_inquiry`,
      * `product_inquiry`, `support`, `complaint`, `delivery`, `return`, `refund`,
-     * `technical`, or `dispute` (a conversation about a dispute over an order).
+     * `technical`, or `dispute` (a conversation about a dispute over an order or product). A shopper may open a
+     * `dispute` thread.
      *
-     * **SDK**
+     * **`source_thread_id`** opens the conversation from an earlier one of the same shopper, so the store sees the
+     * history in one place. It must be a thread of this shopper in the same store and environment (otherwise `400`);
+     * when `order_id` or `product_id` is omitted, the earlier thread's value is used.
      *
      * @returns any Conversation created
      * @throws ApiError
@@ -506,6 +507,10 @@ export class MessagingService {
             subject: string;
             message: string;
             order_id?: string;
+            /**
+             * The earlier thread of this shopper that this conversation continues from.
+             */
+            source_thread_id?: string;
             product_id?: string;
             /**
              * Server-side callers only (a secret key with no customer credential). Any value from a publishable key or a request with a customer credential is refused with `403`; the thread then starts as `normal`.
@@ -577,8 +582,9 @@ export class MessagingService {
     }
     /**
      * Mark thread as read
-     * Resets `unread_count_store` to 0 and marks all customer messages in the thread as `read`.
-     * Requires a secret key.
+     * Marks the thread as read by the shopper: resets `unread_count_customer` to 0 and marks the store's messages
+     * in the thread as `read`. Requires the shopper's session credential (`x-auth-token` or `x-external-auth`);
+     * a publishable key is accepted.
      *
      * @returns any Thread marked as read
      * @throws ApiError
@@ -659,6 +665,9 @@ export class MessagingService {
         xAuthToken: string,
         id: string,
         requestBody: {
+            /**
+             * The new text. It is trimmed; a value that is empty after trimming answers 400.
+             */
             message_content: string;
         },
         /**
@@ -780,11 +789,18 @@ export class MessagingService {
      *
      * This is a WebSocket upgrade, not a normal request — send the standard upgrade headers
      * (`Upgrade: websocket`). The connection is served on the API's own domain; the server responds
-     * `101 Switching Protocols` and then pushes one JSON frame per new message:
+     * `101 Switching Protocols` and then pushes JSON frames shaped `{ "type", "payload" }`:
      *
      * ```json
-     * { "type": "message.created", "payload": { "thread_id": "…", "message": { … } } }
+     * { "type": "message.created", "payload": { "thread_id": "…", "message": { … }, "environment": "production" } }
      * ```
+     *
+     * - `message.created` carries `{ thread_id, message, environment }`.
+     * - `presence.join` and `presence.leave` carry `{ participant: { pid, role }, participants: [ … ] }`.
+     * - `presence.typing` carries `{ participant, is_typing }` and `presence.read` carries `{ participant, at }`.
+     * - The text frame `ping` is answered with `pong`. A client may send `{ "type": "typing", "payload": { "is_typing": true } }`
+     * and `{ "type": "read", "payload": { "at": "…" } }`, which are relayed to the other participants; other frame
+     * types are ignored. Clients should ignore a frame `type` they do not recognise.
      *
      * **Authentication.** Because a browser `WebSocket` cannot set request headers, supply the
      * credentials as **query parameters** on the connection URL (they may also be sent as headers
@@ -800,7 +816,7 @@ export class MessagingService {
      * the store's Auth verifier to validate (equivalently the `x-idp-token` header).
      *
      * The server validates the credential and confirms the customer is the thread's participant
-     * before accepting the socket; an unauthorized or non-participant connection is closed. Use the
+     * before accepting the socket; a connection that fails the check is refused with 401, 403 or 404 before the upgrade. Use the
      * `subscribeToThread` helper in the SDK to manage the connection (it returns an unsubscribe
      * function), or open the WebSocket yourself.
      *
@@ -906,7 +922,7 @@ export class MessagingService {
      * The token opens one conversation of the key's own store and environment. It expires 30 days
      * after the email that carried it, and stops working when the store rotates it or the
      * conversation is closed. Every failure (malformed, unknown, expired, rotated, closed,
-     * another store's) is the same `404` with no other detail. Internal notes and the guest's
+     * another store's) is the same `404` with no other detail; so is a body without a `token`. A body that is not a JSON object answers `400`. Internal notes and the guest's
      * contact details are never returned. At most 120 reads an hour per address and 60 per token.
      *
      * @returns any The conversation, oldest message first (the latest 100).
@@ -946,6 +962,7 @@ export class MessagingService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
@@ -983,6 +1000,7 @@ export class MessagingService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,

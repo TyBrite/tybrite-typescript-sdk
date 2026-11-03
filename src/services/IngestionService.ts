@@ -63,6 +63,7 @@ export class IngestionService {
         format,
         strategy = 'upsert_by_sku',
         dryRun = false,
+        publish = false,
     }: {
         /**
          * Unique key per batch. Retrying the same batch with the same key returns the original result instead of re-importing; the same key with a different batch answers `409 idempotency_key_reused`, and a first run still in progress answers `409 idempotency_in_progress`.
@@ -102,6 +103,10 @@ export class IngestionService {
          * When `true`, validate and report without writing anything.
          */
         dryRun?: boolean,
+        /**
+         * When `true`, products this batch creates are published to the storefront at once. Off by default. Existing products updated by the batch keep their current state, and a row with `is_online_enabled` false stays offline.
+         */
+        publish?: boolean,
     }): CancelablePromise<IngestResult> {
         return this.httpRequest.request({
             method: 'POST',
@@ -115,6 +120,7 @@ export class IngestionService {
                 'format': format,
                 'strategy': strategy,
                 'dry_run': dryRun,
+                'publish': publish,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -173,10 +179,15 @@ export class IngestionService {
      */
     public testIngest({
         requestBody,
+        format,
     }: {
         requestBody: {
             products?: Array<IngestProduct>;
         },
+        /**
+         * The feed format, when the content type does not say.
+         */
+        format?: 'json' | 'xml' | 'csv',
     }): CancelablePromise<{
         status?: 'valid' | 'partial' | 'invalid';
         format?: string;
@@ -188,6 +199,9 @@ export class IngestionService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/ingest/test',
+            query: {
+                'format': format,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {

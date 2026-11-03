@@ -24,30 +24,30 @@ export type SubscribeSaveQuote = {
         variant_id: string | null;
         quantity: number;
         /**
-         * The catalogue price of one unit before the offer's discount.
+         * The catalogue price of one unit before the offer's discount, in `currency`.
          */
-        unit_cents: number;
+        unit_price: number;
     }>;
     /**
      * The covered items' total before any discount.
      */
-    subtotal_cents?: number;
+    subtotal?: number;
     /**
      * The discount on the first delivery.
      */
-    first_order_discount_cents?: number;
+    first_order_discount?: number;
     /**
      * The discount on each later delivery.
      */
-    renewal_discount_cents?: number;
+    renewal_discount?: number;
     /**
      * What the covered items cost on the first delivery.
      */
-    first_order_price_cents?: number;
+    first_order_price?: number;
     /**
      * What the covered items cost on each later delivery, at today's catalogue prices.
      */
-    renewal_price_cents?: number;
+    renewal_price?: number;
     free_shipping?: boolean;
     min_cycles?: number;
     intervals?: Array<SubscribeSaveInterval>;

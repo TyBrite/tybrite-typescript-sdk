@@ -111,11 +111,12 @@ export class AgentService {
      * product attributes, brand and category — use `POST /v1/agent/fit` to check a product's published
      * specifications.
      *
-     * `price` is the shopper price of the product's lowest-priced variant: its online sale price when one
+     * `price` is the shopper price of the product's default variant: its online sale price when one
      * applies, otherwise its online price. `list_price` is that variant's online price. The amount a shopper
      * is charged, after dynamic pricing, promotions, shipping and tax, comes from `POST /v1/agent/quote`.
      *
-     * `in_stock_only` checks every variant of a multi-variant product before excluding it.
+     * `in_stock_only` checks the variants of up to 20 multi-variant products per request; a product beyond that
+     * is excluded unless its default variant is in stock.
      *
      * With a marketplace operator key the search spans every active seller of that marketplace and no other.
      * Each result names its seller (`merchant_store_id`, `merchant_name`), `price` is in the marketplace's
@@ -248,6 +249,7 @@ export class AgentService {
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
+                502: `The store's catalogue could not be read.`,
             },
         });
     }
@@ -325,7 +327,7 @@ export class AgentService {
              * AI credits debited, in US dollars.
              */
             credits_debited?: number;
-            model_class?: 'fast' | 'reasoning' | 'fast+reasoning';
+            model_class?: 'fast';
         };
     }> {
         return this.httpRequest.request({
@@ -419,6 +421,7 @@ export class AgentService {
                 404: `Not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
+                502: `The product could not be read.`,
             },
         });
     }
@@ -541,7 +544,19 @@ export class AgentService {
                 constraint?: string;
                 detail?: string;
             }>;
-            alternatives?: Array<Record<string, any>>;
+            /**
+             * In-stock products that meet more of the constraints.
+             */
+            alternatives?: Array<{
+                product_id?: string;
+                name?: string;
+                price?: number;
+                in_stock?: boolean;
+                met?: Array<{
+                    constraint?: string;
+                    detail?: string;
+                }>;
+            }>;
         };
         /**
          * Where each figure in `data` was read from.
@@ -702,7 +717,10 @@ export class AgentService {
         requestBody: {
             items: Array<{
                 variant_id: string;
-                quantity: number;
+                /**
+                 * Defaults to 1. A variant's total across lines is at most 100.
+                 */
+                quantity?: number;
                 /**
                  * Marketplace key only — the seller of this variant. Optional; when given it must match.
                  */
@@ -728,7 +746,7 @@ export class AgentService {
             shipping_selections?: Array<{
                 merchant_store_id: string;
                 rate_id?: string;
-                rate_source?: 'custom' | 'shippo';
+                rate_source?: 'custom' | 'shippo' | 'carrier';
             }>;
         },
         /**
@@ -1159,7 +1177,7 @@ export class AgentService {
              * AI credits debited, in US dollars.
              */
             credits_debited?: number;
-            model_class?: 'fast' | 'reasoning' | 'fast+reasoning';
+            model_class?: 'fast';
         };
     }> {
         return this.httpRequest.request({
@@ -1421,7 +1439,7 @@ export class AgentService {
      * For a draft (`draft_id`) or the shopper's live cart (a shopper credential, or `x-session-id` for an
      * anonymous cart): lines that can no longer be bought as they are, prices that changed since each item was
      * added, the promotion the cart qualifies for, the gap to free shipping when a destination is given, and
-     * complementary items where the store's recommendations provide them.
+     * complementary items where the store's recommendations provide them. Quotes at most 25 lines.
      * @returns any The insights
      * @throws ApiError
      */
@@ -1758,7 +1776,7 @@ export class AgentService {
     /**
      * Get wishlist insights
      * The shopper's wishlist with each item's current stock and the price they would be charged now, and
-     * whether that price is below the item's list price. Requires the shopper's credential.
+     * whether that price is below the item's list price. Reads at most the first 25 wishlist items; the two counts cover those items. Requires the shopper's credential.
      * @returns any The wishlist
      * @throws ApiError
      */
@@ -1831,7 +1849,8 @@ export class AgentService {
     /**
      * Get reorder suggestions
      * Items the shopper has bought before, most often first, with how many they usually buy and the current
-     * price and stock. Requires the shopper's credential and their consent.
+     * price and stock. Considers the 10 most-ordered items from the shopper's 50 most recent orders. Requires the
+     * shopper's credential and their consent.
      * @returns any The suggestions
      * @throws ApiError
      */
@@ -2067,6 +2086,7 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
+                422: `The store has returns switched off (\`returns_disabled\`), or the order was not paid or was cancelled (\`order_not_paid\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -2074,7 +2094,7 @@ export class AgentService {
     }
     /**
      * List the shopper's standing instructions
-     * The shopper's standing instructions with this store, newest first. Requires the shopper's credential and
+     * The shopper's standing instructions with this store, newest first, at most 50. Requires the shopper's credential and
      * personalization consent.
      * @returns any The standing instructions
      * @throws ApiError
@@ -2422,7 +2442,7 @@ export class AgentService {
     }
     /**
      * List the shopper's Subscribe & Save subscriptions
-     * The shopper's Subscribe & Save subscriptions with this store, newest first: status, delivery interval,
+     * The shopper's Subscribe & Save subscriptions with this store, newest first (at most 100): status, delivery interval,
      * the date of the next delivery, the items, the terms the shopper accepted, and the saved card's brand and
      * last four digits. Requires the shopper's credential and personalization consent.
      * @returns any The subscriptions
@@ -2492,7 +2512,7 @@ export class AgentService {
      * Requires the shopper's credential and personalization consent. A request without a shopper credential
      * answers `409 account_required`. A replay of the same `Idempotency-Key` returns the same intent with
      * `confirmation_token` and `confirmation_url` null.
-     * @returns any A replay of an earlier request with the same `Idempotency-Key`; the token and link are null.
+     * @returns any A replay of an earlier request with the same `Idempotency-Key`; the token and link are null and `data.replayed` is true.
      * @throws ApiError
      */
     public createAgentShopperSubscription({
@@ -2554,7 +2574,16 @@ export class AgentService {
          * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xIdpToken?: string,
-    }): CancelablePromise<any> {
+    }): CancelablePromise<{
+        /**
+         * The checkout intent, as in the 201, with `replayed` true.
+         */
+        data: Record<string, any>;
+        evidence?: Array<Record<string, any>>;
+        computed_at?: string;
+        currency?: string | null;
+        environment?: string;
+    }> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/agent/me/shopper-subscriptions',
@@ -2567,12 +2596,11 @@ export class AgentService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `The request is invalid (\`invalid_request\`, including an interval the offer does not allow), or the offer does not cover the items or is no longer available (\`subscribe_save_not_applicable\`).`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The shopper has not granted personalization consent (\`consent_required\`), or the key lacks the \`agent:write\` scope.`,
-                409: `Not possible as asked. \`account_required\`: no shopper credential was sent. \`subscribe_save_not_applicable\`
-                (400): the offer does not cover the items or is no longer available. \`items_unavailable\`,
+                409: `Not possible as asked. \`account_required\`: no shopper credential was sent. \`items_unavailable\`,
                 \`shipping_not_deliverable\`, \`quote_incomplete\`, \`hold_limit_reached\` and \`idempotency_conflict\` are
                 as for any checkout intent.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
@@ -2988,7 +3016,7 @@ export class AgentService {
             shipping_selections?: Array<{
                 merchant_store_id: string;
                 rate_id?: string;
-                rate_source?: 'custom' | 'shippo';
+                rate_source?: 'custom' | 'shippo' | 'carrier';
             }>;
             /**
              * `token` returns a token the agent confirms with. `hosted` also returns `confirmation_url`, a link to the store's hosted confirmation page for the shopper to open.
@@ -3139,7 +3167,7 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
-                409: `The key was used with different items, or the basket cannot be bought as quoted`,
+                409: `The key was used with different items, or the basket cannot be bought as quoted. \`insufficient_stock\` means a line sold out between the quote and the hold (\`details\` is a sentence naming the variant, the stock available and the quantity asked for)`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -3578,9 +3606,10 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The token does not match, or the emailed code does not (\`invalid_token\`, \`invalid_person_proof\`)`,
                 404: `Not found`,
-                409: `The price changed, the intent is no longer pending or has expired, or a guest confirmation needs its emailed code (\`person_proof_required\`; the masked address is in \`error.details.sent_to\`)`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                409: `The price changed, the intent is no longer pending or has expired, or a guest confirmation needs its emailed code (\`person_proof_required\`; the masked address is in \`error.details.sent_to\`), or a Subscribe & Save intent must be confirmed on the hosted page (\`hosted_confirmation_required\`), or a line sold out before the hold (\`out_of_stock\`, \`insufficient_stock\`; \`details\` names the variant and the stock)`,
+                429: `\`too_many_attempts\` (five wrong codes; \`details.retry_after_seconds\`), \`too_many_codes\` (five codes sent for this intent), or the abuse throttle \`rate_limited\`.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
+                502: `The confirmation code could not be delivered to the shopper.`,
             },
         });
     }

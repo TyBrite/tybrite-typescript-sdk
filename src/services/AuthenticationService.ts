@@ -3,8 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CodeSent } from '../models/CodeSent';
-import type { Customer } from '../models/Customer';
 import type { RegisterPending } from '../models/RegisterPending';
+import type { ShopperCustomer } from '../models/ShopperCustomer';
 import type { ShopperSession } from '../models/ShopperSession';
 import type { ShopperSignedIn } from '../models/ShopperSignedIn';
 import type { User } from '../models/User';
@@ -762,7 +762,7 @@ export class AuthenticationService {
         xAuthToken: string,
     }): CancelablePromise<{
         user: User;
-        customer: (Customer | null);
+        customer: (ShopperCustomer | null);
     }> {
         return this.httpRequest.request({
             method: 'GET',

@@ -24,7 +24,6 @@ export type LeadFormError = {
              * - `consent_required`: a required consent is unchecked.
              * - `captcha_required`: the form asks for a challenge token and none was sent.
              * - `captcha_failed`: the challenge token did not pass verification.
-             * - `plan_required`: the store's plan does not include lead forms (status `403`).
              *
              */
             reason?: LeadFormError.reason;
@@ -42,7 +41,6 @@ export namespace LeadFormError {
      * - `consent_required`: a required consent is unchecked.
      * - `captcha_required`: the form asks for a challenge token and none was sent.
      * - `captcha_failed`: the challenge token did not pass verification.
-     * - `plan_required`: the store's plan does not include lead forms (status `403`).
      *
      */
     export enum reason {
@@ -53,7 +51,6 @@ export namespace LeadFormError {
         CONSENT_REQUIRED = 'consent_required',
         CAPTCHA_REQUIRED = 'captcha_required',
         CAPTCHA_FAILED = 'captcha_failed',
-        PLAN_REQUIRED = 'plan_required',
     }
 }
 

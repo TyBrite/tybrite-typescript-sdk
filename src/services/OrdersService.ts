@@ -447,9 +447,9 @@ export class OrdersService {
              */
             shipping_rate_id?: string;
             /**
-             * Where the chosen option came from — its `source` in `rates[]`: the store's carrier account (`shippo`) or its custom shipping extension (`custom`).
+             * Where the chosen option came from — its `source` in `rates[]`: the store's carrier account (`shippo`, or the neutral spelling `carrier`) or its custom shipping extension (`custom`).
              */
-            shipping_rate_source?: 'shippo' | 'custom';
+            shipping_rate_source?: 'shippo' | 'carrier' | 'custom';
             /**
              * The parcel the option was quoted for. Required with `shipping_rate_source: custom`, because the extension is asked for its options again to check the one chosen.
              */

@@ -65,7 +65,6 @@ export class CmsService {
             next_cursor?: string | null;
             has_more?: boolean;
         };
-        total?: number;
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -329,7 +328,6 @@ export class CmsService {
             next_cursor?: string | null;
             has_more?: boolean;
         };
-        total?: number;
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -440,11 +438,13 @@ export class CmsService {
      * `already_subscribed: true` and never creates a duplicate. A fresh signup returns `201`.
      *
      * **Subscribing again after an unsubscribe:** an address that unsubscribed is re-subscribed only with
-     * the shopper's own sign-in token (`x-auth-token`) for the customer who owns that address. Without it
-     * the call answers `403 resubscribe_requires_login`; with another shopper's token, `403 forbidden`.
-     * A publishable key alone never re-subscribes an address that opted out.
+     * the shopper's own sign-in token (`x-auth-token`, `x-external-auth` or `x-idp-token`) for the customer who
+     * owns that address, which re-subscribes at once (`200`); another shopper's token answers `403 forbidden`.
+     * Without a token the call answers `202` with `pending_confirmation: true` and the address receives a
+     * confirmation link; the subscription returns when its owner follows the link. A repeat request within ten
+     * minutes sends no second email. A publishable key alone never re-subscribes an address that opted out.
      *
-     * @returns any Already subscribed (idempotent re-subscribe).
+     * @returns any Already subscribed (idempotent re-subscribe), or an address that had unsubscribed was re-subscribed with the owner's own sign-in token.
      * @throws ApiError
      */
     public subscribeNewsletter({
@@ -493,7 +493,7 @@ export class CmsService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `A GC Connect key without the operation's scope (\`insufficient_scope\`), or a sign-in token that belongs to a different shopper than the address (\`forbidden\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -537,7 +537,7 @@ export class CmsService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
-                404: `The form does not exist or is not available.`,
+                404: `The form does not exist or is not available, including when the store's plan does not include lead forms.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `The form could not be loaded.`,
             },
@@ -715,7 +715,6 @@ export class CmsService {
                 400: `The submission is not valid. \`details.field\` names the answer and \`details.reason\` says why.`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `The store's plan does not include lead forms (\`details.reason\` is \`plan_required\`).`,
                 404: `The form does not exist or is not available.`,
                 409: `The \`Idempotency-Key\` was already used with a different submission.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,

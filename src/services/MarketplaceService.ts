@@ -672,14 +672,14 @@ export class MarketplaceService {
      */
     public getMarketplaceCollection({
         slug,
-        limit,
+        limit = 24,
     }: {
         /**
          * The section's slug, taken from the section list.
          */
         slug: string,
         /**
-         * Maximum number of members to return.
+         * Maximum number of members to return. Values above 50 are capped at 50. Defaults to 24.
          */
         limit?: number,
     }): CancelablePromise<MarketplaceCollectionDetail> {
