@@ -4,8 +4,8 @@
 /* eslint-disable */
 import type { SubscribeSaveInterval } from './SubscribeSaveInterval';
 /**
- * The price per delivery of a set of items under one Subscribe & Save offer. All amounts are in the
- * smallest unit of the store's currency (cents for a two-decimal currency).
+ * The price per delivery of a set of items under one Subscribe & Save offer. All amounts are in major currency units
+ * of `currency` (`8.0` is eight dollars), like every other price in the API.
  *
  * `available` is `false` when the offer is not live or covers none of the items; no prices are returned
  * then. Only the items the offer covers are listed in `covered_items` and priced; the other items of a

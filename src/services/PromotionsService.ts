@@ -362,7 +362,7 @@ export class PromotionsService {
      * Quote the price of a Subscribe & Save offer
      * Returns what a set of items costs under one Subscribe & Save offer: the price of the first
      * delivery, the price of each later delivery, the discount on each, and whether shipping is free.
-     * Amounts are in the smallest unit of the store's currency.
+     * Amounts are in major currency units of the store's currency (`8.0` is eight dollars).
      *
      * Prices come from the store's catalogue; a price in the request is not read. An item without a
      * `variant_id` is priced at the product's default variant. Only the items the offer covers are

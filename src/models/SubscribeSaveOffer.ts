@@ -8,8 +8,8 @@ import type { SubscribeSaveInterval } from './SubscribeSaveInterval';
  * delivery of the product at a discount. Only the fields a storefront shows are returned.
  *
  * `discount_value` depends on `discount_type`. For `percentage` it is in hundredths of a percent
- * (`1500` is 15%). For `fixed_per_item` it is in the smallest unit of the store's currency taken
- * off each item (`200` is 2.00 in a two-decimal currency). For `none` it is `0` and the offer's
+ * (`1500` is 15%). For `fixed_per_item` it is an amount in major currency units taken off each
+ * item (`2.5` is 2.50 in the store's currency). For `none` it is `0` and the offer's
  * benefit is its free shipping.
  *
  */
@@ -29,7 +29,7 @@ export type SubscribeSaveOffer = {
      */
     discount_value: number;
     /**
-     * The discount on the first delivery, when it differs from `discount_value`; otherwise `null`.
+     * The discount on the first delivery, when it differs from `discount_value`, in the same units; otherwise `null`.
      */
     first_order_discount_value?: number | null;
     /**

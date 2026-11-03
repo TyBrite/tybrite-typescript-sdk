@@ -94,7 +94,7 @@ export class MarketplaceService {
      * Currency: every price is charged in the marketplace's currency. A merchant who prices in
      * another currency is converted with the exchange rate the marketplace sets for that currency —
      * items, the merchant's discounts, gift-card amounts and delivery fees alike, each rounded to
-     * the marketplace currency's minor units. A merchant whose currency has no rate in the
+     * the marketplace currency's decimal places. A merchant whose currency has no rate in the
      * marketplace cannot be bought from there (`400 item_currency_unsupported`).
      *
      * Shipping: each merchant's items are priced by that merchant's delivery rates, converted to

@@ -197,8 +197,8 @@ export class PaymentsService {
             /**
              * Payment amount in MAJOR currency units — `100.00` is one hundred dollars, not one
              * dollar. This matches every other amount in the API: catalog prices, order totals
-             * and refunds are all major units. Conversion to a processor's minor units (Stripe
-             * cents, Paystack kobo) happens server-side; never send minor units here.
+             * and refunds are all major units. The processor's own smallest-denomination amounts (Stripe
+             * cents, Paystack kobo) are converted server-side; never send those here.
              *
              * When `order_id` is supplied the amount must equal that order's total to the cent,
              * or the request is rejected with `amount_mismatch`. Sending `10000` for a `100.00`
