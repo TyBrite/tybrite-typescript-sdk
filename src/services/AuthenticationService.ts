@@ -102,7 +102,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -164,7 +164,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -216,7 +216,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -283,10 +283,10 @@ export class AuthenticationService {
             errors: {
                 400: `\`invalid_request\` for a missing field; \`weak_password\` when the password breaks the rule.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
+                404: `A wrong, spent, expired or unknown \`claim_token\`, or an order for another store or environment. The answer is identical in every case.`,
                 409: `\`account_exists\` (the address already has an account here) or \`claim_unavailable\` (the address already has other orders here).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -345,7 +345,7 @@ export class AuthenticationService {
                 `,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -385,7 +385,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -446,7 +446,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `\`passwordless_disabled\` when the store does not offer sign-in by emailed code, or \`forbidden\` when the call was made with a publishable key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -502,7 +502,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `\`passwordless_disabled\` when the store does not offer sign-in by emailed code, or \`forbidden\` when the call was made with a publishable key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -555,7 +555,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -619,7 +619,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -683,7 +683,7 @@ export class AuthenticationService {
                 401: `\`invalid_token\` when the sign-in token is not valid for this store, \`invalid_credentials\` when \`current_password\` is wrong, or \`unauthorized\` for an invalid API key.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -734,7 +734,7 @@ export class AuthenticationService {
                 401: `\`invalid_refresh_token\` when the session has ended, or \`unauthorized\` for an invalid API key.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -775,7 +775,7 @@ export class AuthenticationService {
                 401: `\`invalid_token\` when the sign-in token is not valid for this store, or \`unauthorized\` for an invalid API key.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

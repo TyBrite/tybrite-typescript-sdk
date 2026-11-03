@@ -79,8 +79,10 @@ export class CmsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -156,9 +158,11 @@ export class CmsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -206,8 +210,10 @@ export class CmsService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -280,9 +286,11 @@ export class CmsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -334,8 +342,10 @@ export class CmsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -408,9 +418,11 @@ export class CmsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -427,11 +439,19 @@ export class CmsService {
      * **Idempotent:** re-subscribing the same email is safe — it returns `200` with
      * `already_subscribed: true` and never creates a duplicate. A fresh signup returns `201`.
      *
+     * **Subscribing again after an unsubscribe:** an address that unsubscribed is re-subscribed only with
+     * the shopper's own sign-in token (`x-auth-token`) for the customer who owns that address. Without it
+     * the call answers `403 resubscribe_requires_login`; with another shopper's token, `403 forbidden`.
+     * A publishable key alone never re-subscribes an address that opted out.
+     *
      * @returns any Already subscribed (idempotent re-subscribe).
      * @throws ApiError
      */
     public subscribeNewsletter({
         requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         requestBody: {
             /**
@@ -443,6 +463,18 @@ export class CmsService {
              */
             source?: string | null;
         },
+        /**
+         * The signed-in shopper's token. Required only to subscribe again an address that unsubscribed earlier. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         subscribed?: boolean;
         already_subscribed?: boolean;
@@ -450,13 +482,20 @@ export class CmsService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/newsletter/subscribe',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -496,6 +535,8 @@ export class CmsService {
             errors: {
                 400: `The form address is not valid.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `The form does not exist or is not available.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `The form could not be loaded.`,
@@ -541,6 +582,8 @@ export class CmsService {
             errors: {
                 400: `The form address is not valid.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests from this address.`,
                 500: `The token could not be issued.`,
             },
@@ -671,6 +714,7 @@ export class CmsService {
             errors: {
                 400: `The submission is not valid. \`details.field\` names the answer and \`details.reason\` says why.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The store's plan does not include lead forms (\`details.reason\` is \`plan_required\`).`,
                 404: `The form does not exist or is not available.`,
                 409: `The \`Idempotency-Key\` was already used with a different submission.`,

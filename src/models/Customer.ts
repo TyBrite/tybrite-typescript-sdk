@@ -21,11 +21,9 @@ export type Customer = {
      */
     custom_fields?: Array<CustomFieldValue>;
     /**
-     * The customer's loyalty/spend tier, derived from their purchase history. New
-     * customers start at `bronze`.
-     *
+     * The pricing tier the merchant assigned to this customer. New customers start at `bronze`. Returned by the authentication endpoints only.
      */
-    tier?: Customer.tier;
+    tier?: string;
     join_date?: string;
     /**
      * Optional identifier from an external identity provider (Auth0, Clerk, Cognito,
@@ -69,33 +67,11 @@ export type Customer = {
      * Aggregated purchase metrics for the customer, or null until they have purchase history.
      */
     store_metrics?: any | null;
-    /**
-     * Whether this customer record belongs to the live or test environment.
-     */
-    environment?: Customer.environment;
 };
 export namespace Customer {
     export enum status {
         ACTIVE = 'active',
         INACTIVE = 'inactive',
-    }
-    /**
-     * The customer's loyalty/spend tier, derived from their purchase history. New
-     * customers start at `bronze`.
-     *
-     */
-    export enum tier {
-        BRONZE = 'bronze',
-        SILVER = 'silver',
-        GOLD = 'gold',
-        PLATINUM = 'platinum',
-    }
-    /**
-     * Whether this customer record belongs to the live or test environment.
-     */
-    export enum environment {
-        PRODUCTION = 'production',
-        SANDBOX = 'sandbox',
     }
 }
 

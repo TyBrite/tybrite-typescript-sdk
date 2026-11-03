@@ -55,8 +55,9 @@ export class B2BService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -123,8 +124,9 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -170,8 +172,10 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -217,8 +221,10 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -272,8 +278,10 @@ export class B2BService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -323,8 +331,10 @@ export class B2BService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -366,8 +376,9 @@ export class B2BService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -413,8 +424,10 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -456,8 +469,9 @@ export class B2BService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -503,8 +517,10 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -580,11 +596,12 @@ export class B2BService {
             errors: {
                 400: `The amount is not a number, is below 0.01, has more than two decimal places, or is more than the open balance.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The key is publishable, or the customer has no wholesale account with this store.`,
                 404: `Resource not found`,
                 409: `The invoice is already paid or was voided.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -630,10 +647,11 @@ export class B2BService {
             errors: {
                 400: `The request names more than one identity header, or its identity cannot be read.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The key is publishable, or the wholesale feature is not enabled for this store.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -697,10 +715,11 @@ export class B2BService {
             errors: {
                 400: `The decision is neither \`approved\` nor \`rejected\`.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The key is publishable, the person is not an approver of this account, or they placed the order themselves.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -818,8 +837,9 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

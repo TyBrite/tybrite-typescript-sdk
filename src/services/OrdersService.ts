@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Order } from '../models/Order';
+import type { OrderSummary } from '../models/OrderSummary';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class OrdersService {
@@ -61,7 +62,7 @@ export class OrdersService {
          */
         fields?: string,
     }): CancelablePromise<{
-        orders?: Array<Order>;
+        orders?: Array<OrderSummary>;
         pagination?: {
             limit?: number;
             next_cursor?: string | null;
@@ -82,9 +83,10 @@ export class OrdersService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -100,7 +102,7 @@ export class OrdersService {
      * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
      * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
      * 4. **Include Headers**:
-     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
+     * - `X-Timestamp`: Unix time in seconds or milliseconds (within 5 minutes of server time)
      * - `X-Signature`: Base64-encoded HMAC signature
      *
      * **Example (Node.js):**
@@ -108,7 +110,7 @@ export class OrdersService {
      * **🔄 Idempotency Protection**
      *
      * Include `Idempotency-Key` header to prevent duplicate orders on retry.
-     * If the same key is used, the original order is returned (not counted against rate limit).
+     * A replay with the same key and body returns the original order (200) and creates no second order.
      *
      * **⚠️ Security Notes:**
      * - HMAC secret is displayed in the Integrations page (Developer section)
@@ -218,7 +220,7 @@ export class OrdersService {
          */
         idempotencyKey: string,
         /**
-         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Unix time in seconds or milliseconds, within 5 minutes of server time.
          * Used to prevent replay attacks.
          *
          */
@@ -320,17 +322,17 @@ export class OrdersService {
                 attendee_names?: any[] | null;
             }>;
             /**
-             * Payment method identifier (required). `free` is for an order whose `total_amount` is 0 and whose items are all downloads or event tickets; the order is created paid, for a signed-in shopper (see `x-auth-token`). It may be omitted on such an order. Any other zero-total order is refused.
+             * Payment method identifier (required): one of `card`, `stripe`, `paypal`, `paystack`, `mpesa`, `mpesa_c2b`, `cash`, `bank_transfer`, `free`, or the identifier of one of the store's own payment providers as listed by `GET /v1/payments/methods`. Any other value answers 400. `free` is for an order whose `total_amount` is 0 and whose items are all downloads or event tickets; the order is created paid, for a signed-in shopper (see `x-auth-token`). It may be omitted on such an order. Any other zero-total order is refused.
              */
-            payment_method: 'card' | 'stripe' | 'paypal' | 'paystack' | 'mpesa' | 'cash' | 'free';
+            payment_method: string;
             /**
-             * Payment status (defaults to pending)
+             * Payment status on create (defaults to pending). Only `pending` and `paid` are accepted; later states are reached by `PATCH /v1/orders/{id}`. An order created as `paid` needs the `payment_reference` of the payment that settled it (counter-settled `cash` and `card`, and a free order, are exempt); without it the call answers 400 `payment_reference_required`.
              */
-            payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
+            payment_status?: 'pending' | 'paid';
             /**
-             * Order fulfillment status (defaults to pending)
+             * Order status on create (defaults to pending). Only `pending`, `confirmed` and `processing` are accepted; later states are reached by `PATCH /v1/orders/{id}`.
              */
-            order_status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+            order_status?: 'pending' | 'confirmed' | 'processing';
             /**
              * Subtotal before tax and shipping. Required.
              */
@@ -610,8 +612,9 @@ export class OrdersService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request (missing required fields, invalid data)`,
-                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
-                403: `Insufficient permissions - operation requires secret key`,
+                401: `Authentication failed. Either the API key is missing, invalid or expired (\`unauthorized\`), or the request signature failed verification (\`signature_missing\`, \`timestamp_missing\`, \`timestamp_malformed\`, \`timestamp_out_of_window\`, \`signature_invalid\`). \`X-Timestamp\` is Unix time in seconds or milliseconds, within 5 minutes of server time.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 409: `The \`Idempotency-Key\` was already used with a different request body (\`idempotency_key_reused\`), or the request conflicts with an existing order number (\`conflict\`). Send a new key for a different request.
                 Creating an order as already paid also checks the payment: the verified payment belongs to another order, is in another currency, or its \`payment_reference\` is already attached to another order of the store (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`). No order is created.
@@ -620,7 +623,7 @@ export class OrdersService {
                 422: `The store runs its own order-validation rule and that rule rejected the order (\`order_rejected\`). The \`message\` carries the reason the store gave. No order is created. This is also returned when the store requires validation but the rule could not be reached, so an order is never created unchecked.
                 Creating an order as already paid with a \`payment_reference\` also verifies the payment with the provider: a reference the provider does not report as paid is refused (\`payment_not_verified\`), and so is a verified payment that does not cover the order total (\`amount_mismatch\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal error, or \`config_error\` when the store has no HMAC secret configured ("Store HMAC secret not configured. Contact support.").`,
                 502: `Shipping could not be checked right now (\`shipping_unavailable\`). No order is created.`,
                 503: `Creating the order as already paid needs the payment verified, and the payment could not be verified at this moment (\`verification_unavailable\`). No order is created; retry shortly with the same \`Idempotency-Key\`.`,
             },
@@ -684,10 +687,11 @@ export class OrdersService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -703,7 +707,7 @@ export class OrdersService {
      * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
      * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
      * 4. **Include Headers**:
-     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
+     * - `X-Timestamp`: Unix time in seconds or milliseconds (within 5 minutes of server time)
      * - `X-Signature`: Base64-encoded HMAC signature
      *
      * **🔄 Idempotency Protection**
@@ -780,7 +784,7 @@ export class OrdersService {
          */
         idempotencyKey: string,
         /**
-         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Unix time in seconds or milliseconds, within 5 minutes of server time.
          * Used to prevent replay attacks.
          *
          */
@@ -867,13 +871,14 @@ export class OrdersService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request (no updatable fields provided, invalid field values)`,
-                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
-                403: `Insufficient permissions - operation requires secret key`,
+                401: `Authentication failed. Either the API key is missing, invalid or expired (\`unauthorized\`), or the request signature failed verification (\`signature_missing\`, \`timestamp_missing\`, \`timestamp_malformed\`, \`timestamp_out_of_window\`, \`signature_invalid\`). \`X-Timestamp\` is Unix time in seconds or milliseconds, within 5 minutes of server time.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 409: `The requested status change is not allowed from the order's current state (\`invalid_transition\`), or the order changed while the request was being applied (\`order_changed\`), or the \`Idempotency-Key\` was already used with a different request body or for a different order (\`idempotency_key_reused\`), or the verified payment belongs to another order, is in another currency or is already attached to another order (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`), or \`shipping_metadata\` tries to set purchased-label details (\`shipping_label_locked\`). The order is left as it was.`,
                 422: `You marked the order paid with a \`payment_reference\`, but the payment provider does not report that reference as paid (\`payment_not_verified\`), or the verified payment does not cover the order total (\`amount_mismatch\`). The order is left unchanged rather than accepted on an unverified claim.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
                 503: `The payment reference could not be checked at this moment (\`verification_unavailable\`). The order is left unchanged; retry shortly.`,
             },
         });
@@ -908,8 +913,8 @@ export class OrdersService {
      * with a secret key, at most 100 items and 1,000 units of any one variant. A
      * request over a limit is refused with `400` and nothing is reserved.
      *
-     * **Rate limit:** 300 requests/hour per API key, and with a publishable key
-     * 60 requests/hour per visitor.
+     * **Rate limit:** the per-key hourly limit depends on the store's plan. With a publishable key,
+     * each visitor address is also limited to 60 requests per hour.
      *
      * A key issued through GC Connect needs the `orders:write` scope; without it
      * the request returns `403`.
@@ -936,7 +941,8 @@ export class OrdersService {
             }>;
             /**
              * Optional hold duration in seconds. Defaults to 900 (15 minutes);
-             * values below 60 are raised to 60.
+             * values below 60 are raised to 60. Values above 1800 (publishable key) or 3600 (secret key)
+             * are capped to those values. The `expires_in_seconds` in the response is the value applied.
              *
              */
             ttl_seconds?: number;
@@ -972,10 +978,11 @@ export class OrdersService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 409: `Insufficient stock - nothing was reserved`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

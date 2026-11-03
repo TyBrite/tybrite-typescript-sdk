@@ -10,7 +10,10 @@ export type B2bApproval = {
     subject_type: B2bApproval.subject_type;
     subject_id: string;
     po_number?: string | null;
-    amount_cents?: number | null;
+    /**
+     * Major currency units: 2500 is 2500.00 in `currency`.
+     */
+    amount?: number | null;
     currency?: string | null;
     status: B2bApproval.status;
     requested_at?: string;

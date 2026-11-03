@@ -17,9 +17,9 @@ export type Order = {
     order_status?: Order.order_status;
     payment_status?: Order.payment_status;
     /**
-     * Method used for payment
+     * Method used for payment: a built-in method (`card`, `stripe`, `paypal`, `paystack`, `mpesa`, `mpesa_c2b`, `cash`, `bank_transfer`, `free`) or the identifier of one of the store's own payment providers.
      */
-    payment_method?: Order.payment_method;
+    payment_method?: string;
     payment_reference?: string;
     subtotal?: number;
     tax_amount?: number;
@@ -107,17 +107,6 @@ export namespace Order {
         PAID = 'paid',
         FAILED = 'failed',
         REFUNDED = 'refunded',
-    }
-    /**
-     * Method used for payment
-     */
-    export enum payment_method {
-        STRIPE = 'stripe',
-        PAYPAL = 'paypal',
-        PAYSTACK = 'paystack',
-        MPESA = 'mpesa',
-        CASH = 'cash',
-        BANK_TRANSFER = 'bank_transfer',
     }
     /**
      * How the tax figure was produced — `automatic` (jurisdiction-accurate calculation for the destination), `fallback` (automatic calculation was unavailable, so the store's configured rate was used), or `manual` (the store's configured rate).

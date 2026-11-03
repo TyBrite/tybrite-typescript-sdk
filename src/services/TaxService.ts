@@ -148,6 +148,18 @@ export class TaxService {
             rate?: number;
             taxable?: number;
             tax?: number;
+            /**
+             * Level of the jurisdiction.
+             */
+            jurisType?: string;
+            /**
+             * The kind of rate applied.
+             */
+            rateType?: string;
+            /**
+             * Amount exempted from this jurisdiction's tax.
+             */
+            exemption?: number;
         }>;
     }> {
         return this.httpRequest.request({
@@ -158,6 +170,7 @@ export class TaxService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });

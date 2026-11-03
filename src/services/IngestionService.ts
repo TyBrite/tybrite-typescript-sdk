@@ -65,7 +65,7 @@ export class IngestionService {
         dryRun = false,
     }: {
         /**
-         * Unique key per batch; retrying with the same key returns the original result instead of re-importing.
+         * Unique key per batch. Retrying the same batch with the same key returns the original result instead of re-importing; the same key with a different batch answers `409 idempotency_key_reused`, and a first run still in progress answers `409 idempotency_in_progress`.
          */
         idempotencyKey: string,
         /**
@@ -121,14 +121,10 @@ export class IngestionService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Missing/invalid secret key, or a missing/invalid request signature.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
-                Common causes:
-                - Email already registered to another customer at this store
-                - Item already exists in wishlist
-                - Idempotency-Key reused with a different request body
-                `,
-                422: `Every row failed validation; nothing was written.`,
+                409: `The \`Idempotency-Key\` was already used for a different batch (\`idempotency_key_reused\`), or the first run with this key is still being processed (\`idempotency_in_progress\`; retry with the same key).`,
+                422: `Every row failed validation; nothing was written. A retry with the same \`Idempotency-Key\` replays this 422.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
@@ -157,6 +153,7 @@ export class IngestionService {
                 'format': format,
             },
             errors: {
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
@@ -195,6 +192,7 @@ export class IngestionService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });

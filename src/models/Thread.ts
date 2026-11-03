@@ -13,6 +13,9 @@ export type Thread = {
     order_id?: string | null;
     product_id?: string | null;
     subject?: string;
+    /**
+     * `dispute` is a conversation about a dispute over an order.
+     */
     thread_type?: Thread.thread_type;
     status?: Thread.status;
     priority?: Thread.priority;
@@ -20,17 +23,25 @@ export type Thread = {
     last_message_by?: Thread.last_message_by;
     unread_count_customer?: number;
     unread_count_store?: number;
+    /**
+     * When the shopper last read the thread. Messages the store sent before this time have been read.
+     */
+    customer_last_read_at?: string | null;
+    /**
+     * When the store last read the thread. Messages the shopper sent before this time have been read by the store.
+     */
+    store_last_read_at?: string | null;
+    store_id?: string;
     is_archived?: boolean;
     is_muted?: boolean;
     is_pinned?: boolean;
-    /**
-     * Whether this conversation belongs to live or test data. Test API keys only see `sandbox`; live keys only see `production`.
-     */
-    environment?: Thread.environment;
     created_at?: string;
     updated_at?: string;
 };
 export namespace Thread {
+    /**
+     * `dispute` is a conversation about a dispute over an order.
+     */
     export enum thread_type {
         GENERAL = 'general',
         ORDER_INQUIRY = 'order_inquiry',
@@ -41,6 +52,7 @@ export namespace Thread {
         RETURN = 'return',
         REFUND = 'refund',
         TECHNICAL = 'technical',
+        DISPUTE = 'dispute',
     }
     export enum status {
         ACTIVE = 'active',
@@ -59,13 +71,6 @@ export namespace Thread {
         CUSTOMER = 'customer',
         STORE = 'store',
         SYSTEM = 'system',
-    }
-    /**
-     * Whether this conversation belongs to live or test data. Test API keys only see `sandbox`; live keys only see `production`.
-     */
-    export enum environment {
-        PRODUCTION = 'production',
-        SANDBOX = 'sandbox',
     }
 }
 
