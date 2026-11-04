@@ -134,6 +134,10 @@ export type Product = {
      */
     meta_product_category?: string | null;
     /**
+     * The date the merchant expects a pre-order of this product to ship, as `YYYY-MM-DD`. `null` when the merchant has not set one. It applies to every variant of the product.
+     */
+    preorder_ship_date?: string | null;
+    /**
      * Product-level attributes (not variant-specific)
      */
     attributes?: any | null;

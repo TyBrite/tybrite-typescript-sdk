@@ -139,6 +139,11 @@ export type { StoreAddress } from './models/StoreAddress';
 export type { StoreBrand } from './models/StoreBrand';
 export type { StoreBusinessIdentity } from './models/StoreBusinessIdentity';
 export type { StoreContact } from './models/StoreContact';
+export { StorefrontExperiment } from './models/StorefrontExperiment';
+export { StorefrontExperimentConversions } from './models/StorefrontExperimentConversions';
+export { StorefrontExperimentInput } from './models/StorefrontExperimentInput';
+export { StorefrontSite } from './models/StorefrontSite';
+export type { StorefrontSiteReport } from './models/StorefrontSiteReport';
 export { StoreInfoResponse } from './models/StoreInfoResponse';
 export { StorePolicy } from './models/StorePolicy';
 export type { StorePolicySummary } from './models/StorePolicySummary';
@@ -189,6 +194,7 @@ export { SandboxService } from './services/SandboxService';
 export { SearchService } from './services/SearchService';
 export { ShippingService } from './services/ShippingService';
 export { StoreService } from './services/StoreService';
+export { StorefrontStudioService } from './services/StorefrontStudioService';
 export { SystemService } from './services/SystemService';
 export { TaxService } from './services/TaxService';
 export { TaxonomyService } from './services/TaxonomyService';
@@ -197,3 +203,7 @@ export { WebhooksService } from './services/WebhooksService';
 // Realtime messaging helper (hand-written — re-added by scripts/post-generate.js)
 export { subscribeToThread } from './realtime';
 export type { SubscribeMode, SubscribeToThreadOptions } from './realtime';
+
+// Response-signature verification helper (hand-written — re-added by scripts/post-generate.js)
+export { verifyResponseSignature } from './verify-response';
+export type { VerifyResponseSignatureOptions } from './verify-response';

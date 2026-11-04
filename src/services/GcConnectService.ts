@@ -51,7 +51,8 @@ export class GcConnectService {
          * `customers:write`, `payments:read`, `payments:write`, `cart:write`, `reviews:read`,
          * `reviews:write`, `messaging:read`, `messaging:write`, `returns:read`, `returns:write`,
          * `disputes:read`, `disputes:write`, `b2b:read`, `b2b:write`, `agent:read`, `agent:write`,
-         * `shopper_subscriptions:read`, `shopper_subscriptions:write`, `fulfilment:read`, `team:read`
+         * `shopper_subscriptions:read`, `shopper_subscriptions:write`, `fulfilment:read`, `team:read`,
+         * `storefront_site:write`, `ab_attribution:write`
          *
          * `payments:write` is required to initiate a payment; without it (or `write`) the call returns
          * `403 forbidden`. `b2b:*` is offered only for wholesale stores and `disputes:*` only for
@@ -64,6 +65,11 @@ export class GcConnectService {
          * they link, and a user who owns none is redirected with `error=access_denied` and
          * `error_description=no_owned_store`. `team:read` lets the key pair call `GET /v1/connect/team`
          * and must accompany another store scope.
+         *
+         * `storefront_site:write` lets the key pair report the storefront's address and routes with
+         * `PUT /v1/storefront/site`. `ab_attribution:write` lets it register its own A/B experiments and
+         * read the paid orders and sales for each variant under `/v1/storefront/experiments`; the consent
+         * screen states this to the merchant in its own line. Both are for the secret key only.
          *
          */
         scope: string,

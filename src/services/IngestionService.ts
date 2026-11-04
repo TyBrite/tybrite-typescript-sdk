@@ -159,6 +159,7 @@ export class IngestionService {
                 'format': format,
             },
             errors: {
+                400: `The \`format\` parameter is not \`json\`, \`xml\` or \`csv\`.`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },

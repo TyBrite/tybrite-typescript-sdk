@@ -52,15 +52,30 @@ export class WebhooksService {
              * **Order lifecycle:** `order.created`, `order.paid`, `order.fulfilled`,
              * `order.shipped`, `order.cancelled`, `order.refunded`, `order.updated`
              *
+             * Order status events fire whoever changes the status: `order.paid` when the
+             * payment status becomes `paid` (including an order created unpaid and later
+             * confirmed by the payment provider, a subscription renewal or a wholesale
+             * payment), `order.fulfilled` when the order status becomes `shipped` or
+             * `delivered`, `order.cancelled` when it becomes `cancelled`, and `order.updated`
+             * for any other status change or an edit that changes neither status.
+             * `order.refunded` and `payment.refunded` fire when an order is refunded in full
+             * and its payment status becomes `refunded`; a return that refunds only part of an
+             * order sends `order.refunded` with `partial: true`, `refund_amount` (this
+             * return), `refunded_to_date` and `return_id`, and the payment status stays `paid`.
+             *
              * **Card disputes:** `order.disputed` (the shopper's bank disputed the card payment
-             * for an order or an in-store sale) and `order.dispute_closed` (the dispute ended).
+             * for an order or an in-store sale), `order.dispute_updated` (an open dispute moved to
+             * another status, for example from `needs_response` to `under_review`; the payload
+             * carries the new status and `previous_attributes.status`) and
+             * `order.dispute_closed` (the dispute ended).
              * The order stays `paid`: a dispute does not change its payment status. The payload
              * object carries `id`, `order_id`, `sale_id` (one of the two is set), `amount`,
              * `currency`, `reason`, `status` (`needs_response` or `under_review` while open,
              * `won`, `lost` or `closed` once ended), `evidence_due_at` (when the evidence is due,
              * or `null`), `opened_at`, `closed_at` and `outcome` (`won`, `lost` or `closed`, or
-             * `null` while open). A dispute on a marketplace order is announced to the
-             * marketplace only.
+             * `null` while open). A dispute on a marketplace order is also announced to each
+             * seller's own endpoints for that seller's share, with `marketplace: true`,
+             * `split_id` and `share_ratio` on the payload object.
              *
              * **In-store sales:** `sale.completed`, `sale.refunded` — a sale rung up at the
              * point of sale rather than online. Subscribe to these alongside the order events
@@ -70,6 +85,19 @@ export class WebhooksService {
              * for this store was revoked, rotated, deactivated or expired. Only reaches
              * applications connected through Login with GC, and carries `pair_id` so you revoke
              * the affected connection rather than every one you hold for the store.
+             *
+             * **Store access:** `store.access_suspended` (the store's API access was paused: the
+             * store was deactivated, suspended by an operator, or its subscription lapsed past
+             * the grace period) and `store.access_restored` (access is back). Requests made with
+             * the store's keys are refused while access is suspended; no key is revoked or
+             * changed, so treat it as a pause and resume on `store.access_restored`, unlike
+             * `connection.revoked`, which ends the connection. The payload object carries
+             * `store_id`, `reason` and `occurred_at`. On `store.access_suspended`, `reason` is
+             * `deactivated` (the store was switched off), `subscription_lapsed` (the
+             * subscription ended or payment was not recovered) or `super_admin` (suspended or
+             * banned by the platform operator); on `store.access_restored` it names the reason
+             * that was lifted. One event is sent per change, never repeated while the state
+             * holds.
              *
              * **Payment lifecycle:** `payment.succeeded`, `payment.failed`, `payment.refunded`
              *
@@ -98,12 +126,18 @@ export class WebhooksService {
              * Endpoints opt in explicitly to the newsletter and lead form events; they are not
              * part of the default subscription.
              *
-             * **Inventory & catalog:** `product.created`, `product.updated`,
+             * **Inventory & catalog:** `product.created`, `product.updated` (including a
+             * product switched off, with `is_active: false`),
              * `product.stock_low`, `product.out_of_stock`
              *
-             * **Cart & checkout:** `cart.created`, `cart.updated`, `cart.abandoned`, `checkout.abandoned`, `wishlist.added`
+             * **Cart & checkout:** `cart.created`, `cart.updated`, `cart.abandoned` (a signed-in
+             * shopper's cart left idle for three hours; sent once per abandonment, so a cart
+             * that is changed and abandoned again is announced again), `checkout.abandoned`
+             * (not sent when the shopper went on to pay for an order), `wishlist.added`
              *
-             * **Gift cards:** `gift_card.issued`, `gift_card.redeemed`, `gift_card.expired`
+             * **Gift cards:** `gift_card.issued`, `gift_card.redeemed` (each time the card is
+             * used, with the new `balance`, `redemption_count` and `amount_redeemed`),
+             * `gift_card.expired`
              *
              * **Promotions:** `promotion.applied` (a promotion was applied to a checkout),
              * `promotion.created`, `promotion.activated` (a promotion went live or was
@@ -112,8 +146,9 @@ export class WebhooksService {
              * while it is a draft, and `promotion.created` arrives when it is approved.
              *
              * **Pricing:** `pricing_rule.created`, `pricing_rule.activated` (a dynamic-pricing
-             * rule went live), `pricing_rule.updated` (a live rule's discount, scope, priority,
-             * or window changed — the prices it produces are now different), and
+             * rule went live), `pricing_rule.updated` (a live rule's discount, scope, targets,
+             * priority, hours, weekdays, channel, currency, conditions or window changed — the
+             * prices it produces are now different), and
              * `pricing_rule.deactivated`. Like promotions, a rule awaiting approval emits
              * nothing until it goes live. Subscribe to these if you render prices and need to
              * re-read when the rules behind them change.
@@ -461,7 +496,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked' | 'shopper_subscription.created' | 'shopper_subscription.renewed' | 'shopper_subscription.renewal_failed' | 'shopper_subscription.cancelled' | 'subscribe_save_offer.activated' | 'order_item.fulfilled' | 'order_item.fulfilment_failed' | 'order_item.fulfilment_voided' | 'event_ticket.checked_in' | 'code_pool.low' | 'order.disputed' | 'order.dispute_closed';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked' | 'store.access_suspended' | 'store.access_restored' | 'shopper_subscription.created' | 'shopper_subscription.renewed' | 'shopper_subscription.renewal_failed' | 'shopper_subscription.cancelled' | 'subscribe_save_offer.activated' | 'order_item.fulfilled' | 'order_item.fulfilment_failed' | 'order_item.fulfilment_voided' | 'event_ticket.checked_in' | 'code_pool.low' | 'order.disputed' | 'order.dispute_updated' | 'order.dispute_closed';
         },
     }): CancelablePromise<{
         success?: boolean;

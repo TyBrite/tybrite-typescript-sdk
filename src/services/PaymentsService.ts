@@ -331,6 +331,12 @@ export class PaymentsService {
      * **Note:** Despite using POST method (for request body), this is a read operation for most
      * providers; for PayPal it captures the approved order.
      *
+     * **Response signature**
+     *
+     * A call made with a secret key returns `X-Signature` and `X-Signature-Timestamp` when the store has a
+     * signing secret, so the caller can verify that the payment status is the one the platform produced. Verification is described under
+     * Get order (`GET /v1/orders/{id}`).
+     *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
      * - ❌ Publishable keys (forbidden - returns 403)

@@ -85,7 +85,7 @@ export type DeliveryFeeCalculation = {
      */
     fulfilled_from?: any | null;
     /**
-     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`, or `carrier` when `rate_source_format=neutral` is sent), the store's custom shipping extension (`custom`), or `none`.
+     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`, or `carrier` when `rate_source_format=neutral` is sent or the store's setting is neutral), the store's custom shipping extension (`custom`), or `none`.
      */
     rate_source?: DeliveryFeeCalculation.rate_source;
     /**
@@ -151,7 +151,7 @@ export namespace DeliveryFeeCalculation {
         PICKUP_ONLY = 'pickup_only',
     }
     /**
-     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`, or `carrier` when `rate_source_format=neutral` is sent), the store's custom shipping extension (`custom`), or `none`.
+     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`, or `carrier` when `rate_source_format=neutral` is sent or the store's setting is neutral), the store's custom shipping extension (`custom`), or `none`.
      */
     export enum rate_source {
         ZONE = 'zone',

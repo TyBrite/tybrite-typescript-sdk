@@ -121,7 +121,7 @@ export class AnalyticsService {
              */
             duration_ms?: number;
             /**
-             * The signed-in shopper, when known.
+             * The signed-in shopper, when known. A value that is not a UUID answers `400 invalid_request`.
              */
             customer_id?: string;
             /**
@@ -162,7 +162,7 @@ export class AnalyticsService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when \`event_type\` is missing or not an accepted type, a search event has no \`search_query\`, \`search_result_click\` has no valid \`search_result_product_id\`, \`content_click\` lacks \`content_id\` or a valid \`content_product_id\`, \`customer_id\` is not a UUID, or \`visitor_id\` or \`session_id\` is missing.`,
                 401: `Authentication failed - invalid or missing API key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,

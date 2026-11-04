@@ -596,7 +596,7 @@ export class MarketplaceService {
              */
             event_type: 'impression' | 'click';
             /**
-             * Optional — the specific product within the placement the event relates to.
+             * Optional — the specific product within the placement the event relates to. A value that is not a UUID answers `400 invalid_request`.
              */
             product_id?: string;
             /**
@@ -679,7 +679,7 @@ export class MarketplaceService {
          */
         slug: string,
         /**
-         * Maximum number of members to return. Values above 50 are capped at 50. Defaults to 24.
+         * Maximum number of members to return. Values above 50 are capped at 50. Defaults to 24. A value that is not a whole number (`abc`, `-1`, `1.5`) answers `400 invalid_request`.
          */
         limit?: number,
     }): CancelablePromise<MarketplaceCollectionDetail> {
@@ -693,9 +693,9 @@ export class MarketplaceService {
                 'limit': limit,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `The \`slug\` is not a valid section slug (letters, digits, \`-\` and \`_\`, up to 80 characters), or \`limit\` is not a whole number.`,
                 401: `Authentication failed - invalid or missing API key`,
-                404: `Resource not found`,
+                404: `No section has this slug in the marketplace.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });

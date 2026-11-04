@@ -136,11 +136,11 @@ export class ShippingService {
      */
     public calculateShipping({
         requestBody,
-        rateSourceFormat = 'provider',
+        rateSourceFormat,
     }: {
         requestBody: ShippingCalculationRequest,
         /**
-         * How `rate_source` names a carrier-account source. `provider` (the default) uses `shippo`; `neutral` uses `carrier`. A request may send either spelling wherever a rate source is accepted.
+         * How `rate_source` names a carrier-account source. `provider` uses `shippo`; `neutral` uses `carrier`. When omitted, the store's own setting applies (`provider` unless the merchant chose `neutral`). A request may send either spelling wherever a rate source is accepted.
          */
         rateSourceFormat?: 'provider' | 'neutral',
     }): CancelablePromise<DeliveryFeeCalculation> {

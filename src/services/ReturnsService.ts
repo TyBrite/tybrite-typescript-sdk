@@ -222,6 +222,12 @@ export class ReturnsService {
      * A customer only ever sees their own returns; there is no way to read another
      * shopper's returns through this API.
      *
+     * **Response signature**
+     *
+     * A call made with a secret key returns `X-Signature` and `X-Signature-Timestamp` when the store has a
+     * signing secret, so the caller can verify the refund amount, method and status of each return. Verification is
+     * described under Get order (`GET /v1/orders/{id}`). A call made with a marketplace key is not signed.
+     *
      * @returns any Returns retrieved successfully
      * @throws ApiError
      */
@@ -439,6 +445,12 @@ export class ReturnsService {
      *
      * **Authentication:** API key in the `Authorization: Bearer` header **and** a
      * customer session — either `x-auth-token` or `x-external-auth`.
+     *
+     * **Response signature**
+     *
+     * A call made with a secret key returns `X-Signature` and `X-Signature-Timestamp` when the store has a
+     * signing secret, so the caller can verify the refund amount, method and status of the return. Verification is
+     * described under Get order (`GET /v1/orders/{id}`). A call made with a marketplace key is not signed.
      *
      * @returns any Return found
      * @throws ApiError

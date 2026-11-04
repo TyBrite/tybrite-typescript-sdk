@@ -77,9 +77,10 @@ export class MessagingService {
          *
          * **Allowed Fields:**
          * - `id`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`
-         * - `store_name`, `store_avatar`, `order_id`, `product_id`
+         * - `store_name`, `store_avatar`, `order_id`, `product_id`, `source_thread_id`
          * - `subject`, `thread_type`, `status`, `priority`
          * - `last_message_at`, `last_message_by`, `unread_count_customer`, `unread_count_store`
+         * - `customer_last_read_at`, `store_last_read_at`
          * - `is_archived`, `is_muted`, `is_pinned`
          * - `created_at`, `updated_at`
          *
@@ -113,7 +114,7 @@ export class MessagingService {
                 'fields': fields,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when \`customer_id\` is missing or not a UUID, or when \`status\`, \`priority\`, \`thread_type\`, \`archived\` or \`unread\` is not one of its listed values; \`invalid_cursor\` when \`cursor\` is not one this endpoint issued.`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
@@ -158,9 +159,10 @@ export class MessagingService {
          *
          * **Allowed Fields:**
          * - `id`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`
-         * - `store_name`, `store_avatar`, `order_id`, `product_id`
+         * - `store_name`, `store_avatar`, `order_id`, `product_id`, `source_thread_id`
          * - `subject`, `thread_type`, `status`, `priority`
          * - `last_message_at`, `last_message_by`, `unread_count_customer`, `unread_count_store`
+         * - `customer_last_read_at`, `store_last_read_at`
          * - `is_archived`, `is_muted`, `is_pinned`
          * - `created_at`, `updated_at`
          *

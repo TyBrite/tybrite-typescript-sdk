@@ -2159,6 +2159,7 @@ export class AgentService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                400: `More than one shopper credential was sent`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Personalization consent has not been granted`,
