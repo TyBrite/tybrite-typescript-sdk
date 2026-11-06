@@ -48,7 +48,7 @@ export type { Error } from './models/Error';
 export type { FeedProduct } from './models/FeedProduct';
 export type { GiftCard } from './models/GiftCard';
 export { HealthResponse } from './models/HealthResponse';
-export type { IngestProduct } from './models/IngestProduct';
+export { IngestProduct } from './models/IngestProduct';
 export { IngestResult } from './models/IngestResult';
 export type { IngestRowError } from './models/IngestRowError';
 export type { IngestSummary } from './models/IngestSummary';

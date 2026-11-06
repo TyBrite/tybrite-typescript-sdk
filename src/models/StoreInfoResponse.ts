@@ -412,7 +412,7 @@ export type StoreInfoResponse = {
      * - **Plan-gated** — `ai_recommendations`, `semantic_search`, `dynamic_pricing`, `cms`,
      * `lookbooks`, `returns`. `true` requires the store's plan to include the feature AND it to
      * be configured. By plan: Starter includes none of these; Growth adds content
-     * pages/lookbooks (`cms`, `lookbooks`) and `returns`; Premium and Enterprise add smart
+     * pages/lookbooks (`cms`, `lookbooks`) and `returns`; Premium adds smart
      * search & recommendations (`ai_recommendations`, `semantic_search`) and `dynamic_pricing`.
      *
      * - **Data-presence (every plan)** — `multi_currency`, `gift_cards`, `promotions`,

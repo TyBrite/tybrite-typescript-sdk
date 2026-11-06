@@ -554,7 +554,7 @@ only when the capability is both available to the store **and** has data/config 
 is broad: the plan doesn't include it, or it's included but not set up yet, or both. Two kinds:
 - **Plan-gated** (`true` = plan includes it AND configured): `ai_recommendations`, `semantic_search`,
   `multi_currency`, `dynamic_pricing`, `cms`, `lookbooks`, `returns`. Starter has none of these;
-  Growth adds `cms`/`lookbooks`/`returns`; Premium & Enterprise add the rest.
+  Growth adds `cms`/`lookbooks`/`returns`; Premium adds the rest.
 - **Data-presence** (`true` = the store has ≥1 of that item; every plan): `gift_cards`, `promotions`,
   `messaging`, `specifications`, `collections`.
 - **Shopping assistants**: `agentic_commerce` (the Agent API, `true` on every store) and
