@@ -52,6 +52,31 @@ export class WebhooksService {
              * **Order lifecycle:** `order.created`, `order.paid`, `order.fulfilled`,
              * `order.shipped`, `order.cancelled`, `order.refunded`, `order.updated`
              *
+             * Order status events fire whoever changes the status: `order.paid` when the
+             * payment status becomes `paid` (including an order created unpaid and later
+             * confirmed by the payment provider, a subscription renewal or a wholesale
+             * payment), `order.fulfilled` when the order status becomes `shipped` or
+             * `delivered`, `order.cancelled` when it becomes `cancelled`, and `order.updated`
+             * for any other status change or an edit that changes neither status.
+             * `order.refunded` and `payment.refunded` fire when an order is refunded in full
+             * and its payment status becomes `refunded`; a return that refunds only part of an
+             * order sends `order.refunded` with `partial: true`, `refund_amount` (this
+             * return), `refunded_to_date` and `return_id`, and the payment status stays `paid`.
+             *
+             * **Card disputes:** `order.disputed` (the shopper's bank disputed the card payment
+             * for an order or an in-store sale), `order.dispute_updated` (an open dispute moved to
+             * another status, for example from `needs_response` to `under_review`; the payload
+             * carries the new status and `previous_attributes.status`) and
+             * `order.dispute_closed` (the dispute ended).
+             * The order stays `paid`: a dispute does not change its payment status. The payload
+             * object carries `id`, `order_id`, `sale_id` (one of the two is set), `amount`,
+             * `currency`, `reason`, `status` (`needs_response` or `under_review` while open,
+             * `won`, `lost` or `closed` once ended), `evidence_due_at` (when the evidence is due,
+             * or `null`), `opened_at`, `closed_at` and `outcome` (`won`, `lost` or `closed`, or
+             * `null` while open). A dispute on a marketplace order is also announced to each
+             * seller's own endpoints for that seller's share, with `marketplace: true`,
+             * `split_id` and `share_ratio` on the payload object.
+             *
              * **In-store sales:** `sale.completed`, `sale.refunded` — a sale rung up at the
              * point of sale rather than online. Subscribe to these alongside the order events
              * to receive every sale a store makes, whichever channel it came through.
@@ -60,6 +85,19 @@ export class WebhooksService {
              * for this store was revoked, rotated, deactivated or expired. Only reaches
              * applications connected through Login with GC, and carries `pair_id` so you revoke
              * the affected connection rather than every one you hold for the store.
+             *
+             * **Store access:** `store.access_suspended` (the store's API access was paused: the
+             * store was deactivated, suspended by an operator, or its subscription lapsed past
+             * the grace period) and `store.access_restored` (access is back). Requests made with
+             * the store's keys are refused while access is suspended; no key is revoked or
+             * changed, so treat it as a pause and resume on `store.access_restored`, unlike
+             * `connection.revoked`, which ends the connection. The payload object carries
+             * `store_id`, `reason` and `occurred_at`. On `store.access_suspended`, `reason` is
+             * `deactivated` (the store was switched off), `subscription_lapsed` (the
+             * subscription ended or payment was not recovered) or `super_admin` (suspended or
+             * banned by the platform operator); on `store.access_restored` it names the reason
+             * that was lifted. One event is sent per change, never repeated while the state
+             * holds.
              *
              * **Payment lifecycle:** `payment.succeeded`, `payment.failed`, `payment.refunded`
              *
@@ -88,12 +126,18 @@ export class WebhooksService {
              * Endpoints opt in explicitly to the newsletter and lead form events; they are not
              * part of the default subscription.
              *
-             * **Inventory & catalog:** `product.created`, `product.updated`,
+             * **Inventory & catalog:** `product.created`, `product.updated` (including a
+             * product switched off, with `is_active: false`),
              * `product.stock_low`, `product.out_of_stock`
              *
-             * **Cart & checkout:** `cart.created`, `cart.updated`, `cart.abandoned`, `checkout.abandoned`, `wishlist.added`
+             * **Cart & checkout:** `cart.created`, `cart.updated`, `cart.abandoned` (a signed-in
+             * shopper's cart left idle for three hours; sent once per abandonment, so a cart
+             * that is changed and abandoned again is announced again), `checkout.abandoned`
+             * (not sent when the shopper went on to pay for an order), `wishlist.added`
              *
-             * **Gift cards:** `gift_card.issued`, `gift_card.redeemed`, `gift_card.expired`
+             * **Gift cards:** `gift_card.issued`, `gift_card.redeemed` (each time the card is
+             * used, with the new `balance`, `redemption_count` and `amount_redeemed`),
+             * `gift_card.expired`
              *
              * **Promotions:** `promotion.applied` (a promotion was applied to a checkout),
              * `promotion.created`, `promotion.activated` (a promotion went live or was
@@ -102,8 +146,9 @@ export class WebhooksService {
              * while it is a draft, and `promotion.created` arrives when it is approved.
              *
              * **Pricing:** `pricing_rule.created`, `pricing_rule.activated` (a dynamic-pricing
-             * rule went live), `pricing_rule.updated` (a live rule's discount, scope, priority,
-             * or window changed — the prices it produces are now different), and
+             * rule went live), `pricing_rule.updated` (a live rule's discount, scope, targets,
+             * priority, hours, weekdays, channel, currency, conditions or window changed — the
+             * prices it produces are now different), and
              * `pricing_rule.deactivated`. Like promotions, a rule awaiting approval emits
              * nothing until it goes live. Subscribe to these if you render prices and need to
              * re-read when the rules behind them change.
@@ -114,7 +159,7 @@ export class WebhooksService {
              * `shopper_subscription.skipped` (one delivery was skipped),
              * `shopper_subscription.renewal_upcoming` (the shopper was reminded that a renewal is
              * due, with `due_on`), `shopper_subscription.renewed` (a renewal was paid; carries
-             * `order_id`, `amount_cents` and `currency`), `shopper_subscription.renewal_failed`
+             * `order_id`, `amount` (major currency units) and `currency`), `shopper_subscription.renewal_failed`
              * (a renewal payment failed; carries `attempts`, `last_error_code` and
              * `next_attempt_at`), `shopper_subscription.action_required` (the shopper must
              * confirm and pay a renewal), `shopper_subscription.past_due` (renewals kept failing),
@@ -187,7 +232,7 @@ export class WebhooksService {
              * render navigation, a category strip, or any layout built from the taxonomy.
              *
              * **Store lifecycle & configuration:** `store.updated` (the store's name,
-             * logo, branding, contact, base currency, or the shopping assistant's name or
+             * logo, branding, contact details, address, base currency, store settings, or the shopping assistant's name or
              * logo changed — carries a `changed_fields` list, which names
              * `agent_assistant_name` and `agent_assistant_logo_url` for the assistant),
              * `payment_provider.connected` (a payment provider was
@@ -218,9 +263,12 @@ export class WebhooksService {
              * `automation-webhooks` guide.
              *
              * **Catalog sync & syndication:** `feed.sync.completed` (a scheduled
-             * inbound feed-pull finished — carries created/updated/failed counts),
+             * inbound feed-pull finished — carries `source_id`, `source_name`, `format`,
+             * `status`, `rows_total`, `rows_created`, `rows_updated`, `rows_skipped`,
+             * `rows_failed` and an `errors` list),
              * `channel.sync.completed` (a sales-channel push to Google/Meta/… finished —
-             * carries pushed/rejected counts)
+             * carries `channel_id`, `provider`, `status`, `items_total`, `items_pushed` and
+             * `items_rejected`)
              *
              * **Wholesale (B2B):** for stores with wholesale enabled — the trade itself:
              * `b2b.rfq.created`, `b2b.quote.sent`, `b2b.quote.accepted`, `b2b.quote.rejected`,
@@ -270,9 +318,10 @@ export class WebhooksService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -304,9 +353,10 @@ export class WebhooksService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -331,10 +381,11 @@ export class WebhooksService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -381,10 +432,11 @@ export class WebhooksService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -410,10 +462,11 @@ export class WebhooksService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -443,7 +496,7 @@ export class WebhooksService {
             /**
              * The event type to simulate.
              */
-            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked' | 'shopper_subscription.created' | 'shopper_subscription.renewed' | 'shopper_subscription.renewal_failed' | 'shopper_subscription.cancelled' | 'subscribe_save_offer.activated' | 'order_item.fulfilled' | 'order_item.fulfilment_failed' | 'order_item.fulfilment_voided' | 'event_ticket.checked_in' | 'code_pool.low';
+            event_type?: 'order.created' | 'order.paid' | 'order.fulfilled' | 'order.shipped' | 'order.cancelled' | 'payment.succeeded' | 'payment.failed' | 'customer.created' | 'newsletter.subscribed' | 'lead_form.submitted' | 'product.created' | 'product.stock_low' | 'cart.abandoned' | 'checkout.abandoned' | 'wishlist.added' | 'gift_card.issued' | 'promotion.applied' | 'b2b.po.confirmed' | 'b2b.invoice.issued' | 'b2b.credit.exhausted' | 'b2b.approval.approved' | 'b2b.replenishment.needed' | 'promotion.activated' | 'pricing_rule.activated' | 'collection.created' | 'post.published' | 'review.approved' | 'store.updated' | 'store.profile_updated' | 'store.policy_published' | 'store.policy_unpublished' | 'store.design_system_updated' | 'payment_provider.connected' | 'feature.status_changed' | 'product.deleted' | 'product.restored' | 'promotion.deleted' | 'sale.completed' | 'sale.refunded' | 'connection.revoked' | 'store.access_suspended' | 'store.access_restored' | 'shopper_subscription.created' | 'shopper_subscription.renewed' | 'shopper_subscription.renewal_failed' | 'shopper_subscription.cancelled' | 'subscribe_save_offer.activated' | 'order_item.fulfilled' | 'order_item.fulfilment_failed' | 'order_item.fulfilment_voided' | 'event_ticket.checked_in' | 'code_pool.low' | 'order.disputed' | 'order.dispute_updated' | 'order.dispute_closed';
         },
     }): CancelablePromise<{
         success?: boolean;
@@ -464,10 +517,11 @@ export class WebhooksService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -519,9 +573,10 @@ export class WebhooksService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -551,10 +606,11 @@ export class WebhooksService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -570,11 +626,16 @@ export class WebhooksService {
      */
     public retryWebhookEvent({
         id,
+        offset,
     }: {
         /**
          * Event ID
          */
         id: string,
+        /**
+         * Position of the first subscribed endpoint to retry. A retry reaches a bounded number of endpoints per call; send the response's next_offset to continue.
+         */
+        offset?: number,
     }): CancelablePromise<{
         event_id?: string;
         /**
@@ -593,13 +654,17 @@ export class WebhooksService {
             path: {
                 'id': id,
             },
+            query: {
+                'offset': offset,
+            },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

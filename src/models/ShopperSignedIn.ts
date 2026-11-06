@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { Customer } from './Customer';
+import type { ShopperCustomer } from './ShopperCustomer';
 import type { ShopperSession } from './ShopperSession';
 import type { User } from './User';
 /**
@@ -12,9 +12,9 @@ export type ShopperSignedIn = {
     message: string;
     user: User;
     /**
-     * The shopper's customer record at this store. `null` when the key belongs to a marketplace, where a shopper holds an account without a per-store record.
+     * The shopper's customer record at this store. `null` when the key belongs to a marketplace, where a shopper holds an account without a per-store record. `GET /v1/customers/me` returns the full record.
      */
-    customer: (Customer | null);
+    customer: (ShopperCustomer | null);
     session: ShopperSession;
 };
 

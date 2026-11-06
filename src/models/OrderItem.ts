@@ -5,6 +5,11 @@
 import type { CustomFieldValue } from './CustomFieldValue';
 export type OrderItem = {
     id?: string;
+    order_id?: string;
+    /**
+     * The options the shopper chose on this line.
+     */
+    product_options?: any | null;
     /**
      * Per-line fields the merchant defined — a personalisation or engraving carried on this line rather than on the order. Only fields the merchant published appear here; the merchant controls the names and how many
      * exist, so render the array rather than reading fixed keys.
@@ -23,7 +28,10 @@ export type OrderItem = {
     fulfilment_kind?: OrderItem.fulfilment_kind;
     quantity?: number;
     unit_price?: number;
-    subtotal?: number;
+    /**
+     * `unit_price` × `quantity`, in the order's currency.
+     */
+    total_price?: number;
 };
 export namespace OrderItem {
     /**

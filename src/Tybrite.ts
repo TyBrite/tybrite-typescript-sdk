@@ -34,6 +34,7 @@ import { SandboxService } from './services/SandboxService';
 import { SearchService } from './services/SearchService';
 import { ShippingService } from './services/ShippingService';
 import { StoreService } from './services/StoreService';
+import { StorefrontStudioService } from './services/StorefrontStudioService';
 import { SystemService } from './services/SystemService';
 import { TaxService } from './services/TaxService';
 import { TaxonomyService } from './services/TaxonomyService';
@@ -69,6 +70,7 @@ export class Tybrite {
     public readonly search: SearchService;
     public readonly shipping: ShippingService;
     public readonly store: StoreService;
+    public readonly storefrontStudio: StorefrontStudioService;
     public readonly system: SystemService;
     public readonly tax: TaxService;
     public readonly taxonomy: TaxonomyService;
@@ -115,6 +117,7 @@ export class Tybrite {
         this.search = new SearchService(this.request);
         this.shipping = new ShippingService(this.request);
         this.store = new StoreService(this.request);
+        this.storefrontStudio = new StorefrontStudioService(this.request);
         this.system = new SystemService(this.request);
         this.tax = new TaxService(this.request);
         this.taxonomy = new TaxonomyService(this.request);

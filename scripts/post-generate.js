@@ -161,6 +161,35 @@ function injectRealtimeExport() {
 injectRealtimeExport();
 console.log('');
 
+// ---------------------------------------------------------------------------
+// Response-signature helper export.
+// Same reason as the realtime helper: the generator rewrites src/index.ts, so
+// `verifyResponseSignature` is re-added here (idempotent).
+// Source: src/verify-response.ts (hand-written, not generated).
+// ---------------------------------------------------------------------------
+function injectVerifyResponseExport() {
+  const indexPath = path.join(__dirname, '..', 'src/index.ts');
+  const verifyPath = path.join(__dirname, '..', 'src/verify-response.ts');
+  if (!fs.existsSync(indexPath) || !fs.existsSync(verifyPath)) {
+    console.log('⚠️  src/index.ts or src/verify-response.ts missing — skipping verify-response export injection');
+    return;
+  }
+  let idx = fs.readFileSync(indexPath, 'utf-8');
+  if (idx.includes("from './verify-response'")) {
+    console.log('⏭️  index.ts already exports the response-signature helper');
+    return;
+  }
+  const exportLine =
+    "\n// Response-signature verification helper (hand-written — re-added by scripts/post-generate.js)\n" +
+    "export { verifyResponseSignature } from './verify-response';\n" +
+    "export type { VerifyResponseSignatureOptions } from './verify-response';\n";
+  fs.writeFileSync(indexPath, idx + exportLine, 'utf-8');
+  console.log('✅ Re-added response-signature helper export to index.ts');
+}
+
+injectVerifyResponseExport();
+console.log('');
+
 // Version management
 async function promptVersionUpdate() {
   const packageJsonPath = path.join(__dirname, '..', 'package.json');

@@ -46,11 +46,19 @@ export class GcConnectService {
          * endpoint it wasn't granted the matching scope for. Request only what your app needs.
          *
          * Available scopes: `read`, `write`, `products:read`, `categories:read`, `pricing:read`,
-         * `orders:read`, `orders:write`, `customers:read`, `customers:write`, `payments:read`,
-         * `cart:write`, `cms:read`, `shipping:read`, `reviews:read`, `reviews:write`,
-         * `gift_cards:read`, `messaging:read`, `messaging:write`, `returns:read`, `returns:write`,
-         * `promotions:read`, `recommendations:read`, `search:read`, `store:read`,
-         * `shopper_subscriptions:read`, `shopper_subscriptions:write`, `fulfilment:read`
+         * `cms:read`, `shipping:read`, `search:read`, `recommendations:read`, `promotions:read`,
+         * `gift_cards:read`, `store:read`, `orders:read`, `orders:write`, `customers:read`,
+         * `customers:write`, `payments:read`, `payments:write`, `cart:write`, `reviews:read`,
+         * `reviews:write`, `messaging:read`, `messaging:write`, `returns:read`, `returns:write`,
+         * `disputes:read`, `disputes:write`, `b2b:read`, `b2b:write`, `agent:read`, `agent:write`,
+         * `shopper_subscriptions:read`, `shopper_subscriptions:write`, `fulfilment:read`, `team:read`,
+         * `storefront_site:write`, `ab_attribution:write`, `support_tickets:write`,
+         * `storefront_template:write`
+         *
+         * `payments:write` is required to initiate a payment; without it (or `write`) the call returns
+         * `403 forbidden`. `b2b:*` is offered only for wholesale stores and `disputes:*` only for
+         * marketplaces. The app's publishable key never carries `write`, `orders:*`, `customers:*`,
+         * `payments:*` or `b2b:write`; those belong to its secret key.
          *
          * Sign-in scopes: `openid`, `email`, `profile` return the signed-in person in the token
          * response. With no other scope the request is identity-only: any user can approve it, no store
@@ -58,6 +66,14 @@ export class GcConnectService {
          * they link, and a user who owns none is redirected with `error=access_denied` and
          * `error_description=no_owned_store`. `team:read` lets the key pair call `GET /v1/connect/team`
          * and must accompany another store scope.
+         *
+         * `storefront_site:write` lets the key pair report the storefront's address and routes with
+         * `PUT /v1/storefront/site`. `ab_attribution:write` lets it register its own A/B experiments and
+         * read the paid orders and sales for each variant under `/v1/storefront/experiments`; the consent
+         * screen states this to the merchant in its own line. `support_tickets:write` lets it open support
+         * requests for the merchant with `POST /v1/storefront/tickets` and read where each stands;
+         * `storefront_template:write` lets it offer templates under `/v1/storefront/templates`, which the
+         * merchant accepts or declines. All four are for the secret key only.
          *
          */
         scope: string,
@@ -95,7 +111,7 @@ export class GcConnectService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -181,7 +197,7 @@ export class GcConnectService {
                 404: `Resource not found`,
                 409: `The request needs an explicit approval (\`consent_required\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -254,7 +270,7 @@ export class GcConnectService {
                 `,
                 401: `Invalid \`client_id\` or \`client_secret\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -321,7 +337,7 @@ export class GcConnectService {
                 401: `Invalid \`client_id\` or \`client_secret\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -341,24 +357,42 @@ export class GcConnectService {
      * @returns any Active connections for this store
      * @throws ApiError
      */
-    public listConnectSessions(): CancelablePromise<{
+    public listConnectSessions({
+        storeId,
+        environment,
+    }: {
+        /**
+         * Required with a merchant session (`400 invalid_request` without it); the store must be one the session's user owns or belongs to (`403 forbidden` otherwise). Ignored with a secret key.
+         */
+        storeId?: string,
+        /**
+         * With a merchant session, restricts the list to one environment. A secret key lists its own environment.
+         */
+        environment?: 'production' | 'sandbox',
+    }): CancelablePromise<{
         sessions: Array<ConnectSession>;
     }> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/connect/sessions',
+            query: {
+                'store_id': storeId,
+                'environment': environment,
+            },
             errors: {
+                400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
     /**
      * List the linked store's team
      * Returns the owner and the active team members of the store the key belongs to, with each person's
-     * role. Use it to offer the store's team a place in your application.
+     * role, its label and the permissions it grants. Use it to offer the store's team a place in your
+     * application with access that matches their role on the store.
      *
      * **Authentication:** The connection's secret key (`tybrite_sk_*`). The connection must have been
      * granted the `team:read` scope at consent; otherwise `403 insufficient_scope` is returned.
@@ -380,6 +414,16 @@ export class GcConnectService {
              * `owner`, or the member's role on the store (for example `manager` or `cashier`).
              */
             role: string;
+            /**
+             * The role's display name on the store, or null when the role has none.
+             */
+            role_label?: string | null;
+            /**
+             * The permissions the role grants on the store. The owner's is `["all"]`. Use it to map a
+             * member's rights into your application rather than inferring them from the role name.
+             *
+             */
+            role_permissions?: Array<string>;
         }>;
     }> {
         return this.httpRequest.request({
@@ -389,7 +433,7 @@ export class GcConnectService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

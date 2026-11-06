@@ -26,11 +26,12 @@ export class AnalyticsService {
      * the call can be made directly from the browser. The request is processed
      * best-effort and returns immediately; it never blocks the page.
      *
-     * @returns any The event was accepted.
+     * @returns any Accepted for processing. `recorded` is `false` when the event was not stored (a crawler user agent or an internal failure); the status is 202 either way, so a beacon never blocks the page.
      * @throws ApiError
      */
     public collectAnalyticsEvent({
         requestBody,
+        xSessionId,
         xTybriteChannel,
     }: {
         requestBody: {
@@ -61,7 +62,7 @@ export class AnalyticsService {
              */
             event_type: 'page_view' | 'session_start' | 'page_close' | 'post_view' | 'lookbook_view' | 'content_click' | 'search' | 'search_result_click';
             /**
-             * The shopper's search term. Required when `event_type` is `search`, ignored
+             * The shopper's search term; over 200 characters it is truncated. Required when `event_type` is `search`, ignored
              * otherwise. Leading, trailing and repeated whitespace is collapsed and the term is
              * lowercased before storage, so casing and spacing do not fragment the reporting.
              * May also be sent as `q`.
@@ -81,14 +82,14 @@ export class AnalyticsService {
              */
             search_result_product_id?: string;
             /**
-             * Its 1-based position in the results as they were shown. Optional, but worth
+             * Values above 1000 are capped. Its 1-based position in the results as they were shown. Optional, but worth
              * sending: it is what distinguishes a product that was clicked because it was
              * featured from one that would have been found anyway.
              *
              */
             search_result_position?: number;
             /**
-             * How many results the search returned. Send `0` when it returned none — that is the
+             * Values above 100000 are capped. How many results the search returned. Send `0` when it returned none — that is the
              * signal a merchant most needs, marking a search the catalogue could not answer at
              * all. Only meaningful when `event_type` is `search`.
              *
@@ -99,9 +100,9 @@ export class AnalyticsService {
              */
             visitor_id: string;
             /**
-             * The shopper's browsing-session identifier (same concept as the anonymous cart session). May also be sent as the `x-session-id` header.
+             * The shopper's browsing-session identifier (same concept as the anonymous cart session). Required in the body or the `x-session-id` header; `400` if neither is sent.
              */
-            session_id: string;
+            session_id?: string;
             /**
              * The page path being viewed. Only the pathname is stored; any query string is discarded.
              */
@@ -120,7 +121,7 @@ export class AnalyticsService {
              */
             duration_ms?: number;
             /**
-             * The signed-in shopper, when known.
+             * The signed-in shopper, when known. A value that is not a UUID answers `400 invalid_request`.
              */
             customer_id?: string;
             /**
@@ -141,26 +142,31 @@ export class AnalyticsService {
             channel?: 'storefront' | 'marketplace';
         },
         /**
-         * Where the shopper was, when it is easier to set a header than to add a body field — `marketplace` from a marketplace storefront, `storefront` (or omitted) for a seller's own site. Equivalent to the `channel` body field; the body wins if both are sent. The marketplace itself is resolved server-side from the store, so this says which channel and cannot name one.
+         * The browsing-session identifier, when it is easier to set a header than a body field. The body `session_id` takes precedence.
+         */
+        xSessionId?: string,
+        /**
+         * Where the shopper was, when it is easier to set a header than to add a body field — `marketplace` from a marketplace storefront, `storefront` (or omitted) for a seller's own site. A `marketplace` value in either this header or the `channel` body field attributes the event to the marketplace; `storefront` in one does not override `marketplace` in the other. The marketplace itself is resolved server-side from the store, so this says which channel and cannot name one.
          */
         xTybriteChannel?: 'storefront' | 'marketplace',
     }): CancelablePromise<{
-        recorded?: boolean;
+        recorded: boolean;
     }> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/analytics/collect',
             headers: {
+                'x-session-id': xSessionId,
                 'x-tybrite-channel': xTybriteChannel,
             },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when \`event_type\` is missing or not an accepted type, a search event has no \`search_query\`, \`search_result_click\` has no valid \`search_result_product_id\`, \`content_click\` lacks \`content_id\` or a valid \`content_product_id\`, \`customer_id\` is not a UUID, or \`visitor_id\` or \`session_id\` is missing.`,
                 401: `Authentication failed - invalid or missing API key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

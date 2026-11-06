@@ -13,6 +13,10 @@ export type B2bPurchaseOrder = {
     tax_amount?: number;
     total?: number;
     payment_terms?: B2bPurchaseOrder.payment_terms;
+    /**
+     * The delivery address given when the order was placed; used for the order created from this purchase order.
+     */
+    shipping_address?: string | null;
     created_at?: string;
 };
 export namespace B2bPurchaseOrder {

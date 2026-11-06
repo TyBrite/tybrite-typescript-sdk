@@ -57,7 +57,7 @@ export class RecommendationsService {
         requestBody: {
             type: 'similar' | 'also-bought' | 'next' | 'trending' | 'new' | 'personalized' | 'bundle';
             /**
-             * Required when type is `similar`, `also-bought`, or `bundle`. For `next`, an optional explicit anchor. Must reference an existing product in the store; otherwise 404 is returned.
+             * Required when type is `similar`, `also-bought`, or `bundle`. For `next`, an optional explicit anchor. When sent, for any type, it must be a UUID (otherwise `400 invalid_request`) and name an active product of the store (otherwise `404 not_found`).
              */
             productId?: string;
             /**
@@ -93,12 +93,13 @@ export class RecommendationsService {
             body: requestBody,
             mediaType: 'application/json',
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
+                400: `\`invalid_request\` when the body is not a JSON object, \`type\` is unknown, \`limit\` is not a whole number from 1 to 50, \`productId\` is not a UUID, or \`productId\` is missing for a type that needs one.`,
+                401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                404: `The \`productId\` sent does not name an active product of this store.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

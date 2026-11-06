@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { B2bApprovalDecisionResponse } from '../models/B2bApprovalDecisionResponse';
+import type { B2bApprovalListResponse } from '../models/B2bApprovalListResponse';
 import type { B2bDirectOrderResponse } from '../models/B2bDirectOrderResponse';
 import type { B2bInvoice } from '../models/B2bInvoice';
 import type { B2bInvoicePaymentResponse } from '../models/B2bInvoicePaymentResponse';
@@ -14,7 +16,8 @@ export class B2BService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * List your requests for quote
-     * Returns the buyer's own requests for quote (RFQs), newest first. Requires
+     * Returns the buyer's own requests for quote (RFQs), newest first. Returns the 100 most recent records; older
+     * records are not returned and the list is not paginated. Requires
      * the buyer's session token (x-auth-token or x-external-auth) alongside the API key.
      *
      * @returns any RFQs retrieved
@@ -52,9 +55,10 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -121,8 +125,9 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -168,8 +173,11 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -215,8 +223,11 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -270,8 +281,10 @@ export class B2BService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -321,8 +334,10 @@ export class B2BService {
             },
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -363,9 +378,10 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -411,8 +427,11 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -453,9 +472,10 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -501,8 +521,11 @@ export class B2BService {
                 'x-idp-token': xIdpToken,
             },
             errors: {
+                401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -578,11 +601,130 @@ export class B2BService {
             errors: {
                 400: `The amount is not a number, is below 0.01, has more than two decimal places, or is more than the open balance.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The key is publishable, or the customer has no wholesale account with this store.`,
                 404: `Resource not found`,
                 409: `The invoice is already paid or was voided.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * List the approvals the signed-in approver can decide
+     * Returns the purchases waiting for a decision on the wholesale accounts the signed-in person is an
+     * approver or admin of, for a buyer that orders through the API with no store of its own. Each
+     * entry says whether this person may decide it now: the person who placed an order never can.
+     *
+     * A buyer that has its own store decides from that store instead, so its approvals are not listed.
+     *
+     * Requires the approver's identity (exactly one of x-auth-token, x-external-auth or x-idp-token).
+     *
+     * @returns B2bApprovalListResponse The approvals this person can see, newest first.
+     * @throws ApiError
+     */
+    public listB2BApprovals({
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * Buyer session token (GC-native). Provide this or x-external-auth.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the approver. Provide this or x-auth-token.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<B2bApprovalListResponse> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/b2b/approvals',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            errors: {
+                400: `The request names more than one identity header, or its identity cannot be read.`,
+                401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                404: `B2B is not enabled for this store (\`not_available\`).`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Approve or reject a held purchase
+     * Records the decision of the signed-in approver on a purchase held at the supplier's approval
+     * threshold, for a buyer that orders through the API with no store of its own. The decider is the
+     * person behind the credential; nothing in the request names one.
+     *
+     * Only an active approver or admin of that wholesale account can decide it, and never the person who
+     * placed the order. Approving a pay-now purchase makes the order payable; rejecting it releases
+     * nothing. Deciding an approval that is already decided returns it unchanged.
+     *
+     * Requires a secret key and the approver's identity (exactly one of x-auth-token, x-external-auth or
+     * x-idp-token).
+     *
+     * @returns B2bApprovalDecisionResponse The decision was recorded, or the approval had already been decided.
+     * @throws ApiError
+     */
+    public decideB2BApproval({
+        id,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        id: string,
+        requestBody: {
+            decision: 'approved' | 'rejected';
+            /**
+             * An optional note kept with the decision.
+             */
+            reason?: string;
+        },
+        /**
+         * Buyer session token (GC-native). Provide this or x-external-auth.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the approver. Provide this or x-auth-token.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<B2bApprovalDecisionResponse> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/b2b/approvals/{id}/decision',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `The decision is neither \`approved\` nor \`rejected\`.`,
+                401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `The key is publishable, the person is not an approver of this account, or they placed the order themselves.`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -607,9 +749,11 @@ export class B2BService {
      * `amount`; complete the payment through the standard payment flow (`/v1/payments/initialize`
      * then `/v1/payments/verify`) with that `order_id`, exactly as for a normal online order.
      *
-     * Requires the buyer's session token (x-auth-token or x-external-auth), an Idempotency-Key, and a
-     * request signature (X-Timestamp + X-Signature over the body with the store's signing secret) —
-     * the same signing a standard order requires.
+     * Requires the buyer's session token (x-auth-token or x-external-auth) and an Idempotency-Key. The request
+     * signature (X-Timestamp + X-Signature over the body with the store's signing secret) is required unless the
+     * store has turned order signing off (on by default); when sent, the signature is always verified. A signing
+     * failure answers 401 with `signature_missing`, `timestamp_missing`, `timestamp_malformed`,
+     * `timestamp_out_of_window` or `signature_invalid`.
      *
      * @returns B2bDirectOrderResponse Order placed. The `settlement` field is `terms` (an invoice was issued) or `pay_now`
      * (an order awaiting payment). Fields present depend on which. `tax_amount` is always
@@ -619,25 +763,17 @@ export class B2BService {
      */
     public createDirectOrder({
         idempotencyKey,
-        xTimestamp,
-        xSignature,
         requestBody,
         xAuthToken,
         xExternalAuth,
         xIdpToken,
+        xTimestamp,
+        xSignature,
     }: {
         /**
          * A unique key so a retried order is not duplicated.
          */
         idempotencyKey: string,
-        /**
-         * Unix timestamp (milliseconds) used in the request signature. Required — a direct order must be signed, like a standard order. Must be within 5 minutes of the server time.
-         */
-        xTimestamp: string,
-        /**
-         * Base64 HMAC-SHA256 of `{X-Timestamp}.{raw JSON body}` using the store's signing secret. Required — a direct order must be signed, like a standard order.
-         */
-        xSignature: string,
         requestBody: {
             /**
              * The items to order. Prices are resolved by Galactic Core; do not send prices.
@@ -683,6 +819,14 @@ export class B2BService {
          *
          */
         xIdpToken?: string,
+        /**
+         * Unix timestamp (milliseconds) used in the request signature. Required unless the store has turned order signing off (on by default). Must be within 5 minutes of the server time.
+         */
+        xTimestamp?: string,
+        /**
+         * Base64 HMAC-SHA256 of `{X-Timestamp}.{raw JSON body}` using the store's signing secret. Required unless the store has turned order signing off (on by default); always verified when sent.
+         */
+        xSignature?: string,
     }): CancelablePromise<B2bDirectOrderResponse> {
         return this.httpRequest.request({
             method: 'POST',
@@ -700,8 +844,9 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

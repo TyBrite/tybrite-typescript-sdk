@@ -58,18 +58,18 @@ export class MessagingService {
         /**
          * Filter by thread type
          */
-        threadType?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical',
+        threadType?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical' | 'dispute',
         /**
          * true = archived threads only, false = non-archived only, omit = no filter
          */
         archived?: boolean,
         /**
-         * Set to true to return only threads with unread_count_store > 0
+         * Set to true to return only threads with unread messages for the shopper (`unread_count_customer` > 0).
          */
         unread?: boolean,
         limit?: number,
         /**
-         * Cursor for pagination (base64-encoded last_message_at value)
+         * Opaque cursor from `pagination.next_cursor`. An invalid cursor answers 400 `invalid_cursor`.
          */
         cursor?: string,
         /**
@@ -77,9 +77,10 @@ export class MessagingService {
          *
          * **Allowed Fields:**
          * - `id`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`
-         * - `store_name`, `store_avatar`, `order_id`, `product_id`
+         * - `store_name`, `store_avatar`, `order_id`, `product_id`, `source_thread_id`
          * - `subject`, `thread_type`, `status`, `priority`
          * - `last_message_at`, `last_message_by`, `unread_count_customer`, `unread_count_store`
+         * - `customer_last_read_at`, `store_last_read_at`
          * - `is_archived`, `is_muted`, `is_pinned`
          * - `created_at`, `updated_at`
          *
@@ -113,11 +114,12 @@ export class MessagingService {
                 'fields': fields,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when \`customer_id\` is missing or not a UUID, or when \`status\`, \`priority\`, \`thread_type\`, \`archived\` or \`unread\` is not one of its listed values; \`invalid_cursor\` when \`cursor\` is not one this endpoint issued.`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -157,9 +159,10 @@ export class MessagingService {
          *
          * **Allowed Fields:**
          * - `id`, `customer_id`, `customer_name`, `customer_email`, `customer_phone`
-         * - `store_name`, `store_avatar`, `order_id`, `product_id`
+         * - `store_name`, `store_avatar`, `order_id`, `product_id`, `source_thread_id`
          * - `subject`, `thread_type`, `status`, `priority`
          * - `last_message_at`, `last_message_by`, `unread_count_customer`, `unread_count_store`
+         * - `customer_last_read_at`, `store_last_read_at`
          * - `is_archived`, `is_muted`, `is_pinned`
          * - `created_at`, `updated_at`
          *
@@ -183,10 +186,11 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -274,16 +278,17 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
     /**
      * Get messages in a thread
-     * Returns messages in a thread. Soft-deleted messages are excluded by default.
+     * Returns messages in a thread. Soft-deleted messages are always excluded.
      * Supports cursor-based pagination and sort order (default: oldest first).
      *
      * @returns any Success
@@ -366,10 +371,11 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -387,8 +393,6 @@ export class MessagingService {
      *
      * **Body field:** the message text goes in `message`. (Note the sibling
      * `editMessage` endpoint uses `message_content` instead.)
-     *
-     * **SDK**
      *
      * @returns any Message sent
      * @throws ApiError
@@ -444,10 +448,11 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -477,9 +482,12 @@ export class MessagingService {
      *
      * **`thread_type`** classifies the inquiry: `general`, `order_inquiry`,
      * `product_inquiry`, `support`, `complaint`, `delivery`, `return`, `refund`,
-     * or `technical`.
+     * `technical`, or `dispute` (a conversation about a dispute over an order or product). A shopper may open a
+     * `dispute` thread.
      *
-     * **SDK**
+     * **`source_thread_id`** opens the conversation from an earlier one of the same shopper, so the store sees the
+     * history in one place. It must be a thread of this shopper in the same store and environment (otherwise `400`);
+     * when `order_id` or `product_id` is omitted, the earlier thread's value is used.
      *
      * @returns any Conversation created
      * @throws ApiError
@@ -501,12 +509,16 @@ export class MessagingService {
             subject: string;
             message: string;
             order_id?: string;
+            /**
+             * The earlier thread of this shopper that this conversation continues from.
+             */
+            source_thread_id?: string;
             product_id?: string;
             /**
              * Server-side callers only (a secret key with no customer credential). Any value from a publishable key or a request with a customer credential is refused with `403`; the thread then starts as `normal`.
              */
             priority?: 'low' | 'normal' | 'high' | 'urgent';
-            thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical';
+            thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical' | 'dispute';
         },
         /**
          * Customer session access_token. Required when body.customer_id is supplied so the gateway can prove the caller owns that customer record.
@@ -535,7 +547,7 @@ export class MessagingService {
             /**
              * What the conversation is about. Inferred from the request when not supplied: `order_inquiry` when `order_id` is given, `product_inquiry` when `product_id` is given, otherwise `general`.
              */
-            thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical';
+            thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical' | 'dispute';
             /**
              * The order this conversation is about, echoed from the request.
              */
@@ -563,16 +575,18 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
     /**
      * Mark thread as read
-     * Resets `unread_count_store` to 0 and marks all customer messages in the thread as `read`.
-     * Requires a secret key.
+     * Marks the thread as read by the shopper: resets `unread_count_customer` to 0 and marks the store's messages
+     * in the thread as `read`. Requires the shopper's session credential (`x-auth-token` or `x-external-auth`);
+     * a publishable key is accepted.
      *
      * @returns any Thread marked as read
      * @throws ApiError
@@ -620,10 +634,11 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -652,6 +667,9 @@ export class MessagingService {
         xAuthToken: string,
         id: string,
         requestBody: {
+            /**
+             * The new text. It is trimmed; a value that is empty after trimming answers 400.
+             */
             message_content: string;
         },
         /**
@@ -693,10 +711,11 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -756,10 +775,11 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -771,11 +791,18 @@ export class MessagingService {
      *
      * This is a WebSocket upgrade, not a normal request — send the standard upgrade headers
      * (`Upgrade: websocket`). The connection is served on the API's own domain; the server responds
-     * `101 Switching Protocols` and then pushes one JSON frame per new message:
+     * `101 Switching Protocols` and then pushes JSON frames shaped `{ "type", "payload" }`:
      *
      * ```json
-     * { "type": "message.created", "payload": { "thread_id": "…", "message": { … } } }
+     * { "type": "message.created", "payload": { "thread_id": "…", "message": { … }, "environment": "production" } }
      * ```
+     *
+     * - `message.created` carries `{ thread_id, message, environment }`.
+     * - `presence.join` and `presence.leave` carry `{ participant: { pid, role }, participants: [ … ] }`.
+     * - `presence.typing` carries `{ participant, is_typing }` and `presence.read` carries `{ participant, at }`.
+     * - The text frame `ping` is answered with `pong`. A client may send `{ "type": "typing", "payload": { "is_typing": true } }`
+     * and `{ "type": "read", "payload": { "at": "…" } }`, which are relayed to the other participants; other frame
+     * types are ignored. Clients should ignore a frame `type` they do not recognise.
      *
      * **Authentication.** Because a browser `WebSocket` cannot set request headers, supply the
      * credentials as **query parameters** on the connection URL (they may also be sent as headers
@@ -791,7 +818,7 @@ export class MessagingService {
      * the store's Auth verifier to validate (equivalently the `x-idp-token` header).
      *
      * The server validates the credential and confirms the customer is the thread's participant
-     * before accepting the socket; an unauthorized or non-participant connection is closed. Use the
+     * before accepting the socket; a connection that fails the check is refused with 401, 403 or 404 before the upgrade. Use the
      * `subscribeToThread` helper in the SDK to manage the connection (it returns an unsubscribe
      * function), or open the WebSocket yourself.
      *
@@ -877,13 +904,14 @@ export class MessagingService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 426: `Upgrade Required — the request reached the endpoint without a WebSocket upgrade. Reconnect
                 with the \`Upgrade: websocket\` header.
                 `,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -896,7 +924,7 @@ export class MessagingService {
      * The token opens one conversation of the key's own store and environment. It expires 30 days
      * after the email that carried it, and stops working when the store rotates it or the
      * conversation is closed. Every failure (malformed, unknown, expired, rotated, closed,
-     * another store's) is the same `404` with no other detail. Internal notes and the guest's
+     * another store's) is the same `404` with no other detail; so is a body without a `token`. A body that is not a JSON object answers `400`. Internal notes and the guest's
      * contact details are never returned. At most 120 reads an hour per address and 60 per token.
      *
      * @returns any The conversation, oldest message first (the latest 100).
@@ -936,9 +964,12 @@ export class MessagingService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -971,9 +1002,12 @@ export class MessagingService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

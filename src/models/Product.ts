@@ -134,6 +134,10 @@ export type Product = {
      */
     meta_product_category?: string | null;
     /**
+     * The date the merchant expects a pre-order of this product to ship, as `YYYY-MM-DD`. `null` when the merchant has not set one. It applies to every variant of the product.
+     */
+    preorder_ship_date?: string | null;
+    /**
      * Product-level attributes (not variant-specific)
      */
     attributes?: any | null;
@@ -162,7 +166,7 @@ export type Product = {
      */
     sku?: string | null;
     /**
-     * The online price in major currency units (369.99 = $369.99), not minor units. It is the variant's online price, or its in-store price when no online price is set. On the list endpoint it is the price of the product's lowest-priced variant. Only present for simple products or the list endpoint.
+     * The online price in major currency units (369.99 = $369.99), never a whole-number count of cents. It is the variant's online price, or its in-store price when no online price is set. On the list endpoint it is the price of the product's lowest-priced variant. Only present for simple products or the list endpoint.
      */
     price?: number | null;
     /**

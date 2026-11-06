@@ -22,7 +22,7 @@ export type ProductVariant = {
      */
     sku?: string;
     /**
-     * The variant's online price in major currency units (369.99 = $369.99), not minor units. It is the in-store price when no online price is set.
+     * The variant's online price in major currency units (369.99 = $369.99), never a whole-number count of cents. It is the in-store price when no online price is set.
      */
     price?: number;
     /**

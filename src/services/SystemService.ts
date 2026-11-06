@@ -135,7 +135,8 @@ export class SystemService {
          * **Cache Duration:** 5 minutes (300 seconds)
          *
          * With `cache=false` the response is built from the store's current data, including the
-         * `features` flags and their `feature_status`, and `X-Cache` is `MISS`.
+         * `features` flags and their `feature_status`, `X-Cache` is `MISS`, and the response carries
+         * `Cache-Control: no-store`, so no cache between the API and the caller keeps it.
          *
          * **When to Bypass Cache:**
          * - After updating store configuration
@@ -146,8 +147,9 @@ export class SystemService {
          * - When you need real-time data
          *
          * **Cache Headers:**
-         * - `X-Cache: HIT` - Response served from cache
-         * - `X-Cache: MISS` - Response fetched from database
+         * - `X-Cache: HIT` - Response served from the edge cache (`HIT-304` for a 304 on an ETag match)
+         * - `X-Cache: MISS` - Response read fresh (`cache=false`)
+         * - The header can be absent on other 200 responses
          * - `Cache-Control: public, max-age=300` - Browser/CDN caching
          *
          * **SDK Usage:**
@@ -167,7 +169,7 @@ export class SystemService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

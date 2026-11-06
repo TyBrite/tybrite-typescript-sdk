@@ -63,9 +63,10 @@ export class IngestionService {
         format,
         strategy = 'upsert_by_sku',
         dryRun = false,
+        publish = false,
     }: {
         /**
-         * Unique key per batch; retrying with the same key returns the original result instead of re-importing.
+         * Unique key per batch. Retrying the same batch with the same key returns the original result instead of re-importing; the same key with a different batch answers `409 idempotency_key_reused`, and a first run still in progress answers `409 idempotency_in_progress`.
          */
         idempotencyKey: string,
         /**
@@ -102,6 +103,10 @@ export class IngestionService {
          * When `true`, validate and report without writing anything.
          */
         dryRun?: boolean,
+        /**
+         * When `true`, products this batch creates are published to the storefront at once. Off by default. Existing products updated by the batch keep their current state, and a row with `is_online_enabled` false stays offline.
+         */
+        publish?: boolean,
     }): CancelablePromise<IngestResult> {
         return this.httpRequest.request({
             method: 'POST',
@@ -115,20 +120,17 @@ export class IngestionService {
                 'format': format,
                 'strategy': strategy,
                 'dry_run': dryRun,
+                'publish': publish,
             },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Missing/invalid secret key, or a missing/invalid request signature.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
-                Common causes:
-                - Email already registered to another customer at this store
-                - Item already exists in wishlist
-                - Idempotency-Key reused with a different request body
-                `,
-                422: `Every row failed validation; nothing was written.`,
+                409: `The \`Idempotency-Key\` was already used for a different batch (\`idempotency_key_reused\`), or the first run with this key is still being processed (\`idempotency_in_progress\`; retry with the same key).`,
+                422: `Every row failed validation; nothing was written. A retry with the same \`Idempotency-Key\` replays this 422.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
@@ -157,6 +159,8 @@ export class IngestionService {
                 'format': format,
             },
             errors: {
+                400: `The \`format\` parameter is not \`json\`, \`xml\` or \`csv\`.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });
@@ -176,10 +180,15 @@ export class IngestionService {
      */
     public testIngest({
         requestBody,
+        format,
     }: {
         requestBody: {
             products?: Array<IngestProduct>;
         },
+        /**
+         * The feed format, when the content type does not say.
+         */
+        format?: 'json' | 'xml' | 'csv',
     }): CancelablePromise<{
         status?: 'valid' | 'partial' | 'invalid';
         format?: string;
@@ -191,10 +200,14 @@ export class IngestionService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/ingest/test',
+            query: {
+                'format': format,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
             },
         });

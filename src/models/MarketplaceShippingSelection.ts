@@ -33,6 +33,7 @@ export namespace MarketplaceShippingSelection {
      */
     export enum rate_source {
         SHIPPO = 'shippo',
+        CARRIER = 'carrier',
         CUSTOM = 'custom',
     }
 }

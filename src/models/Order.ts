@@ -17,9 +17,9 @@ export type Order = {
     order_status?: Order.order_status;
     payment_status?: Order.payment_status;
     /**
-     * Method used for payment
+     * Method used for payment: a built-in method (`card`, `stripe`, `paypal`, `paystack`, `mpesa`, `mpesa_c2b`, `cash`, `bank_transfer`, `free`) or the identifier of one of the store's own payment providers.
      */
-    payment_method?: Order.payment_method;
+    payment_method?: string;
     payment_reference?: string;
     subtotal?: number;
     tax_amount?: number;
@@ -43,6 +43,10 @@ export type Order = {
      * Whether the order is delivered to the shopper, collected at one of the store's locations, or has nothing to ship (`none`: downloads, codes, event tickets and services only).
      */
     fulfillment_method?: Order.fulfillment_method;
+    /**
+     * `b2b` for a wholesale order placed by a buyer account, `retail` for every other order. The `order.created`, `order.paid`, `order.fulfilled`, `order.cancelled`, `order.updated` and `order.refunded` events carry the same field.
+     */
+    order_type?: Order.order_type;
     /**
      * The location the shopper collects from, on a pickup order. Null on a delivery order.
      */
@@ -105,17 +109,6 @@ export namespace Order {
         REFUNDED = 'refunded',
     }
     /**
-     * Method used for payment
-     */
-    export enum payment_method {
-        STRIPE = 'stripe',
-        PAYPAL = 'paypal',
-        PAYSTACK = 'paystack',
-        MPESA = 'mpesa',
-        CASH = 'cash',
-        BANK_TRANSFER = 'bank_transfer',
-    }
-    /**
      * How the tax figure was produced — `automatic` (jurisdiction-accurate calculation for the destination), `fallback` (automatic calculation was unavailable, so the store's configured rate was used), or `manual` (the store's configured rate).
      */
     export enum tax_source {
@@ -130,6 +123,13 @@ export namespace Order {
         DELIVERY = 'delivery',
         PICKUP = 'pickup',
         NONE = 'none',
+    }
+    /**
+     * `b2b` for a wholesale order placed by a buyer account, `retail` for every other order. The `order.created`, `order.paid`, `order.fulfilled`, `order.cancelled`, `order.updated` and `order.refunded` events carry the same field.
+     */
+    export enum order_type {
+        RETAIL = 'retail',
+        B2B = 'b2b',
     }
     /**
      * Whether this order was created in the live or test environment. Sandbox orders are isolated from production data.

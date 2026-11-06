@@ -8,8 +8,17 @@ export type B2bInvoice = {
     invoice_number?: string;
     status?: B2bInvoice.status;
     currency?: string;
+    /**
+     * Major currency units: 200 is 200.00 in `currency`.
+     */
     amount?: number;
+    /**
+     * Major currency units.
+     */
     amount_paid?: number;
+    /**
+     * Major currency units.
+     */
     tax_amount?: number;
     due_date?: string | null;
     created_at?: string;

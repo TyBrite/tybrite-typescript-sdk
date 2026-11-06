@@ -9,8 +9,8 @@ export class SearchService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * Simple text search
-     * Fast text-based product search matching the query against product names, brands, and
-     * descriptions in the store's catalog. Returns a ranked list of matches with a relevance
+     * Fast text-based product search matching the query against product names. When no product name matches,
+     * the query is retried by similarity against product names and brands (see Typo tolerance). Returns a ranked list of matches with a relevance
      * `score` and a human-readable `matchReason`.
      *
      * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys, so
@@ -98,8 +98,10 @@ export class SearchService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -144,6 +146,7 @@ export class SearchService {
      */
     public semanticSearch({
         requestBody,
+        storeId,
         xAuthToken,
         xExternalAuth,
         xIdpToken,
@@ -172,6 +175,10 @@ export class SearchService {
             personalize?: boolean;
         },
         /**
+         * With a marketplace operator key, narrows the search to one merchant of the marketplace. Ignored for a store key. May also be sent as `store_id` in the body.
+         */
+        storeId?: string,
+        /**
          * Session token of a customer signed in through Galactic Core. Only used when `personalize` is true, to rank results toward that shopper's preferences. Optional everywhere else, and an absent or invalid credential simply returns unpersonalized results rather than an error.
          */
         xAuthToken?: string,
@@ -192,14 +199,19 @@ export class SearchService {
                 'x-external-auth': xExternalAuth,
                 'x-idp-token': xIdpToken,
             },
+            query: {
+                'store_id': storeId,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
+                401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -273,8 +285,10 @@ export class SearchService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

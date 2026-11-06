@@ -22,7 +22,7 @@ export class EventsService {
      * browser. The request is processed best-effort and returns immediately; it never blocks
      * the page.
      *
-     * @returns any The event was accepted.
+     * @returns any Accepted for processing. `recorded` is `false` when the event was not stored (a crawler user agent or an internal failure); the status is 202 either way, so a beacon never blocks the page.
      * @throws ApiError
      */
     public recordEvent({
@@ -53,11 +53,11 @@ export class EventsService {
             channel?: 'storefront' | 'marketplace';
         },
         /**
-         * Where the shopper was, when it is easier to set a header than to add a body field — `marketplace` from a marketplace storefront, `storefront` (or omitted) for a seller's own site. Equivalent to the `channel` body field; the body wins if both are sent. The marketplace itself is resolved server-side from the store, so this says which channel and cannot name one.
+         * Where the shopper was, when it is easier to set a header than to add a body field — `marketplace` from a marketplace storefront, `storefront` (or omitted) for a seller's own site. A `marketplace` value in either this header or the `channel` body field attributes the event to the marketplace; `storefront` in one does not override `marketplace` in the other. The marketplace itself is resolved server-side from the store, so this says which channel and cannot name one.
          */
         xTybriteChannel?: 'storefront' | 'marketplace',
     }): CancelablePromise<{
-        recorded?: boolean;
+        recorded: boolean;
     }> {
         return this.httpRequest.request({
             method: 'POST',
@@ -72,7 +72,7 @@ export class EventsService {
                 401: `Authentication failed - invalid or missing API key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

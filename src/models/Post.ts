@@ -7,28 +7,28 @@ export type Post = {
     id?: string;
     title?: string;
     slug?: string;
-    excerpt?: string;
+    excerpt?: string | null;
     /**
      * The article body, or `null` for a post with no body. See `PostContent`.
      */
     content?: (PostContent | null);
-    featured_image?: string;
+    featured_image?: string | null;
     /**
      * Optional URL of a short video for this banner (MP4, H.264 with AAC audio). Null when none is set. `featured_image` stays the poster and the fallback, so a storefront that shows only images keeps working unchanged.
      */
     video?: string | null;
-    category_id?: string;
-    category_name?: string;
-    category_slug?: string;
-    category_icon?: string;
-    author_name?: string;
-    author_avatar?: string;
+    category_id?: string | null;
+    category_name?: string | null;
+    category_slug?: string | null;
+    category_icon?: string | null;
+    author_name?: string | null;
+    author_avatar?: string | null;
     status?: Post.status;
     published_at?: string;
     view_count?: number;
     product_count?: number;
-    seo_title?: string;
-    seo_description?: string;
+    seo_title?: string | null;
+    seo_description?: string | null;
     /**
      * Search keywords the author chose for the post, for a page's meta tags. Returned by `getPost`.
      */

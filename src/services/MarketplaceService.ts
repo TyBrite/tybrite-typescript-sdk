@@ -94,7 +94,7 @@ export class MarketplaceService {
      * Currency: every price is charged in the marketplace's currency. A merchant who prices in
      * another currency is converted with the exchange rate the marketplace sets for that currency —
      * items, the merchant's discounts, gift-card amounts and delivery fees alike, each rounded to
-     * the marketplace currency's minor units. A merchant whose currency has no rate in the
+     * the marketplace currency's decimal places. A merchant whose currency has no rate in the
      * marketplace cannot be bought from there (`400 item_currency_unsupported`).
      *
      * Shipping: each merchant's items are priced by that merchant's delivery rates, converted to
@@ -227,10 +227,11 @@ export class MarketplaceService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 409: `The marketplace has not finished connecting its payment account, so it cannot take payment yet (\`provider_not_live\`); or the \`Idempotency-Key\` was already used with a different body (\`idempotency_conflict\`), names a checkout still being processed (\`idempotency_in_progress\`), or names a checkout that did not complete (\`idempotency_failed\` — retry with a new key).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `The payment provider could not be reached or rejected the request (\`provider_error\`), or shipping could not be priced (\`shipping_unavailable\`). No order is created.`,
             },
         });
@@ -296,11 +297,12 @@ export class MarketplaceService {
             errors: {
                 400: `The basket is invalid (\`invalid_request\`, \`insufficient_stock\`, \`currency_mismatch\`, \`discount_invalid\`), a merchant's currency has no exchange rate in the marketplace (\`item_currency_unsupported\`), no location could be found for a merchant priced by location (\`shipping_destination_required\`), a merchant or the marketplace does not deliver to the address (\`shipping_not_deliverable\`), the marketplace has no exchange rate for a merchant's delivery-rate currency (\`shipping_currency_unsupported\`), or a chosen carrier option cannot be used (\`shipping_rate_invalid\`).`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                409: `The marketplace has not finished connecting its payment account (\`provider_not_live\`).`,
+                409: `The marketplace has not finished connecting its payment account (\`provider_not_live\`), or a gift card has less available than the basket needs because another checkout is using it (\`gift_card_unavailable\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `Shipping could not be priced right now (\`shipping_unavailable\`).`,
             },
         });
@@ -354,9 +356,10 @@ export class MarketplaceService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -436,9 +439,10 @@ export class MarketplaceService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -500,7 +504,7 @@ export class MarketplaceService {
                 403: `Insufficient permissions - operation requires secret key`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -560,7 +564,7 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -592,7 +596,7 @@ export class MarketplaceService {
              */
             event_type: 'impression' | 'click';
             /**
-             * Optional — the specific product within the placement the event relates to.
+             * Optional — the specific product within the placement the event relates to. A value that is not a UUID answers `400 invalid_request`.
              */
             product_id?: string;
             /**
@@ -610,7 +614,7 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -648,7 +652,7 @@ export class MarketplaceService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -668,14 +672,14 @@ export class MarketplaceService {
      */
     public getMarketplaceCollection({
         slug,
-        limit,
+        limit = 24,
     }: {
         /**
          * The section's slug, taken from the section list.
          */
         slug: string,
         /**
-         * Maximum number of members to return.
+         * Maximum number of members to return. Values above 50 are capped at 50. Defaults to 24. A value that is not a whole number (`abc`, `-1`, `1.5`) answers `400 invalid_request`.
          */
         limit?: number,
     }): CancelablePromise<MarketplaceCollectionDetail> {
@@ -689,10 +693,10 @@ export class MarketplaceService {
                 'limit': limit,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `The \`slug\` is not a valid section slug (letters, digits, \`-\` and \`_\`, up to 80 characters), or \`limit\` is not a whole number.`,
                 401: `Authentication failed - invalid or missing API key`,
-                404: `Resource not found`,
-                500: `Internal server error`,
+                404: `No section has this slug in the marketplace.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

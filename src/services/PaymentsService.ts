@@ -36,7 +36,7 @@ export class PaymentsService {
          *
          * **Allowed Fields:**
          * - `provider`, `display_name`, `type`
-         * - `environment`, `is_configured`
+         * - `environment`, `is_configured`, `custom_provider`, `modes`, `publishable_key`
          *
          */
         fields?: string,
@@ -52,8 +52,10 @@ export class PaymentsService {
             errors: {
                 400: `Invalid request (invalid field names in \`fields\` query parameter)`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -69,7 +71,7 @@ export class PaymentsService {
      * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
      * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
      * 4. **Include Headers**:
-     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
+     * - `X-Timestamp`: Unix time in seconds or milliseconds (within 5 minutes of server time)
      * - `X-Signature`: Base64-encoded HMAC signature
      * - `Idempotency-Key`: Unique key to prevent duplicate payments
      *
@@ -172,7 +174,7 @@ export class PaymentsService {
          */
         idempotencyKey: string,
         /**
-         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Unix time in seconds or milliseconds, within 5 minutes of server time.
          * Used to prevent replay attacks.
          *
          */
@@ -195,8 +197,8 @@ export class PaymentsService {
             /**
              * Payment amount in MAJOR currency units — `100.00` is one hundred dollars, not one
              * dollar. This matches every other amount in the API: catalog prices, order totals
-             * and refunds are all major units. Conversion to a processor's minor units (Stripe
-             * cents, Paystack kobo) happens server-side; never send minor units here.
+             * and refunds are all major units. The processor's own smallest-denomination amounts (Stripe
+             * cents, Paystack kobo) are converted server-side; never send those here.
              *
              * When `order_id` is supplied the amount must equal that order's total to the cent,
              * or the request is rejected with `amount_mismatch`. Sending `10000` for a `100.00`
@@ -264,7 +266,16 @@ export class PaymentsService {
              */
             mode?: 'redirect' | 'embedded';
         },
-    }): CancelablePromise<(PaymentInitializeResponse | Record<string, any>)> {
+    }): CancelablePromise<(PaymentInitializeResponse | Record<string, any> | {
+        provider: string;
+        reference: string;
+        redirect_url?: string;
+        status?: string;
+        settled?: boolean;
+        settlement_code?: string;
+        order_id?: string;
+        custom_provider: boolean;
+    })> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/payments/initialize',
@@ -277,12 +288,13 @@ export class PaymentsService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request (missing required fields, invalid provider, unsupported currency, etc.)`,
-                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
-                403: `Insufficient permissions - operation requires secret key`,
+                401: `Authentication failed. Either the API key is missing, invalid or expired (\`unauthorized\`), or the request signature failed verification (\`signature_missing\`, \`timestamp_missing\`, \`timestamp_malformed\`, \`timestamp_out_of_window\`, \`signature_invalid\`). \`X-Timestamp\` is Unix time in seconds or milliseconds, within 5 minutes of server time.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 409: `\`provider_not_live\` — the payment method is still configured with test credentials and cannot take a real payment; the store must switch it to live mode first (a sandbox request is not affected). \`provider_not_test_mode\` — a sandbox request names a payment method that is connected with live credentials, so a test key cannot use it; use a live key, or connect the method in test mode. \`idempotency_in_progress\` — another request with the same \`Idempotency-Key\` is still being initialized; retry shortly with the same key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `A payment method the merchant added themselves did not complete the request. Retry, or fall back to another method.`,
                 504: `The payment provider did not respond in time. Safe to retry.`,
             },
@@ -318,15 +330,29 @@ export class PaymentsService {
      * **Paystack:**
      * - Queries Paystack Transaction Verification API
      * - Returns payment status and transaction details
-     * - Includes gateway response and fees
+     * - Includes the channel, customer email and payment time.
      *
      * **M-Pesa:**
      * - Queries M-Pesa STK Push Query API
-     * - Returns transaction status from Safaricom
-     * - Includes M-Pesa receipt number if successful
+     * - Returns the transaction status from Safaricom
+     * - Returns the STK query result code and description
+     *
+     * **A store's own payment provider:**
+     * - Pass the `reference` returned by initialize
+     * - Asks the provider for the payment's status and relays it as `status`
+     * - When the provider reports the payment as paid, the order the reference was opened for is marked paid, exactly as for
+     * the built-in providers. The order is the one recorded when the payment was initialized, never one named by the
+     * provider. It is marked paid only when the provider confirms an amount that covers the order total in the order's
+     * currency; otherwise `status` is `amount_mismatch` and the order stays unpaid. Repeating the call changes nothing.
      *
      * **Note:** Despite using POST method (for request body), this is a read operation for most
      * providers; for PayPal it captures the approved order.
+     *
+     * **Response signature**
+     *
+     * A call made with a secret key returns `X-Signature` and `X-Signature-Timestamp` when the store has a
+     * signing secret, so the caller can verify that the payment status is the one the platform produced. Verification is described under
+     * Get order (`GET /v1/orders/{id}`).
      *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
@@ -340,15 +366,43 @@ export class PaymentsService {
     }: {
         requestBody: {
             /**
-             * Payment provider used for initialization
+             * A built-in provider (`stripe`, `paypal`, `paystack`, `mpesa`) or the identifier of the store's own payment provider, as returned in the `provider` field by `GET /v1/payments/methods`.
              */
-            provider: 'stripe' | 'paypal' | 'paystack' | 'mpesa';
+            provider: string;
             /**
              * Payment reference returned from initialization
              */
             reference: string;
         },
-    }): CancelablePromise<Record<string, any>> {
+    }): CancelablePromise<(Record<string, any> | {
+        provider: string;
+        reference: string;
+        /**
+         * The status the provider reported, or `unknown` when it reported none. A provider's `paid` is
+         * returned as `paid` only once the order it was opened for is paid. Otherwise: `amount_mismatch`
+         * (the provider confirmed less than the order total, another currency, or no amount), `pending`
+         * (the payment could not be confirmed yet; verify again), or `not_settled` (the order cannot be
+         * paid, for example because it was cancelled).
+         *
+         */
+        status: string;
+        /**
+         * Present when the provider reported the payment as paid for an order. `true` once that order is paid under this reference.
+         */
+        settled?: boolean;
+        /**
+         * Present with `settled: false`. Why the order was not marked paid.
+         */
+        settlement_code?: string;
+        /**
+         * The order this reference was opened for.
+         */
+        order_id?: string;
+        /**
+         * Always `true` for a store's own payment provider.
+         */
+        custom_provider: boolean;
+    })> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/payments/verify',
@@ -357,10 +411,11 @@ export class PaymentsService {
             errors: {
                 400: `Invalid request (missing required fields, invalid provider, provider misconfigured, or upstream provider rejected verification)`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Forbidden - Publishable keys cannot verify payments. Use a secret key (tybrite_sk_*).`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `A payment method the merchant added themselves did not complete the verification. The payment's real state is unchanged; retry.`,
                 504: `The payment provider did not respond in time. Safe to retry.`,
             },

@@ -4,8 +4,8 @@
 /* eslint-disable */
 import type { SubscribeSaveInterval } from './SubscribeSaveInterval';
 /**
- * The price per delivery of a set of items under one Subscribe & Save offer. All amounts are in the
- * smallest unit of the store's currency (cents for a two-decimal currency).
+ * The price per delivery of a set of items under one Subscribe & Save offer. All amounts are in major currency units
+ * of `currency` (`8.0` is eight dollars), like every other price in the API.
  *
  * `available` is `false` when the offer is not live or covers none of the items; no prices are returned
  * then. Only the items the offer covers are listed in `covered_items` and priced; the other items of a
@@ -24,30 +24,30 @@ export type SubscribeSaveQuote = {
         variant_id: string | null;
         quantity: number;
         /**
-         * The catalogue price of one unit before the offer's discount.
+         * The catalogue price of one unit before the offer's discount, in `currency`.
          */
-        unit_cents: number;
+        unit_price: number;
     }>;
     /**
      * The covered items' total before any discount.
      */
-    subtotal_cents?: number;
+    subtotal?: number;
     /**
      * The discount on the first delivery.
      */
-    first_order_discount_cents?: number;
+    first_order_discount?: number;
     /**
      * The discount on each later delivery.
      */
-    renewal_discount_cents?: number;
+    renewal_discount?: number;
     /**
      * What the covered items cost on the first delivery.
      */
-    first_order_price_cents?: number;
+    first_order_price?: number;
     /**
      * What the covered items cost on each later delivery, at today's catalogue prices.
      */
-    renewal_price_cents?: number;
+    renewal_price?: number;
     free_shipping?: boolean;
     min_cycles?: number;
     intervals?: Array<SubscribeSaveInterval>;

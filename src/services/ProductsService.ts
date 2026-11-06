@@ -86,6 +86,9 @@ export class ProductsService {
         storeId,
         personalize,
         b2B,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         /**
          * Search products by name or SKU using case-insensitive partial matching.
@@ -265,8 +268,8 @@ export class ProductsService {
          * - **Metadata:** `brand`, `featured`, `featured_order`, `tags`, `is_active`
          * - **Nested:** `attributes.*`, `shipping_info.*`, `variant_attributes.*`
          * - **Timestamps:** `created_at`, `updated_at`
-         * - **Flags:** `has_variants`, `is_default`
-         * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`
+         * - **Flags:** `has_variants`
+         * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`, `preorder_ship_date`
          * - **Reviews:** `average_rating`, `review_count` (list only)
          *
          * **Bandwidth Savings:**
@@ -343,6 +346,18 @@ export class ProductsService {
          *
          */
         b2B?: boolean,
+        /**
+         * Galactic Core customer session access_token, used with `personalize=true` or `b2b=true` to identify the shopper. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`. Without a valid credential the list is returned unpersonalised.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the shopper for `personalize=true` or `b2b=true`. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`. Without a valid credential the list is returned unpersonalised.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier, identifying the shopper for `personalize=true` or `b2b=true`. Provide at most one of `x-auth-token`, `x-external-auth` or `x-idp-token`. Without a valid credential the list is returned unpersonalised.
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         products?: Array<Product>;
         pagination?: {
@@ -369,6 +384,11 @@ export class ProductsService {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/products',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
             query: {
                 'search': search,
                 'brand': brand,
@@ -388,11 +408,12 @@ export class ProductsService {
                 'b2b': b2B,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when a \`category_id\` or \`subcategory_id\` value is not a UUID (a typo is refused rather than answered with an empty list), or when a price, \`sort\`, \`include_total\` or \`spec[...]\` value is not valid, or a listing filter is combined with a marketplace operator key, \`personalize\` or \`b2b\`.`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -432,9 +453,10 @@ export class ProductsService {
             },
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -588,11 +610,12 @@ export class ProductsService {
                 'spec': spec,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when a \`category_id\` or \`subcategory_id\` value is not a UUID, or when a listing parameter is not valid.`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -696,8 +719,8 @@ export class ProductsService {
          * - **Inventory:** `stock`, `total_stock`, `last_restocked` (`last_restocked` is not in the default response — request it explicitly)
          * - **Media:** `media`, `thumbnail_url`
          * - **Metadata:** `brand`, `category_name`, `subcategory_name`, `attributes.*`
-         * - **Flags:** `has_variants`, `variant_count`, `is_default`
-         * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`
+         * - **Flags:** `has_variants`, `variant_count`
+         * - **Delivery:** `fulfilment_kind`, `fulfilment`, `fulfilment.*`, `preorder_ship_date`
          * - **Variants:** `variants` (includes all variant fields)
          *
          * **Nested Variant Filtering (52% bandwidth reduction):**
@@ -762,7 +785,8 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Product or variant not found for the given ID.
 
                  **Common Causes:**
@@ -773,7 +797,7 @@ export class ProductsService {
                  **SDK Error Handling:**
                 `,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -897,7 +921,8 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Product not found for the given slug.
 
                  **Common Causes:**
@@ -915,7 +940,7 @@ export class ProductsService {
                 - Try listing products to see available slugs
                 `,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -964,9 +989,11 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `No specifications found for this product`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -1011,8 +1038,10 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -1081,8 +1110,10 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -1127,8 +1158,10 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -1159,9 +1192,11 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -1169,7 +1204,8 @@ export class ProductsService {
      * Get items in a product collection
      * Returns all items belonging to a product collection, ordered by `sort_order`.
      * Each item contains the linked online product row along with its sort position.
-     * If the collection has no items (or does not exist), an empty array is returned.
+     * A collection with no items returns an empty array. A collection that does not exist,
+     * is inactive or has been deleted answers `404`.
      *
      * @returns any Success
      * @throws ApiError
@@ -1203,8 +1239,11 @@ export class ProductsService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

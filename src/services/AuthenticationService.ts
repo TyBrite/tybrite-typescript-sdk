@@ -3,8 +3,8 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { CodeSent } from '../models/CodeSent';
-import type { Customer } from '../models/Customer';
 import type { RegisterPending } from '../models/RegisterPending';
+import type { ShopperCustomer } from '../models/ShopperCustomer';
 import type { ShopperSession } from '../models/ShopperSession';
 import type { ShopperSignedIn } from '../models/ShopperSignedIn';
 import type { User } from '../models/User';
@@ -41,14 +41,13 @@ export class AuthenticationService {
      * One account exists per email address at a store. The same address can hold accounts at several
      * stores, each with its own password and sessions.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 5 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 60 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 20 attempts for one
+     * accepted. Across every store and address, past 20 attempts for one
      * email the call is slowed to one every 60 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -102,7 +101,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -119,14 +118,13 @@ export class AuthenticationService {
      * A refused call states why in `details.reason`: `expired`, `too_many_attempts` or `wrong`. The
      * reason reveals nothing about the address, because a code exists for every address that registers.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 10 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 30 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 20 attempts for one
+     * accepted. Across every store and address, past 20 attempts for one
      * email the call is slowed to one every 30 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -164,7 +162,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -178,14 +176,13 @@ export class AuthenticationService {
      * At most one email per address is sent every 60 seconds and five an hour; a call past that is
      * answered `202` and sends nothing.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 5 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 60 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 10 attempts for one
+     * accepted. Across every store and address, past 10 attempts for one
      * email the call is slowed to one every 60 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -216,7 +213,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -244,7 +241,7 @@ export class AuthenticationService {
      * Only the order for this token is claimed. Other guest orders for the same address are not linked.
      *
      * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`), called from the
-     * storefront's server. Publishable keys answer `403 forbidden`.
+     * storefront's server. A publishable key answers `403 forbidden`.
      *
      * **Attempt limits:** 10 attempts per order per hour and 600 per store per hour; past either, the call
      * answers `429 rate_limited` with a `Retry-After` header. After 10 wrong tokens an order's token is
@@ -283,10 +280,10 @@ export class AuthenticationService {
             errors: {
                 400: `\`invalid_request\` for a missing field; \`weak_password\` when the password breaks the rule.`,
                 403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
+                404: `A wrong, spent, expired or unknown \`claim_token\`, or an order for another store or environment. The answer is identical in every case.`,
                 409: `\`account_exists\` (the address already has an account here) or \`claim_unavailable\` (the address already has other orders here).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -305,14 +302,13 @@ export class AuthenticationService {
      * Repeated wrong passwords on one account lock it for a short period, during which every call for that
      * account answers `429 rate_limited` with a `Retry-After` header.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 10 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 15 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 50 attempts for one
+     * accepted. Across every store and address, past 50 attempts for one
      * email the call is slowed to one every 10 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -345,7 +341,7 @@ export class AuthenticationService {
                 `,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -357,8 +353,8 @@ export class AuthenticationService {
      *
      * An access token already issued remains valid until its `expires_at` (at most 15 minutes).
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** 20 requests per refresh token per 15 minutes. Beyond that the call returns
      * `429 rate_limited` with a `Retry-After` header.
@@ -385,7 +381,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -408,14 +404,13 @@ export class AuthenticationService {
      * At most one email per address is sent every 60 seconds and five an hour; a call past that is
      * answered `202` and sends nothing.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 5 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 60 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 10 attempts for one
+     * accepted. Across every store and address, past 10 attempts for one
      * email the call is slowed to one every 60 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -446,7 +441,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `\`passwordless_disabled\` when the store does not offer sign-in by emailed code, or \`forbidden\` when the call was made with a publishable key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -460,14 +455,13 @@ export class AuthenticationService {
      * `400 invalid_code` with no reason, and an address without an account answers the same way. This
      * endpoint never creates an account.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 10 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 30 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 20 attempts for one
+     * accepted. Across every store and address, past 20 attempts for one
      * email the call is slowed to one every 30 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -502,7 +496,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `\`passwordless_disabled\` when the store does not offer sign-in by emailed code, or \`forbidden\` when the call was made with a publishable key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -517,14 +511,13 @@ export class AuthenticationService {
      * `?link_token=<token>` to it. It must be on one of the store's allowed storefront origins; otherwise
      * it is ignored and the email carries the code only.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 5 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 60 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 10 attempts for one
+     * accepted. Across every store and address, past 10 attempts for one
      * email the call is slowed to one every 60 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -555,7 +548,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -570,14 +563,13 @@ export class AuthenticationService {
      * `POST /v1/auth/register`; a password that breaks it is refused with `400 weak_password`. The reset
      * also clears a `password_reset_required` state.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** with a secret key, past 10 attempts for one email address from one store in
      * 15 minutes, the call is slowed to one attempt every 30 seconds; other calls for that address
      * answer `429 rate_limited` with a `Retry-After` header giving the seconds until the next attempt is
-     * accepted. With a publishable key, attempts are limited per calling address: 20 per address and email,
-     * and 60 per address, in 15 minutes. Across every store and address, past 20 attempts for one
+     * accepted. Across every store and address, past 20 attempts for one
      * email the call is slowed to one every 30 seconds. Every attempt counts, successful or not,
      * and an address with no account is treated identically.
      *
@@ -619,7 +611,7 @@ export class AuthenticationService {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -635,8 +627,8 @@ export class AuthenticationService {
      * `current_password`. The new password follows the password rule of `POST /v1/auth/register`; a
      * password that breaks it is refused with `400 weak_password`.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** 5 password changes per sign-in token per 15 minutes. Beyond that the call
      * returns `429 rate_limited` with a `Retry-After` header.
@@ -683,7 +675,7 @@ export class AuthenticationService {
                 401: `\`invalid_token\` when the sign-in token is not valid for this store, \`invalid_credentials\` when \`current_password\` is wrong, or \`unauthorized\` for an invalid API key.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -699,8 +691,8 @@ export class AuthenticationService {
      * with the same token at once therefore leave one of them refused, so a storefront serialises
      * refreshes per session. On `invalid_refresh_token` the shopper is signed out.
      *
-     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). Publishable keys
-     * answer `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
+     * **Secret key required.** This endpoint requires a secret key (`tybrite_sk_*`). A publishable key
+     * answers `403 forbidden`. Account calls are made from a server, which then holds the shopper's session.
      *
      * **Attempt limits:** 20 refreshes per refresh token per 15 minutes. Beyond that the call returns
      * `429 rate_limited` with a `Retry-After` header.
@@ -734,7 +726,7 @@ export class AuthenticationService {
                 401: `\`invalid_refresh_token\` when the session has ended, or \`unauthorized\` for an invalid API key.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -762,7 +754,7 @@ export class AuthenticationService {
         xAuthToken: string,
     }): CancelablePromise<{
         user: User;
-        customer: (Customer | null);
+        customer: (ShopperCustomer | null);
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -775,7 +767,7 @@ export class AuthenticationService {
                 401: `\`invalid_token\` when the sign-in token is not valid for this store, or \`unauthorized\` for an invalid API key.`,
                 403: `Insufficient permissions - operation requires secret key`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }

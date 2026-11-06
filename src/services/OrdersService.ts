@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { Order } from '../models/Order';
+import type { OrderSummary } from '../models/OrderSummary';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class OrdersService {
@@ -13,6 +14,12 @@ export class OrdersService {
      *
      * The list view returns order headers **without line items** for efficiency —
      * fetch `GET /v1/orders/{id}` for the full order including its items.
+     *
+     * **Response signature**
+     *
+     * A call made with a secret key returns `X-Signature` and `X-Signature-Timestamp` when the store has a
+     * signing secret, so the caller can verify that the list is the one the platform produced. Verification is described under
+     * Get order (`GET /v1/orders/{id}`).
      *
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
@@ -61,7 +68,7 @@ export class OrdersService {
          */
         fields?: string,
     }): CancelablePromise<{
-        orders?: Array<Order>;
+        orders?: Array<OrderSummary>;
         pagination?: {
             limit?: number;
             next_cursor?: string | null;
@@ -82,9 +89,10 @@ export class OrdersService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -100,7 +108,7 @@ export class OrdersService {
      * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
      * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
      * 4. **Include Headers**:
-     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
+     * - `X-Timestamp`: Unix time in seconds or milliseconds (within 5 minutes of server time)
      * - `X-Signature`: Base64-encoded HMAC signature
      *
      * **Example (Node.js):**
@@ -108,7 +116,7 @@ export class OrdersService {
      * **🔄 Idempotency Protection**
      *
      * Include `Idempotency-Key` header to prevent duplicate orders on retry.
-     * If the same key is used, the original order is returned (not counted against rate limit).
+     * A replay with the same key and body returns the original order (200) and creates no second order.
      *
      * **⚠️ Security Notes:**
      * - HMAC secret is displayed in the Integrations page (Developer section)
@@ -218,7 +226,7 @@ export class OrdersService {
          */
         idempotencyKey: string,
         /**
-         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
+         * Unix time in seconds or milliseconds, within 5 minutes of server time.
          * Used to prevent replay attacks.
          *
          */
@@ -320,17 +328,17 @@ export class OrdersService {
                 attendee_names?: any[] | null;
             }>;
             /**
-             * Payment method identifier (required). `free` is for an order whose `total_amount` is 0 and whose items are all downloads or event tickets; the order is created paid, for a signed-in shopper (see `x-auth-token`). It may be omitted on such an order. Any other zero-total order is refused.
+             * Payment method identifier (required): one of `card`, `stripe`, `paypal`, `paystack`, `mpesa`, `mpesa_c2b`, `cash`, `bank_transfer`, `free`, or the identifier of one of the store's own payment providers as listed by `GET /v1/payments/methods`. Any other value answers 400. `free` is for an order whose `total_amount` is 0 and whose items are all downloads or event tickets; the order is created paid, for a signed-in shopper (see `x-auth-token`). It may be omitted on such an order. Any other zero-total order is refused.
              */
-            payment_method: 'card' | 'stripe' | 'paypal' | 'paystack' | 'mpesa' | 'cash' | 'free';
+            payment_method: string;
             /**
-             * Payment status (defaults to pending)
+             * Payment status on create (defaults to pending). Only `pending` and `paid` are accepted; later states are reached by `PATCH /v1/orders/{id}`. An order created as `paid` needs the `payment_reference` of the payment that settled it (counter-settled `cash` and `card`, and a free order, are exempt); without it the call answers 400 `payment_reference_required`.
              */
-            payment_status?: 'pending' | 'paid' | 'failed' | 'refunded';
+            payment_status?: 'pending' | 'paid';
             /**
-             * Order fulfillment status (defaults to pending)
+             * Order status on create (defaults to pending). Only `pending`, `confirmed` and `processing` are accepted; later states are reached by `PATCH /v1/orders/{id}`.
              */
-            order_status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+            order_status?: 'pending' | 'confirmed' | 'processing';
             /**
              * Subtotal before tax and shipping. Required.
              */
@@ -445,9 +453,9 @@ export class OrdersService {
              */
             shipping_rate_id?: string;
             /**
-             * Where the chosen option came from — its `source` in `rates[]`: the store's carrier account (`shippo`) or its custom shipping extension (`custom`).
+             * Where the chosen option came from — its `source` in `rates[]`: the store's carrier account (`shippo`, or the neutral spelling `carrier`) or its custom shipping extension (`custom`).
              */
-            shipping_rate_source?: 'shippo' | 'custom';
+            shipping_rate_source?: 'shippo' | 'carrier' | 'custom';
             /**
              * The parcel the option was quoted for. Required with `shipping_rate_source: custom`, because the extension is asked for its options again to check the one chosen.
              */
@@ -610,17 +618,18 @@ export class OrdersService {
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request (missing required fields, invalid data)`,
-                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
-                403: `Insufficient permissions - operation requires secret key`,
+                401: `Authentication failed. Either the API key is missing, invalid or expired (\`unauthorized\`), or the request signature failed verification (\`signature_missing\`, \`timestamp_missing\`, \`timestamp_malformed\`, \`timestamp_out_of_window\`, \`signature_invalid\`). \`X-Timestamp\` is Unix time in seconds or milliseconds, within 5 minutes of server time.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `Resource not found`,
                 409: `The \`Idempotency-Key\` was already used with a different request body (\`idempotency_key_reused\`), or the request conflicts with an existing order number (\`conflict\`). Send a new key for a different request.
                 Creating an order as already paid also checks the payment: the verified payment belongs to another order, is in another currency, or its \`payment_reference\` is already attached to another order of the store (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`). No order is created.
                 A \`subscribe_save\` order without a \`customer_id\` is refused with \`account_required\`: a subscription needs a signed-in shopper, so have the shopper sign in or create an account and send their \`customer_id\`. A free order (\`total_amount\` 0) without a signed-in shopper is refused the same way.
-                An event ticket that cannot be bought is refused with \`ticket_sale_closed\` (sales not open or closed), \`ticket_event_ended\`, or \`insufficient_stock\` (the ticket type is sold out or the venue is full); \`not_available\` marks an item the store can no longer sell.`,
+                An event ticket that cannot be bought is refused with \`ticket_sale_closed\` (sales not open or closed), \`ticket_event_ended\`, or \`insufficient_stock\` (the ticket type is sold out or the venue is full); \`not_available\` marks an item the store can no longer sell. A gift card that has less available than the order needs, because another checkout is using it, is refused with \`gift_card_unavailable\`; the card is held for an order until it is paid or closed unpaid. A campaign whose budget no longer covers the order's discount, because other open orders have reserved it, is refused with \`campaign_budget_exhausted\`; re-price the cart and send the order again.`,
                 422: `The store runs its own order-validation rule and that rule rejected the order (\`order_rejected\`). The \`message\` carries the reason the store gave. No order is created. This is also returned when the store requires validation but the rule could not be reached, so an order is never created unchecked.
                 Creating an order as already paid with a \`payment_reference\` also verifies the payment with the provider: a reference the provider does not report as paid is refused (\`payment_not_verified\`), and so is a verified payment that does not cover the order total (\`amount_mismatch\`).`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal error, or \`config_error\` when the store has no HMAC secret configured ("Store HMAC secret not configured. Contact support.").`,
                 502: `Shipping could not be checked right now (\`shipping_unavailable\`). No order is created.`,
                 503: `Creating the order as already paid needs the payment verified, and the payment could not be verified at this moment (\`verification_unavailable\`). No order is created; retry shortly with the same \`Idempotency-Key\`.`,
             },
@@ -630,353 +639,378 @@ export class OrdersService {
      * Get order details
      * Retrieve detailed information about a specific order including line items and status.
      *
-     * **HMAC Signature Verification (Optional)**
+     * **Response signature**
      *
-     * For enhanced security, you can verify the authenticity of order data using HMAC signatures.
-     * When enabled, the response includes an `X-Signature` header containing an HMAC-SHA256 signature
-     * of the response body.
+     * A call made with a secret key returns `X-Signature` and `X-Signature-Timestamp` when the store has a
+     * signing secret, so the caller can verify that the body is the one the platform produced and was not
+     * changed in transit. A call made with a publishable key is not signed. A key issued to a connected app is
+     * signed with that app's own signing secret; any other key with the store's signing secret.
      *
      * To verify:
-     * 1. Extract the `X-Signature` header from the response
-     * 2. Compute HMAC-SHA256 of the response body using your API secret key
-     * 3. Compare the computed signature with the header value
+     * 1. Read `X-Signature-Timestamp` (Unix seconds) and `X-Signature` from the response.
+     * 2. Take the decoded response body: the exact bytes received after transport decompression, without
+     * parsing or re-serialising them.
+     * 3. Compute `HMAC-SHA256(signing_secret, "{timestamp}.{body}")` and encode the digest as base64.
+     * 4. Compare it with `X-Signature` in constant time, and reject a response whose timestamp is more than
+     * five minutes from the current time.
+     *
+     * This is the recipe used to sign requests, applied to the response.
      *
      * Example verification (Node.js):
      *
-     * @returns Order Successfully retrieved order
-     * @throws ApiError
-     */
-    public getOrder({
-        id = '880e8400-e29b-41d4-a716-446655440003',
-        fields,
-    }: {
-        /**
-         * Order UUID
-         */
-        id?: string,
-        /**
-         * Comma-separated list of fields to include in the response.
+     * ```js
+     * import { createHmac, timingSafeEqual } from 'node:crypto';
+     *
+     * const headers = { Authorization: `Bearer ${secretKey}` };
+     * const res = await fetch(`${baseUrl}/v1/orders/${orderId}`, { headers });
+     * const body = await res.text();
+     * const timestamp = res.headers.get('X-Signature-Timestamp');
+     * const received = Buffer.from(res.headers.get('X-Signature') ?? '');
+     * const expected = Buffer.from(
+         * createHmac('sha256', signingSecret).update(`${timestamp}.${body}`).digest('base64'),
+         * );
+         * const fresh = Math.abs(Date.now() / 1000 - Number(timestamp)) <= 300;
+         * const valid = fresh && received.length === expected.length && timingSafeEqual(received, expected);
+         * ```
          *
-         * **Allowed Fields:**
-         * - `id`, `order_number`, `customer_id`, `customer_email`, `customer_phone`, `customer_name`
-         * - `billing_address`, `shipping_address`
-         * - `subtotal`, `tax_amount`, `shipping_amount`, `discount_amount`, `total_amount`
-         * - `payment_method`, `payment_status`, `order_status`, `payment_reference`
-         * - `notes`, `tracking_number`, `estimated_delivery`
-         * - `shipped_at`, `delivered_at`
-         * - `created_at`, `updated_at`
-         * - `shipping_metadata`
-         * - `fulfillment_method`, `pickup_location_id`, `fulfillment_location_id`, `shipping_option_id`
-         * - `items`
-         *
+         * @returns Order Successfully retrieved order
+         * @throws ApiError
          */
-        fields?: string,
-    }): CancelablePromise<Order> {
-        return this.httpRequest.request({
-            method: 'GET',
-            url: '/v1/orders/{id}',
-            path: {
-                'id': id,
-            },
-            query: {
-                'fields': fields,
-            },
-            errors: {
-                400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
-            },
-        });
-    }
-    /**
-     * Update order
-     * Update specific fields of an existing order with HMAC signature verification and idempotency protection.
-     *
-     * **🔐 HMAC Signing (REQUIRED)**
-     *
-     * All order update requests MUST include HMAC-SHA256 signature:
-     *
-     * 1. **Generate Timestamp**: Get current Unix timestamp in seconds
-     * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
-     * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
-     * 4. **Include Headers**:
-     * - `X-Timestamp`: Unix timestamp (must be within 5 minutes)
-     * - `X-Signature`: Base64-encoded HMAC signature
-     *
-     * **🔄 Idempotency Protection**
-     *
-     * Include `Idempotency-Key` header to prevent duplicate updates on retry.
-     * Each PATCH operation is tracked separately - if you retry with the same key,
-     * the original order state is returned without re-processing side effects.
-     *
-     * **Important:** Use a unique idempotency key for each distinct update operation.
-     * - ✅ Good: `update-shipping-{order_id}-{timestamp}`, `mark-paid-{order_id}-{timestamp}`
-     * - ❌ Bad: Reusing the same key for different updates to the same order
-     *
-     * This prevents duplicate processing of critical operations like:
-     * - Double-triggering accounting entries when marking as paid
-     * - Re-reducing inventory stock
-     * - Duplicate gift card redemptions
-     * - Multiple promotion usage recordings
-     *
-     * **Updatable Fields:**
-     * - `payment_status`: Payment status (pending, paid, failed)
-     * - `order_status`: Order fulfillment status (pending, confirmed, processing, shipped, delivered, cancelled)
-     * - `notes`: Additional order notes
-     * - `tracking_number`: Shipping tracking number
-     * - `estimated_delivery`: Estimated delivery date/time
-     * - `shipped_at`: Timestamp when order was shipped
-     * - `delivered_at`: Timestamp when order was delivered
-     * - `shipping_metadata`: Fulfilment details such as carrier and tracking, merged into the stored object (purchased-label details are locked)
-     *
-     * **Status transitions:**
-     * - `payment_status`: `pending` → `paid` or `failed`; `failed` → `paid`. A `paid` order
-     * does not move back, and `refunded` is set by processing a refund, not by this endpoint.
-     * - `order_status` moves forward only (`pending` → `confirmed` → `processing` → `shipped` →
-     * `delivered`). `cancelled` is available until the order ships. `cancelled` and `delivered`
-     * are final, and a cancelled order cannot be marked paid.
-     * - Sending a field with the value it already has is not a transition: the request succeeds
-     * and nothing is repeated. Any other move is refused with `409 invalid_transition`.
-     * - A status change applies only if the order is still in the state it was in when the
-     * request began. When two requests change it at once, one succeeds and the other receives
-     * `409 order_changed`.
-     *
-     * **Automatic Accounting:**
-     * When `payment_status` is updated to `paid`, the system automatically, and once:
-     * - Triggers accounting entry creation (production only)
-     * - Reduces inventory stock for all order items, committing the order's own stock holds
-     * - Updates customer purchase metrics
-     * - Redeems the gift card applied at checkout (if applicable)
-     * - Records promotion usage and campaign spend (if applicable)
-     * Anything that does not complete is listed in `post_processing_warnings` on the response; the
-     * order stays paid.
-     *
-     * When an unpaid order is cancelled or its payment fails, its stock holds are released and any
-     * store credit applied to it is returned to the customer.
-     *
-     * **Key Type Support:**
-     * - ✅ Secret keys (full access)
-     * - ❌ Publishable keys (forbidden - returns 403)
-     *
-     * @returns any Order updated successfully
-     * @throws ApiError
-     */
-    public updateOrder({
-        id,
-        idempotencyKey,
-        xTimestamp,
-        xSignature,
-        requestBody,
-    }: {
-        /**
-         * Order UUID
-         */
-        id: string,
-        /**
-         * Unique key to prevent duplicate updates (e.g., update-{operation}-{order_id}-{timestamp})
-         */
-        idempotencyKey: string,
-        /**
-         * Unix timestamp in seconds (current time). Must be within 5 minutes of server time.
-         * Used to prevent replay attacks.
-         *
-         */
-        xTimestamp: number,
-        /**
-         * HMAC-SHA256 signature of the payload (timestamp + "." + request_body), base64-encoded.
-         * Sign using your HMAC secret from the Integrations page (Developer section).
-         *
-         */
-        xSignature: string,
-        requestBody: {
+        public getOrder({
+            id = '880e8400-e29b-41d4-a716-446655440003',
+            fields,
+        }: {
             /**
-             * Payment status. See the allowed transitions above.
+             * Order UUID
              */
-            payment_status?: 'pending' | 'paid' | 'failed';
+            id?: string,
             /**
-             * Order fulfillment status. See the allowed transitions above.
-             */
-            order_status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-            /**
-             * Additional order notes
-             */
-            notes?: string;
-            /**
-             * Shipping tracking number
-             */
-            tracking_number?: string;
-            /**
-             * Estimated delivery date and time
-             */
-            estimated_delivery?: string;
-            /**
-             * Timestamp when order was shipped
-             */
-            shipped_at?: string;
-            /**
-             * Timestamp when order was delivered
-             */
-            delivered_at?: string;
-            /**
-             * The reference your payment provider issued for this payment. Send it when marking an order paid that was charged outside Galactic Core, so the payment can be traced back to the provider's own record. When the store has added its own payment method, the reference is checked with that provider before the order is accepted as paid.
-             */
-            payment_reference?: string;
-            /**
-             * Stock reservation ids returned by `POST /v1/checkout/reserve`. Supplying them commits the stock already held for this shopper rather than decrementing it a second time.
-             */
-            reservation_ids?: Array<string>;
-            /**
-             * Fulfilment details to add to the order, such as the carrier, service and tracking number. The keys sent are merged into the stored `shipping_metadata`; keys not sent are kept. The details of a label purchased through the platform (`shippo`, `label`, `label_url`, `transaction_id`, `rate_id`) cannot be set here and answer 409 `shipping_label_locked`.
-             */
-            shipping_metadata?: Record<string, any>;
-        },
-    }): CancelablePromise<(Order & {
-        /**
-         * Present only when the update marked the order paid and one or more of the
-         * steps that follow (stock, gift card, store credit, promotion usage) did not
-         * complete. The order stays paid; each warning names the step and what needs
-         * follow-up.
-         *
-         */
-        post_processing_warnings?: Array<{
-            /**
-             * The step that did not complete
-             */
-            stage: string;
-            /**
-             * Human-readable description of the failure
-             */
-            message: string;
-        }>;
-    })> {
-        return this.httpRequest.request({
-            method: 'PATCH',
-            url: '/v1/orders/{id}',
-            path: {
-                'id': id,
-            },
-            headers: {
-                'Idempotency-Key': idempotencyKey,
-                'X-Timestamp': xTimestamp,
-                'X-Signature': xSignature,
-            },
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                400: `Invalid request (no updatable fields provided, invalid field values)`,
-                401: `Unauthorized - Invalid or missing authentication credentials, or HMAC signature verification failed`,
-                403: `Insufficient permissions - operation requires secret key`,
-                404: `Resource not found`,
-                409: `The requested status change is not allowed from the order's current state (\`invalid_transition\`), or the order changed while the request was being applied (\`order_changed\`), or the \`Idempotency-Key\` was already used with a different request body or for a different order (\`idempotency_key_reused\`), or the verified payment belongs to another order, is in another currency or is already attached to another order (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`), or \`shipping_metadata\` tries to set purchased-label details (\`shipping_label_locked\`). The order is left as it was.`,
-                422: `You marked the order paid with a \`payment_reference\`, but the payment provider does not report that reference as paid (\`payment_not_verified\`), or the verified payment does not cover the order total (\`amount_mismatch\`). The order is left unchanged rather than accepted on an unverified claim.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
-                503: `The payment reference could not be checked at this moment (\`verification_unavailable\`). The order is left unchanged; retry shortly.`,
-            },
-        });
-    }
-    /**
-     * Reserve stock for checkout
-     * **Optional.** Holds stock for the items a customer is checking out so the
-     * units can't be sold to someone else while they complete payment.
-     *
-     * Use this when there is a gap between "customer commits to buy" and "payment
-     * confirms" — card redirects, 3‑D Secure, or mobile‑money push prompts — so
-     * the stock is claimed *before* the customer pays and a second shopper racing
-     * for the last unit is turned away up front. For instant‑capture or fully
-     * synchronous flows you can skip it and call `POST /v1/orders` directly;
-     * Galactic Core still prevents stock from going negative at order time. In
-     * other words, reserving is a stronger guarantee for async payments, not a
-     * mandatory step before every order.
-     *
-     * Reservations are all‑or‑nothing: if any item lacks available stock, nothing
-     * is reserved and the response is `409`. Each hold expires automatically after
-     * a window (15 minutes by default). Pass the returned `reservation_ids` to
-     * `POST /v1/orders` (or when you `PATCH` an order to `paid`) and Galactic Core
-     * converts the hold into the actual stock deduction. If the customer abandons
-     * checkout, the hold simply expires and the stock returns to availability —
-     * you don't need to release it explicitly.
-     *
-     * Works with both publishable and secret keys (checkout originates in the
-     * browser).
-     *
-     * **Limits per request:** with a publishable key, at most 25 items and 25 units
-     * of any one variant (quantities for a repeated variant are added together);
-     * with a secret key, at most 100 items and 1,000 units of any one variant. A
-     * request over a limit is refused with `400` and nothing is reserved.
-     *
-     * **Rate limit:** 300 requests/hour per API key, and with a publishable key
-     * 60 requests/hour per visitor.
-     *
-     * A key issued through GC Connect needs the `orders:write` scope; without it
-     * the request returns `403`.
-     *
-     * @returns any Stock reserved
-     * @throws ApiError
-     */
-    public reserveStock({
-        requestBody,
-    }: {
-        requestBody: {
-            /**
-             * The variants and quantities to hold.
-             */
-            items: Array<{
-                /**
-                 * The product variant to reserve.
-                 */
-                variant_id: string;
-                /**
-                 * How many units to hold.
-                 */
-                quantity: number;
-            }>;
-            /**
-             * Optional hold duration in seconds. Defaults to 900 (15 minutes);
-             * values below 60 are raised to 60.
+             * Comma-separated list of fields to include in the response.
+             *
+             * **Allowed Fields:**
+             * - `id`, `order_number`, `customer_id`, `customer_email`, `customer_phone`, `customer_name`
+             * - `billing_address`, `shipping_address`
+             * - `subtotal`, `tax_amount`, `shipping_amount`, `discount_amount`, `total_amount`
+             * - `payment_method`, `payment_status`, `order_status`, `payment_reference`
+             * - `notes`, `tracking_number`, `estimated_delivery`
+             * - `shipped_at`, `delivered_at`
+             * - `created_at`, `updated_at`
+             * - `shipping_metadata`
+             * - `fulfillment_method`, `pickup_location_id`, `fulfillment_location_id`, `shipping_option_id`
+             * - `items`
              *
              */
-            ttl_seconds?: number;
-            /**
-             * Optional - associate the hold with a customer (used for checkout recovery). Honoured only with a secret key; with a publishable key the hold is recorded without a customer.
-             */
-            customer_id?: string;
-            /**
-             * Optional - associate the hold with an anonymous browser session.
-             */
-            session_id?: string;
-        },
-    }): CancelablePromise<{
-        reservations: Array<{
-            reservation_id?: string;
-            variant_id?: string;
-            quantity?: number;
-        }>;
+            fields?: string,
+        }): CancelablePromise<Order> {
+            return this.httpRequest.request({
+                method: 'GET',
+                url: '/v1/orders/{id}',
+                path: {
+                    'id': id,
+                },
+                query: {
+                    'fields': fields,
+                },
+                errors: {
+                    400: `Invalid request - malformed data or missing required fields`,
+                    401: `Authentication failed - invalid or missing API key`,
+                    402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                    403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                    404: `Resource not found`,
+                    429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                    500: `Internal server error. A 5xx response never carries \`details\`.`,
+                },
+            });
+        }
         /**
-         * Pass these to order creation to convert the hold into a sale.
+         * Update order
+         * Update specific fields of an existing order with HMAC signature verification and idempotency protection.
+         *
+         * **🔐 HMAC Signing (REQUIRED)**
+         *
+         * All order update requests MUST include HMAC-SHA256 signature:
+         *
+         * 1. **Generate Timestamp**: Get current Unix timestamp in seconds
+         * 2. **Create Payload**: Concatenate `timestamp + "." + JSON_body`
+         * 3. **Sign Payload**: `HMAC-SHA256(hmac_secret, payload)` → base64 encode
+         * 4. **Include Headers**:
+         * - `X-Timestamp`: Unix time in seconds or milliseconds (within 5 minutes of server time)
+         * - `X-Signature`: Base64-encoded HMAC signature
+         *
+         * **🔄 Idempotency Protection**
+         *
+         * Include `Idempotency-Key` header to prevent duplicate updates on retry.
+         * Each PATCH operation is tracked separately - if you retry with the same key,
+         * the original order state is returned without re-processing side effects.
+         *
+         * **Important:** Use a unique idempotency key for each distinct update operation.
+         * - ✅ Good: `update-shipping-{order_id}-{timestamp}`, `mark-paid-{order_id}-{timestamp}`
+         * - ❌ Bad: Reusing the same key for different updates to the same order
+         *
+         * This prevents duplicate processing of critical operations like:
+         * - Double-triggering accounting entries when marking as paid
+         * - Re-reducing inventory stock
+         * - Duplicate gift card redemptions
+         * - Multiple promotion usage recordings
+         *
+         * **Updatable Fields:**
+         * - `payment_status`: Payment status (pending, paid, failed)
+         * - `order_status`: Order fulfillment status (pending, confirmed, processing, shipped, delivered, cancelled)
+         * - `notes`: Additional order notes
+         * - `tracking_number`: Shipping tracking number
+         * - `estimated_delivery`: Estimated delivery date/time
+         * - `shipped_at`: Timestamp when order was shipped
+         * - `delivered_at`: Timestamp when order was delivered
+         * - `shipping_metadata`: Fulfilment details such as carrier and tracking, merged into the stored object (purchased-label details are locked)
+         *
+         * **Status transitions:**
+         * - `payment_status`: `pending` → `paid` or `failed`; `failed` → `paid`. A `paid` order
+         * does not move back, and `refunded` is set by processing a refund, not by this endpoint.
+         * - `order_status` moves forward only (`pending` → `confirmed` → `processing` → `shipped` →
+         * `delivered`). `cancelled` is available until the order ships. `cancelled` and `delivered`
+         * are final, and a cancelled order cannot be marked paid.
+         * - Sending a field with the value it already has is not a transition: the request succeeds
+         * and nothing is repeated. Any other move is refused with `409 invalid_transition`.
+         * - A status change applies only if the order is still in the state it was in when the
+         * request began. When two requests change it at once, one succeeds and the other receives
+         * `409 order_changed`.
+         *
+         * **Automatic Accounting:**
+         * When `payment_status` is updated to `paid`, the system automatically, and once:
+         * - Triggers accounting entry creation (production only)
+         * - Reduces inventory stock for all order items, committing the order's own stock holds
+         * - Updates customer purchase metrics
+         * - Redeems the gift card applied at checkout (if applicable)
+         * - Records promotion usage and campaign spend (if applicable)
+         * Anything that does not complete is listed in `post_processing_warnings` on the response; the
+         * order stays paid.
+         *
+         * When an unpaid order is cancelled or its payment fails, its stock holds are released and any
+         * store credit applied to it is returned to the customer.
+         *
+         * **Key Type Support:**
+         * - ✅ Secret keys (full access)
+         * - ❌ Publishable keys (forbidden - returns 403)
+         *
+         * @returns any Order updated successfully
+         * @throws ApiError
          */
-        reservation_ids: Array<string>;
-        /**
-         * Seconds until the hold expires if not converted.
-         */
-        expires_in_seconds: number;
-    }> {
-        return this.httpRequest.request({
-            method: 'POST',
-            url: '/v1/checkout/reserve',
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                400: `Invalid request - malformed data or missing required fields`,
-                401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
-                409: `Insufficient stock - nothing was reserved`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+        public updateOrder({
+            id,
+            idempotencyKey,
+            xTimestamp,
+            xSignature,
+            requestBody,
+        }: {
+            /**
+             * Order UUID
+             */
+            id: string,
+            /**
+             * Unique key to prevent duplicate updates (e.g., update-{operation}-{order_id}-{timestamp})
+             */
+            idempotencyKey: string,
+            /**
+             * Unix time in seconds or milliseconds, within 5 minutes of server time.
+             * Used to prevent replay attacks.
+             *
+             */
+            xTimestamp: number,
+            /**
+             * HMAC-SHA256 signature of the payload (timestamp + "." + request_body), base64-encoded.
+             * Sign using your HMAC secret from the Integrations page (Developer section).
+             *
+             */
+            xSignature: string,
+            requestBody: {
+                /**
+                 * Payment status. See the allowed transitions above.
+                 */
+                payment_status?: 'pending' | 'paid' | 'failed';
+                /**
+                 * Order fulfillment status. See the allowed transitions above.
+                 */
+                order_status?: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+                /**
+                 * Additional order notes
+                 */
+                notes?: string;
+                /**
+                 * Shipping tracking number
+                 */
+                tracking_number?: string;
+                /**
+                 * Estimated delivery date and time
+                 */
+                estimated_delivery?: string;
+                /**
+                 * Timestamp when order was shipped
+                 */
+                shipped_at?: string;
+                /**
+                 * Timestamp when order was delivered
+                 */
+                delivered_at?: string;
+                /**
+                 * The reference your payment provider issued for this payment. Send it when marking an order paid that was charged outside Galactic Core, so the payment can be traced back to the provider's own record. When the store has added its own payment method, the reference is checked with that provider before the order is accepted as paid.
+                 */
+                payment_reference?: string;
+                /**
+                 * Stock reservation ids returned by `POST /v1/checkout/reserve`. Supplying them commits the stock already held for this shopper rather than decrementing it a second time.
+                 */
+                reservation_ids?: Array<string>;
+                /**
+                 * Fulfilment details to add to the order, such as the carrier, service and tracking number. The keys sent are merged into the stored `shipping_metadata`; keys not sent are kept. The details of a label purchased through the platform (`shippo`, `label`, `label_url`, `transaction_id`, `rate_id`) cannot be set here and answer 409 `shipping_label_locked`.
+                 */
+                shipping_metadata?: Record<string, any>;
             },
-        });
+        }): CancelablePromise<(Order & {
+            /**
+             * Present only when the update marked the order paid and one or more of the
+             * steps that follow (stock, gift card, store credit, promotion usage) did not
+             * complete. The order stays paid; each warning names the step and what needs
+             * follow-up.
+             *
+             */
+            post_processing_warnings?: Array<{
+                /**
+                 * The step that did not complete
+                 */
+                stage: string;
+                /**
+                 * Human-readable description of the failure
+                 */
+                message: string;
+            }>;
+        })> {
+            return this.httpRequest.request({
+                method: 'PATCH',
+                url: '/v1/orders/{id}',
+                path: {
+                    'id': id,
+                },
+                headers: {
+                    'Idempotency-Key': idempotencyKey,
+                    'X-Timestamp': xTimestamp,
+                    'X-Signature': xSignature,
+                },
+                body: requestBody,
+                mediaType: 'application/json',
+                errors: {
+                    400: `Invalid request (no updatable fields provided, invalid field values)`,
+                    401: `Authentication failed. Either the API key is missing, invalid or expired (\`unauthorized\`), or the request signature failed verification (\`signature_missing\`, \`timestamp_missing\`, \`timestamp_malformed\`, \`timestamp_out_of_window\`, \`signature_invalid\`). \`X-Timestamp\` is Unix time in seconds or milliseconds, within 5 minutes of server time.`,
+                    402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                    403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                    404: `Resource not found`,
+                    409: `The requested status change is not allowed from the order's current state (\`invalid_transition\`), or the order changed while the request was being applied (\`order_changed\`), or the \`Idempotency-Key\` was already used with a different request body or for a different order (\`idempotency_key_reused\`), or the verified payment belongs to another order, is in another currency or is already attached to another order (\`payment_order_mismatch\`, \`payment_currency_mismatch\`, \`payment_reference_in_use\`), or \`shipping_metadata\` tries to set purchased-label details (\`shipping_label_locked\`). The order is left as it was.`,
+                    422: `You marked the order paid with a \`payment_reference\`, but the payment provider does not report that reference as paid (\`payment_not_verified\`), or the verified payment does not cover the order total (\`amount_mismatch\`). The order is left unchanged rather than accepted on an unverified claim.`,
+                    429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                    500: `Internal server error. A 5xx response never carries \`details\`.`,
+                    503: `The payment reference could not be checked at this moment (\`verification_unavailable\`). The order is left unchanged; retry shortly.`,
+                },
+            });
+        }
+        /**
+         * Reserve stock for checkout
+         * **Optional.** Holds stock for the items a customer is checking out so the
+         * units can't be sold to someone else while they complete payment.
+         *
+         * Use this when there is a gap between "customer commits to buy" and "payment
+         * confirms" — card redirects, 3‑D Secure, or mobile‑money push prompts — so
+         * the stock is claimed *before* the customer pays and a second shopper racing
+         * for the last unit is turned away up front. For instant‑capture or fully
+         * synchronous flows you can skip it and call `POST /v1/orders` directly;
+         * Galactic Core still prevents stock from going negative at order time. In
+         * other words, reserving is a stronger guarantee for async payments, not a
+         * mandatory step before every order.
+         *
+         * Reservations are all‑or‑nothing: if any item lacks available stock, nothing
+         * is reserved and the response is `409`. Each hold expires automatically after
+         * a window (15 minutes by default). Pass the returned `reservation_ids` to
+         * `POST /v1/orders` (or when you `PATCH` an order to `paid`) and Galactic Core
+         * converts the hold into the actual stock deduction. If the customer abandons
+         * checkout, the hold simply expires and the stock returns to availability —
+         * you don't need to release it explicitly.
+         *
+         * Works with both publishable and secret keys (checkout originates in the
+         * browser).
+         *
+         * **Limits per request:** with a publishable key, at most 25 items and 25 units
+         * of any one variant (quantities for a repeated variant are added together);
+         * with a secret key, at most 100 items and 1,000 units of any one variant. A
+         * request over a limit is refused with `400` and nothing is reserved.
+         *
+         * **Rate limit:** the per-key hourly limit depends on the store's plan. With a publishable key,
+         * each visitor address is also limited to 60 requests per hour.
+         *
+         * A key issued through GC Connect needs the `orders:write` scope; without it
+         * the request returns `403`.
+         *
+         * @returns any Stock reserved
+         * @throws ApiError
+         */
+        public reserveStock({
+            requestBody,
+        }: {
+            requestBody: {
+                /**
+                 * The variants and quantities to hold.
+                 */
+                items: Array<{
+                    /**
+                     * The product variant to reserve.
+                     */
+                    variant_id: string;
+                    /**
+                     * How many units to hold.
+                     */
+                    quantity: number;
+                }>;
+                /**
+                 * Optional hold duration in seconds. Defaults to 900 (15 minutes);
+                 * values below 60 are raised to 60. Values above 1800 (publishable key) or 3600 (secret key)
+                 * are capped to those values. The `expires_in_seconds` in the response is the value applied.
+                 *
+                 */
+                ttl_seconds?: number;
+                /**
+                 * Optional - associate the hold with a customer (used for checkout recovery). Honoured only with a secret key; with a publishable key the hold is recorded without a customer.
+                 */
+                customer_id?: string;
+                /**
+                 * Optional - associate the hold with an anonymous browser session.
+                 */
+                session_id?: string;
+            },
+        }): CancelablePromise<{
+            reservations: Array<{
+                reservation_id?: string;
+                variant_id?: string;
+                quantity?: number;
+            }>;
+            /**
+             * Pass these to order creation to convert the hold into a sale.
+             */
+            reservation_ids: Array<string>;
+            /**
+             * Seconds until the hold expires if not converted.
+             */
+            expires_in_seconds: number;
+        }> {
+            return this.httpRequest.request({
+                method: 'POST',
+                url: '/v1/checkout/reserve',
+                body: requestBody,
+                mediaType: 'application/json',
+                errors: {
+                    400: `Invalid request - malformed data or missing required fields`,
+                    401: `Authentication failed - invalid or missing API key`,
+                    402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                    403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                    409: `Insufficient stock - nothing was reserved`,
+                    429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                    500: `Internal server error. A 5xx response never carries \`details\`.`,
+                },
+            });
+        }
     }
-}

@@ -54,12 +54,7 @@ export type DeliveryFeeCalculation = {
     /**
      * The address's coordinates (geocoded when a place_name was sent), with the country and postcode used to match zones when known.
      */
-    coordinates?: {
-        latitude?: number;
-        longitude?: number;
-        country_code?: string | null;
-        postal_code?: string | null;
-    };
+    coordinates?: any | null;
     /**
      * Whether the store delivers to the address. False when only pickup is offered for it — because the address is outside the store's delivery area, or because an item in the basket can only be collected.
      */
@@ -80,7 +75,7 @@ export type DeliveryFeeCalculation = {
     /**
      * The lowest-fee available entry of `options` (the delivery options; the pickup options when there is no delivery), in the shape of a `ShippingOption`. Null when nothing is available, and null when the request named only a country and the store's rules are map zones and distance rates (a price would be a guess); show no delivery price then. Use it for "Delivery from £3.95" on a product page.
      */
-    cheapest_option?: ShippingOption;
+    cheapest_option?: (ShippingOption | null);
     /**
      * The store's delivery-day settings, for rendering `delivery_window` dates. Absent on a carrier-options-only request.
      */
@@ -90,7 +85,7 @@ export type DeliveryFeeCalculation = {
      */
     fulfilled_from?: any | null;
     /**
-     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`), the store's custom shipping extension (`custom`), or `none`.
+     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`, or `carrier` when `rate_source_format=neutral` is sent or the store's setting is neutral), the store's custom shipping extension (`custom`), or `none`.
      */
     rate_source?: DeliveryFeeCalculation.rate_source;
     /**
@@ -125,7 +120,7 @@ export type DeliveryFeeCalculation = {
         /**
          * Where the option came from — the store's carrier account, or its custom shipping extension.
          */
-        source?: 'shippo' | 'custom';
+        source?: 'shippo' | 'carrier' | 'custom';
     }>;
 };
 export namespace DeliveryFeeCalculation {
@@ -156,13 +151,14 @@ export namespace DeliveryFeeCalculation {
         PICKUP_ONLY = 'pickup_only',
     }
     /**
-     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`), the store's custom shipping extension (`custom`), or `none`.
+     * Which source produced the result — the store's `zone`, distance `tier` or `fallback` rate, a connected carrier account (`shippo`, or `carrier` when `rate_source_format=neutral` is sent or the store's setting is neutral), the store's custom shipping extension (`custom`), or `none`.
      */
     export enum rate_source {
         ZONE = 'zone',
         TIER = 'tier',
         FALLBACK = 'fallback',
         SHIPPO = 'shippo',
+        CARRIER = 'carrier',
         CUSTOM = 'custom',
         NONE = 'none',
     }

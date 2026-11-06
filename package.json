@@ -23,6 +23,7 @@
   "scripts": {
     "generate": "openapi --input ../cloudflare-workers/openapi.yaml --output ./src --client fetch --name Tybrite --useOptions && node scripts/post-generate.js",
     "build": "tsc",
+    "test": "tsx --test scripts/verify-response.test.ts",
     "clean": "rimraf src dist",
     "sync": "node scripts/sync-sdk.js",
     "version:update": "node scripts/version-manager.js",

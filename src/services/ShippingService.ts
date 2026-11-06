@@ -60,10 +60,12 @@ export class ShippingService {
             method: 'GET',
             url: '/v1/shipping/zones',
             errors: {
+                304: `Unchanged since the \`If-None-Match\` ETag.`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -134,20 +136,29 @@ export class ShippingService {
      */
     public calculateShipping({
         requestBody,
+        rateSourceFormat,
     }: {
         requestBody: ShippingCalculationRequest,
+        /**
+         * How `rate_source` names a carrier-account source. `provider` uses `shippo`; `neutral` uses `carrier`. When omitted, the store's own setting applies (`provider` unless the merchant chose `neutral`). A request may send either spelling wherever a rate source is accepted.
+         */
+        rateSourceFormat?: 'provider' | 'neutral',
     }): CancelablePromise<DeliveryFeeCalculation> {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/shipping/calculate',
+            query: {
+                'rate_source_format': rateSourceFormat,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `The request is invalid (\`invalid_request\`: a location outside -90..90 / -180..180, an \`order_total\` that is not a number of zero or more, a \`country_code\` that is not two letters, a \`postal_code\` longer than 16 characters, \`items\` that is not an array of at most 500 lines each with a \`variant_id\` and a positive \`quantity\`, or no location at all), a \`place_name\` could not be found (\`geocoding_failed\`), the store neither delivers to the location nor offers pickup (\`shipping_not_deliverable\`), or a carrier-options-only request was sent to a store with no carrier connected (\`provider_not_configured\`).`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions - operation requires secret key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
-                500: `Internal server error`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
@@ -167,11 +178,11 @@ export class ShippingService {
         number,
     }: {
         /**
-         * Carrier token (e.g. usps, ups, fedex).
+         * Carrier token (e.g. usps, ups, fedex). At most 50 characters.
          */
         carrier: string,
         /**
-         * The tracking number.
+         * The tracking number. At most 100 characters.
          */
         number: string,
     }): CancelablePromise<{
@@ -195,8 +206,10 @@ export class ShippingService {
                 'number': number,
             },
             errors: {
-                400: `Invalid request - malformed data or missing required fields`,
+                400: `\`invalid_request\` when the carrier exceeds 50 characters or the tracking number 100; \`provider_not_configured\` when the store has not connected a carrier account.`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
                 404: `With a publishable key, the tracking number is not on any of this store's orders.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 502: `The carrier's tracking service could not be reached (\`tracking_unavailable\`).`,
