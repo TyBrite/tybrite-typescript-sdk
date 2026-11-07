@@ -37,6 +37,8 @@ export { ConnectSession } from './models/ConnectSession';
 export { ConnectTokenResponse } from './models/ConnectTokenResponse';
 export { Customer } from './models/Customer';
 export { CustomerAddress } from './models/CustomerAddress';
+export { CustomerDataExport } from './models/CustomerDataExport';
+export { CustomerDataRequest } from './models/CustomerDataRequest';
 export { CustomFieldValue } from './models/CustomFieldValue';
 export { DeliveryFeeCalculation } from './models/DeliveryFeeCalculation';
 export type { DeliveryPricingTier } from './models/DeliveryPricingTier';
