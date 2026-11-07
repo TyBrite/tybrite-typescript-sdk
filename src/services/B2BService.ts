@@ -282,7 +282,7 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -335,7 +335,7 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
