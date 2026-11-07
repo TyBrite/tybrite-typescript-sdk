@@ -7,6 +7,11 @@ import type { StorefrontExperimentConversions } from '../models/StorefrontExperi
 import type { StorefrontExperimentInput } from '../models/StorefrontExperimentInput';
 import type { StorefrontSite } from '../models/StorefrontSite';
 import type { StorefrontSiteReport } from '../models/StorefrontSiteReport';
+import type { StorefrontSupportRequest } from '../models/StorefrontSupportRequest';
+import type { StorefrontSupportRequestInput } from '../models/StorefrontSupportRequestInput';
+import type { StorefrontSupportRequestList } from '../models/StorefrontSupportRequestList';
+import type { StorefrontTemplate } from '../models/StorefrontTemplate';
+import type { StorefrontTemplateInput } from '../models/StorefrontTemplateInput';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class StorefrontStudioService {
@@ -47,7 +52,7 @@ export class StorefrontStudioService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -71,7 +76,7 @@ export class StorefrontStudioService {
             url: '/v1/storefront/site',
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
@@ -100,7 +105,7 @@ export class StorefrontStudioService {
             url: '/v1/storefront/experiments',
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -147,7 +152,7 @@ export class StorefrontStudioService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
                 Common causes:
                 - Email already registered to another customer at this store
@@ -210,7 +215,292 @@ export class StorefrontStudioService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`; a request that needs a secret key, or a marketplace operator key calling a single-store operation, receives \`forbidden\`.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Open a support request for the store
+     * Opens a support request with the merchant's support team on the merchant's behalf, for something
+     * the app cannot resolve itself. The request appears in the merchant's Support list marked with the
+     * app's name, the merchant is told by email and in the app, and the support team's replies go to the
+     * merchant, not to the app.
+     *
+     * Send an idempotency key (`idempotency_key` in the body or the `Idempotency-Key` header). Repeating
+     * a request with the same key returns the request already opened with `200` and notifies no one; a new
+     * key opens a new request with `201`.
+     *
+     * An app can open 5 requests an hour and 20 a day per store. Beyond that the call returns `429` with
+     * `Retry-After`. A sandbox connection records the request and returns it but reaches no support team
+     * and no merchant.
+     *
+     * **Authentication:** the connection's secret key (`tybrite_sk_*`). The connection must have been
+     * granted the `support_tickets:write` scope at consent; otherwise `403 insufficient_scope` is
+     * returned. A publishable key is refused with `403 forbidden`.
+     *
+     * **Rate limit:** 30 requests/hour per API key.
+     *
+     * @returns StorefrontSupportRequest The request this key already opened
+     * @throws ApiError
+     */
+    public createStorefrontSupportRequest({
+        requestBody,
+        idempotencyKey,
+    }: {
+        requestBody: StorefrontSupportRequestInput,
+        /**
+         * Names this attempt. Required here or as `idempotency_key` in the body.
+         */
+        idempotencyKey?: string,
+    }): CancelablePromise<StorefrontSupportRequest> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/storefront/tickets',
+            headers: {
+                'Idempotency-Key': idempotencyKey,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * List the support requests the app opened
+     * Returns the requests this app opened for the store and environment, newest first. Requests the
+     * merchant or another app opened are never listed, and a reply from the support team is not
+     * returned: the app sees only where each request stands.
+     *
+     * **Authentication:** the connection's secret key, with the `support_tickets:write` scope.
+     *
+     * **Rate limit:** 300 requests/hour per API key.
+     *
+     * @returns StorefrontSupportRequestList A page of requests
+     * @throws ApiError
+     */
+    public listStorefrontSupportRequests({
+        status,
+        limit = 20,
+        cursor,
+    }: {
+        /**
+         * Only requests with this status, for example `Open` or `Resolved`.
+         */
+        status?: string,
+        /**
+         * Requests per page.
+         */
+        limit?: number,
+        /**
+         * The `next_cursor` of the previous page.
+         */
+        cursor?: string,
+    }): CancelablePromise<StorefrontSupportRequestList> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/storefront/tickets',
+            query: {
+                'status': status,
+                'limit': limit,
+                'cursor': cursor,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Read one support request the app opened
+     * Returns where one of the app's requests stands. A request that does not exist, was opened by the
+     * merchant or another app, or belongs to the other environment returns the same `404`.
+     *
+     * **Authentication:** the connection's secret key, with the `support_tickets:write` scope.
+     *
+     * **Rate limit:** 300 requests/hour per API key.
+     *
+     * @returns StorefrontSupportRequest The request
+     * @throws ApiError
+     */
+    public getStorefrontSupportRequest({
+        ticketId,
+    }: {
+        /**
+         * The `id` returned when the request was opened.
+         */
+        ticketId: string,
+    }): CancelablePromise<StorefrontSupportRequest> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/storefront/tickets/{ticket_id}',
+            path: {
+                'ticket_id': ticketId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * List the templates the app offered
+     * Returns the templates this app offered the store in this environment, newest first, including
+     * withdrawn ones. Another app's templates are never listed.
+     *
+     * **Authentication:** the connection's secret key. The connection must have been granted the
+     * `storefront_template:write` scope at consent; otherwise `403 insufficient_scope` is returned.
+     *
+     * **Rate limit:** 300 requests/hour per API key.
+     *
+     * @returns any The app's templates
+     * @throws ApiError
+     */
+    public listStorefrontTemplates(): CancelablePromise<{
+        data: Array<StorefrontTemplate>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/storefront/templates',
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Offer a template for the store
+     * Offers a template to the merchant, or updates one the app already offered. The merchant is told
+     * and chooses to accept or decline; nothing changes in the store until they accept, and GC does not
+     * move the template itself. `status` reports the merchant's answer, and `confirmed_version` is the
+     * version they accepted.
+     *
+     * A new `template_id`, a new `version` of an existing one, or a template the app had withdrawn is
+     * offered to the merchant again. Repeating the same `version` only refreshes the name, summary and
+     * preview, and the merchant's answer to that version stands.
+     *
+     * An app can have up to 50 templates on offer per store and environment. A sandbox connection records
+     * the offer but no merchant is asked.
+     *
+     * **Authentication:** the connection's secret key, with the `storefront_template:write` scope.
+     *
+     * **Rate limit:** 300 requests/hour per API key.
+     *
+     * @returns StorefrontTemplate The template as GC now holds it
+     * @throws ApiError
+     */
+    public putStorefrontTemplate({
+        templateId,
+        requestBody,
+    }: {
+        /**
+         * The template id you chose, 1 to 100 letters, digits, dots, dashes, colons or underscores.
+         */
+        templateId: string,
+        requestBody: StorefrontTemplateInput,
+    }): CancelablePromise<StorefrontTemplate> {
+        return this.httpRequest.request({
+            method: 'PUT',
+            url: '/v1/storefront/templates/{template_id}',
+            path: {
+                'template_id': templateId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Read a template the app offered
+     * Returns the template and the merchant's answer. A template that does not exist, belongs to another
+     * app or to the other environment returns the same `404`.
+     *
+     * **Authentication:** the connection's secret key, with the `storefront_template:write` scope.
+     *
+     * **Rate limit:** 300 requests/hour per API key.
+     *
+     * @returns StorefrontTemplate The template
+     * @throws ApiError
+     */
+    public getStorefrontTemplate({
+        templateId,
+    }: {
+        /**
+         * The template id you offered.
+         */
+        templateId: string,
+    }): CancelablePromise<StorefrontTemplate> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/storefront/templates/{template_id}',
+            path: {
+                'template_id': templateId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                404: `Resource not found`,
+                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Withdraw a template offer
+     * Takes the offer back. The merchant is no longer asked about it, and the record stays with
+     * `status: withdrawn`. Withdrawing twice is the same as once. Offering the template again asks the
+     * merchant again.
+     *
+     * **Authentication:** the connection's secret key, with the `storefront_template:write` scope.
+     *
+     * **Rate limit:** 300 requests/hour per API key.
+     *
+     * @returns StorefrontTemplate The template, withdrawn
+     * @throws ApiError
+     */
+    public withdrawStorefrontTemplate({
+        templateId,
+    }: {
+        /**
+         * The template id you offered.
+         */
+        templateId: string,
+    }): CancelablePromise<StorefrontTemplate> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/storefront/templates/{template_id}',
+            path: {
+                'template_id': templateId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
                 429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,

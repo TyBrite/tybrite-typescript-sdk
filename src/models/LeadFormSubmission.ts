@@ -5,7 +5,7 @@
 export type LeadFormSubmission = {
     submitted: boolean;
     /**
-     * True when the signup is waiting for the shopper to confirm from an email.
+     * True when the signup is waiting for the shopper to confirm from an email. A form that asks for confirmation answers true for every address, including one that is already subscribed (which is sent no email), so the reply never reveals who is on the list.
      */
     pending_confirmation: boolean;
     /**

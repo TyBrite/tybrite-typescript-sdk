@@ -52,7 +52,8 @@ export class GcConnectService {
          * `reviews:write`, `messaging:read`, `messaging:write`, `returns:read`, `returns:write`,
          * `disputes:read`, `disputes:write`, `b2b:read`, `b2b:write`, `agent:read`, `agent:write`,
          * `shopper_subscriptions:read`, `shopper_subscriptions:write`, `fulfilment:read`, `team:read`,
-         * `storefront_site:write`, `ab_attribution:write`
+         * `storefront_site:write`, `ab_attribution:write`, `support_tickets:write`,
+         * `storefront_template:write`
          *
          * `payments:write` is required to initiate a payment; without it (or `write`) the call returns
          * `403 forbidden`. `b2b:*` is offered only for wholesale stores and `disputes:*` only for
@@ -69,7 +70,10 @@ export class GcConnectService {
          * `storefront_site:write` lets the key pair report the storefront's address and routes with
          * `PUT /v1/storefront/site`. `ab_attribution:write` lets it register its own A/B experiments and
          * read the paid orders and sales for each variant under `/v1/storefront/experiments`; the consent
-         * screen states this to the merchant in its own line. Both are for the secret key only.
+         * screen states this to the merchant in its own line. `support_tickets:write` lets it open support
+         * requests for the merchant with `POST /v1/storefront/tickets` and read where each stands;
+         * `storefront_template:write` lets it offer templates under `/v1/storefront/templates`, which the
+         * merchant accepts or declines. All four are for the secret key only.
          *
          */
         scope: string,

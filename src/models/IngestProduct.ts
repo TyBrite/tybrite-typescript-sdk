@@ -80,5 +80,21 @@ export type IngestProduct = {
      *
      */
     barcode_type?: string;
+    /**
+     * How the product is delivered. Optional: a row that omits it takes the store's default, which is `shipped` unless the store does not offer shipped products, in which case it is the first type the store offers. A row that names a type the store does not offer is rejected for that row.
+     */
+    fulfilment_kind?: IngestProduct.fulfilment_kind;
 };
+export namespace IngestProduct {
+    /**
+     * How the product is delivered. Optional: a row that omits it takes the store's default, which is `shipped` unless the store does not offer shipped products, in which case it is the first type the store offers. A row that names a type the store does not offer is rejected for that row.
+     */
+    export enum fulfilment_kind {
+        SHIPPED = 'shipped',
+        DIGITAL = 'digital',
+        CODE = 'code',
+        EVENT_TICKET = 'event_ticket',
+        SERVICE = 'service',
+    }
+}
 
