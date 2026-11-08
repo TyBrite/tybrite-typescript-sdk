@@ -205,6 +205,10 @@ export type StoreInfoResponse = {
                  */
                 video?: string | null;
                 image_mobile?: string | null;
+                /**
+                 * Number of active products sold online that belong to the collection, whether or not they are in stock: the same products `GET /v1/product-collections/{id}/items` returns, the rule's live members for an automatic collection. A storefront or assistant that links to collections skips any with a count of 0. Null when the count could not be read.
+                 */
+                product_count?: number | null;
             }>;
         };
         taxonomy?: {

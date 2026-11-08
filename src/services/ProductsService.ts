@@ -1207,10 +1207,15 @@ export class ProductsService {
     }
     /**
      * Get items in a product collection
-     * Returns all items belonging to a product collection, ordered by `sort_order`.
-     * Each item contains the linked online product row along with its sort position.
-     * A collection with no items returns an empty array. A collection that does not exist,
-     * is inactive or has been deleted answers `404`.
+     * Returns the live members of a product collection, ordered by `sort_order`. Only active
+     * products sold online are listed. Each item contains the linked product row along with its
+     * sort position.
+     *
+     * A manual collection returns the products the merchant placed in it. An automatic collection
+     * (for example New Arrivals or Best Sellers) returns the products its rule selects at the time
+     * of the request, ranked in the rule's order, so its list changes as the catalogue and orders
+     * change. A collection with no members returns an empty array. A collection that does not
+     * exist, is inactive or has been deleted answers `404`.
      *
      * @returns any Success
      * @throws ApiError
