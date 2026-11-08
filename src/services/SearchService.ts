@@ -44,9 +44,33 @@ export class SearchService {
      * requested or configured on the client: the ordering already reflects the rules, and a store with
      * none behaves exactly as before.
      *
+     * **Synonyms.** A merchant can declare words that mean the same ("sofa", "couch", "settee") or a
+     * one-way pairing ("trainers" also finds "sneakers", not the reverse). A query containing one of the
+     * words is also searched with each alternative; matches for the words typed rank first, then the
+     * matches each synonym adds.
+     *
+     * **Understanding.** When neither the words, their synonyms nor the spelling fallback match a product
+     * name, the query is read for its meaning: words that carry none ("best", "products", "for") are set
+     * aside and the rest are matched against product names, brands, categories, subcategories, SKUs and
+     * tags, together with the products of a collection the query names. "best products for summer" finds
+     * the summer range. These results carry a `matchReason` of `Related to your search` or
+     * `In the <name> collection`. `GET /v1/products?search=` applies the same reading when its own name
+     * and SKU match finds nothing, so a search page and a product list agree.
+     *
+     * **Redirects.** A merchant can send a query to one place: a page address, a collection, a category
+     * or a product. The response carries `redirect` (null when there is none) beside the results, and the
+     * storefront decides whether to navigate.
+     *
+     * **Ranking by popularity, promotions and stock.** A store can turn on a ranking that, after its
+     * rules, lifts the products shoppers add to their carts most this week and those in a live
+     * buy-one-get-one or bundle offer or on sale, nudges down a product at or below the store's low-stock
+     * level, and places sold-out products after the rest. Pinned results stay first and buried results
+     * stay last. The setting is the merchant's; nothing is requested on the client.
+     *
      * **Marketplace:** when called with a marketplace operator key, searches products across all
      * merchants in the marketplace; pass `?store_id=<merchant>` to narrow results to a single
-     * merchant.
+     * merchant. Synonyms, understanding, redirects and the ranking setting belong to a store's own search
+     * and do not apply to marketplace searches.
      *
      * @returns SearchResponse Success
      * @throws ApiError
@@ -134,6 +158,13 @@ export class SearchService {
      * label a deliberate placement rather than presenting it as an earned one. Nothing needs to be
      * requested or configured on the client: the ordering already reflects the rules, and a store with
      * none behaves exactly as before.
+     *
+     * **Synonyms, redirects and ranking.** The store's synonyms apply here too: a query containing a synonym
+     * word is embedded with its alternatives, so the meaning the merchant declared is part of the match.
+     * When the query cannot be embedded, or nothing scores above `minScore`, the keyword search answers
+     * with its synonyms and its understanding of the query (see `searchProducts`). The response carries
+     * `redirect` exactly as `searchProducts` does, and the store's ranking by popularity, promotions and
+     * stock applies after the rules.
      *
      * **When to use:** prefer this over the text `GET /v1/search` (`searchProducts`) when the query
      * is conversational or descriptive. Two tuning options:

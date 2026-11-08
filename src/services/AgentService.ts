@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { SearchRedirect } from '../models/SearchRedirect';
 import type { ShopperSubscription } from '../models/ShopperSubscription';
 import type { SubscribeSaveOffer } from '../models/SubscribeSaveOffer';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -114,6 +115,22 @@ export class AgentService {
      * Without a `query` the store's search has no order to give: the store's most-added-to-cart products come first,
      * then products on sale or in an offer, then the rest by name (`ranking: catalogue`).
      *
+     * The store's search also applies the merchant's synonyms, its ranking by popularity, promotions and stock when the
+     * store has turned it on, and its reading of a sentence that matches no product name (`searchProducts`): "best
+     * products for summer" is read as "summer", so the storefront's search and this search return the same products. The
+     * direct match here reads the query the same way, setting aside words that carry no product meaning.
+     *
+     * **Redirects.** When the merchant sends the query somewhere (a page address, a collection, a category or a
+     * product), `redirect` names it, with the same shape as the store search's `redirect`. It is a suggestion to offer
+     * the shopper beside the results; nothing navigates on its own. Null when there is none.
+     *
+     * **Paging.** `limit` results are returned from `offset` (default 0) of one ordered set: the store's search order,
+     * then what this search adds, then what a rule buried. `next_cursor` (or `next_offset`) continues it; a cursor is
+     * valid only for the constraints and personalisation it was issued for, and a mismatched one is refused with `400`.
+     * `total_matched` is the size of the whole set; `has_more` is false on its last page. The order is recomputed the same
+     * way for every page, so a page repeats nothing and skips nothing unless the catalogue changes between requests.
+     * Paging is for store keys; a marketplace search returns one page.
+     *
      * Every result carries `match_reasons` (why it is in the results, in words a shopper can read) and `badges` (short
      * labels for display). A result never carries a score. A product a rule pins or boosts carries the `featured` badge,
      * labelled "Featured"; which products a rule buries is not disclosed.
@@ -173,6 +190,14 @@ export class AgentService {
             attributes?: Record<string, string>;
             in_stock_only?: boolean;
             limit?: number;
+            /**
+             * Skip this many results of the ordered set. Send `offset` or `cursor`, not both.
+             */
+            offset?: number;
+            /**
+             * The `next_cursor` of the previous page, sent with the same constraints. Send `offset` or `cursor`, not both.
+             */
+            cursor?: string;
         },
         /**
          * Comma-separated top-level keys of `data` to return, e.g. `fields=grand_total,lines`.
@@ -230,7 +255,32 @@ export class AgentService {
                     label: string;
                 }>;
             }>;
+            /**
+             * Results in the whole ordered set, across every page.
+             */
             total_matched?: number;
+            /**
+             * Where this page starts in the ordered set.
+             */
+            offset?: number;
+            limit?: number;
+            has_more?: boolean;
+            /**
+             * The `offset` of the next page; null on the last page.
+             */
+            next_offset?: number | null;
+            /**
+             * Continues this search from the next result; null on the last page.
+             */
+            next_cursor?: string | null;
+            /**
+             * Where the merchant sends this query, as a suggestion to offer beside the results; null when there is none.
+             */
+            redirect?: (SearchRedirect | null);
+            /**
+             * A one- or two-sentence lead-in to show above the results, built from facts this search computed (matches, the collection the words named, how many of the results shown are on sale and in stock, their price range, the filters applied). Always present, for example `Here are 25 picks for summer, led by the Summer Essentials collection; 4 are on sale and everything shown is in stock.`
+             */
+            summary?: string;
             /**
              * Marketplace key only — how many sellers the results come from.
              */
@@ -324,9 +374,18 @@ export class AgentService {
     }
     /**
      * Read a shopper's message
-     * A hosted helper: a shopper's message in, what kind of message it is (`intent`) out, and for a product request the
-     * exact constraint object `POST /v1/agent/search` accepts, plus `unresolved` — the parts of the request it could not
-     * map to a constraint.
+     * A shopper's message in, what kind of message it is (`intent`) out, and for a product request the exact constraint
+     * object `POST /v1/agent/search` accepts, plus `unresolved` — the parts of the request it could not map to a
+     * constraint.
+     *
+     * **It works without the hosted helpers.** A greeting, a thank-you, a goodbye, a question about an order and a plain
+     * question about the store (delivery with an optional place, returns, opening hours, payment, contact) are read by
+     * fixed rules and cost nothing, whether or not the store has hosted helpers on; a message that asks several of those
+     * is answered for each. Every other message is read by the hosted helper when the store has it on, and by the same
+     * rules over the store's own vocabulary when it does not: a price limit ("under 50", "between 20 and 40"), `in stock`,
+     * a colour that is one of the store's own colour values, and a category named as the store names it become
+     * constraints; any other words stay in `query`; a word the rules cannot turn into a filter is listed in `unresolved`.
+     * `classified_by` says which read the message. The call never answers `403 helpers_unavailable`.
      *
      * | `intent` | The message | `constraints` | `reply` |
      * |---|---|---|---|
@@ -346,21 +405,20 @@ export class AgentService {
      * `suggestions` holds two or three follow-up prompts drawn from the store's live collections and the categories its
      * online products are in. Each `text` can be sent back to `interpret` as it is.
      *
-     * It runs a model and debits the store's AI credits at the true cost of the call; `usage`
-     * reports what was debited. A failed call keeps no credits. It is limited to 60 calls a minute per client
-     * and 1,000 an hour per key, in addition to the standard limits.
+     * A message read by the hosted helper debits the store's AI credits at the true cost of the call; `usage` reports what
+     * was debited (`credits_debited: 0` for a message read by rules). A failed helper call keeps no credits and the
+     * message is read by the rules instead. The call is limited per shopper at the store as described under the agent
+     * fair-use budgets, in addition to the standard limits.
      *
-     * **A publishable key spends the store's credits too.** A publishable key is public, so anyone holding it can
-     * make these calls, and each one debits the merchant's balance (and can trigger the merchant's automatic
-     * top-up). The merchant sets a daily limit on that spend, counted over the last 24 hours; once it is reached
-     * the key receives `403 helpers_unavailable`, the same answer as any other refusal. A secret key is not
-     * limited by it.
+     * **A publishable key spends the store's credits too, when the helper reads the message.** A publishable key is
+     * public, so anyone holding it can make these calls, and each one the helper reads debits the merchant's balance (and
+     * can trigger the merchant's automatic top-up). The merchant sets a daily limit on that spend, counted over the last
+     * 24 hours; once it is reached, or when the helpers are off, paused or out of credits, the message is read by the
+     * rules and nothing is debited.
      *
-     * **With a marketplace operator key** the call is paid from the marketplace operator's own AI
-     * credits, never a seller's. A secret key receives the reason a call is refused: `403 helpers_unavailable`
-     * with `details.reason` when the operator has not switched hosted helpers on, `402 insufficient_credits`
-     * when the operator's credits are exhausted. A publishable key receives `403 helpers_unavailable` whatever
-     * the reason, as on a single store.
+     * **With a marketplace operator key** a message read by the helper is paid from the marketplace operator's own AI
+     * credits, never a seller's; when the operator has not switched hosted helpers on or its credits are exhausted, the
+     * rules read the message.
      *
      * **A follow-up in a saved conversation.** With `conversation_id`, the request is read in the context of that
      * storefront conversation (`/v1/agent/me/conversations`): its last six turns, the prices of the results the storefront
@@ -456,9 +514,17 @@ export class AgentService {
             };
             unresolved?: Array<string>;
             /**
+             * `rules`: read by fixed rules over the store's own vocabulary, at no cost. `helper`: read by the hosted helper.
+             */
+            classified_by?: 'rules' | 'helper';
+            /**
              * The conversation the request was read in, when `conversation_id` was sent.
              */
             conversation_id?: string;
+            /**
+             * Present when this call named the conversation, which had no title, with a short noun phrase from the first shopping request, such as `Summer Essentials`, `Blue lamps` or `Summer picks`. A title already set is never changed.
+             */
+            conversation_title?: string;
         };
         /**
          * Where each figure in `data` was read from.
@@ -501,8 +567,8 @@ export class AgentService {
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
-                402: `The store has no AI credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
-                403: `Hosted helpers are unavailable. To a publishable key this is the one answer for every reason and carries no \`details\`. A secret key receives \`details.reason\` (\`disabled\`, \`paused\` or \`unavailable\`), and \`402 insufficient_credits\` when the store is out of credits. With \`conversation_id\`, also \`shopping_assistant_disabled\`, \`history_disabled\` or \`guests_not_allowed\` when the store's assistant settings do not allow the conversation to be read.`,
+                402: `Not returned by this endpoint. A store without AI credits has its messages read by the rules at no cost.`,
+                403: `With \`conversation_id\`, \`shopping_assistant_disabled\`, \`history_disabled\` or \`guests_not_allowed\` when the store's assistant settings do not allow the conversation to be read. Hosted helpers being off is never a refusal here.`,
                 404: `Resource not found`,
                 429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,

@@ -97,6 +97,11 @@ export class ProductsService {
          * - Searches both product name and SKU fields
          * - Case-insensitive matching
          * - Partial matches supported (e.g., "iphone" matches "iPhone 15 Pro")
+         * - When no name or SKU contains the text (and no `sort`, price or specification filter is set), the
+         * text is read the way the store's search reads it (`searchProducts`, Understanding): words that carry
+         * no product meaning are set aside, the rest are matched against names, brands, categories,
+         * subcategories, SKUs and tags with the store's synonyms, and the products of a collection the text
+         * names are included. `search=best products for summer` lists the summer range.
          *
          * **Examples:**
          * - `search=macbook` - Matches "MacBook Pro", "MacBook Air", "macbook-case"

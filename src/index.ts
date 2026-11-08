@@ -123,6 +123,7 @@ export { SandboxGiftCard } from './models/SandboxGiftCard';
 export { SandboxPricingRule } from './models/SandboxPricingRule';
 export { SandboxPromotion } from './models/SandboxPromotion';
 export type { SandboxStockLevel } from './models/SandboxStockLevel';
+export { SearchRedirect } from './models/SearchRedirect';
 export type { SearchResponse } from './models/SearchResponse';
 export type { SearchResult } from './models/SearchResult';
 export type { ShippingAddressInput } from './models/ShippingAddressInput';
