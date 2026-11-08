@@ -328,7 +328,7 @@ export class OrdersService {
                 attendee_names?: any[] | null;
             }>;
             /**
-             * Payment method identifier (required): one of `card`, `stripe`, `paypal`, `paystack`, `mpesa`, `mpesa_c2b`, `cash`, `bank_transfer`, `free`, or the identifier of one of the store's own payment providers as listed by `GET /v1/payments/methods`. Any other value answers 400. `free` is for an order whose `total_amount` is 0 and whose items are all downloads or event tickets; the order is created paid, for a signed-in shopper (see `x-auth-token`). It may be omitted on such an order. Any other zero-total order is refused.
+             * Payment method identifier (required): one of `card`, `stripe`, `paypal`, `paystack`, `mpesa`, `mpesa_c2b`, `cash`, `bank_transfer`, `free`, or the identifier of one of the store's own payment providers as listed by `GET /v1/payments/methods`. On a live key the order may name only a method the store has switched on (`card` and `free` aside); any other value answers 400 with the list the store accepts. A test key is not held to the store's switches. `free` is for an order whose `total_amount` is 0 and whose items are all downloads or event tickets; the order is created paid, for a signed-in shopper (see `x-auth-token`). It may be omitted on such an order. Any other zero-total order is refused.
              */
             payment_method: string;
             /**

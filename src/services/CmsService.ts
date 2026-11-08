@@ -13,6 +13,8 @@ export class CmsService {
     constructor(public readonly httpRequest: BaseHttpRequest) {}
     /**
      * List blog posts
+     * Blog posts and lookbooks belong to the store's plan: when the plan does not include them this returns `403` `feature_not_available`. The content is kept, and is served again as it was when the plan includes it.
+     *
      * List the store's published blog posts, newest first, with cursor-based pagination. Posts may
      * be commerce-aware (shoppable) and link to products in the catalog (`product_count` on each
      * item).
@@ -87,7 +89,7 @@ export class CmsService {
     }
     /**
      * Get blog post by slug
-     * Retrieve a single published blog post by its URL slug, including full `content` and any linked products (for shoppable posts). `content` is an Editor.js document (`time`, `version`, `blocks`), or `null` for a post with no body; the block types and rendering rules are described on the `PostContent` schema. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
+     * Blog posts and lookbooks belong to the store's plan: when the plan does not include them this returns `403` `feature_not_available`. The content is kept, and is served again as it was when the plan includes it. Retrieve a single published blog post by its URL slug, including full `content` and any linked products (for shoppable posts). `content` is an Editor.js document (`time`, `version`, `blocks`), or `null` for a post with no body; the block types and rendering rules are described on the `PostContent` schema. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
      * @returns Post Success
      * @throws ApiError
      */
@@ -167,7 +169,7 @@ export class CmsService {
     }
     /**
      * Most-read blog posts
-     * The posts being read most, ranked by reads per day over a recent window. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
+     * Blog posts and lookbooks belong to the store's plan: when the plan does not include them this returns `403` `feature_not_available`. The content is kept, and is served again as it was when the plan includes it. The posts being read most, ranked by reads per day over a recent window. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      *
      * The window widens — 7, then 21, 45 and 90 days — until enough posts qualify, and the one that was used is returned as `window_days`. A blog that publishes occasionally has quiet weeks, and a shelf that is empty half the time is worse than one that describes a longer period honestly. Render the period beside the list rather than claiming "this week" for all of them.
      *
@@ -218,7 +220,7 @@ export class CmsService {
     }
     /**
      * Posts related to this one
-     * Posts related to the given one, ranked server-side so a storefront does not compute similarity in the browser. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
+     * Blog posts and lookbooks belong to the store's plan: when the plan does not include them this returns `403` `feature_not_available`. The content is kept, and is served again as it was when the plan includes it. Posts related to the given one, ranked server-side so a storefront does not compute similarity in the browser. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published post matches the slug.
      *
      * Ranking combines what the writing is about with the topics two posts share and how recent each one is, and nudges a post from a different category up between otherwise equal results.
      *
@@ -295,7 +297,7 @@ export class CmsService {
     }
     /**
      * List lookbooks
-     * List the store's published shoppable lookbooks (curated, image-led product galleries), newest first, with cursor-based pagination. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
+     * Blog posts and lookbooks belong to the store's plan: when the plan does not include them this returns `403` `feature_not_available`. The content is kept, and is served again as it was when the plan includes it. List the store's published shoppable lookbooks (curated, image-led product galleries), newest first, with cursor-based pagination. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      * @returns any Success
      * @throws ApiError
      */
@@ -349,7 +351,7 @@ export class CmsService {
     }
     /**
      * Get lookbook details by slug
-     * Retrieve a single published lookbook by its URL slug, including its images and the products featured in each. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published lookbook matches the slug.
+     * Blog posts and lookbooks belong to the store's plan: when the plan does not include them this returns `403` `feature_not_available`. The content is kept, and is served again as it was when the plan includes it. Retrieve a single published lookbook by its URL slug, including its images and the products featured in each. Read-only; accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys. Returns 404 if no published lookbook matches the slug.
      * @returns Lookbook Success
      * @throws ApiError
      */

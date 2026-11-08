@@ -16,6 +16,8 @@ export class SearchService {
      * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys, so
      * it is safe to call directly from client-side storefront code — no customer session required.
      *
+     * **Plans:** keyword search is available on every plan.
+     *
      * **When to use:** use this GET endpoint for fast type-ahead and keyword search where exact
      * term matching is enough. For natural-language intent ("wireless headphones with noise
      * cancellation"), use the semantic `POST /v1/search` (`semanticSearch`) instead, which scores
@@ -111,6 +113,10 @@ export class SearchService {
      * queries like "wireless headphones with noise cancellation" — matching shopper intent against
      * product meaning rather than literal keyword overlap. Results carry a similarity `score` and a
      * `matchReason`.
+     *
+     * **Plans:** semantic search is Smart Search, which belongs to the store's plan. A store whose plan does not include it
+     * receives `403` `feature_not_available`; keyword search (`GET /v1/search`) and type-ahead (`GET /v1/search/autocomplete`)
+     * answer on every plan, so a storefront can fall back to them.
      *
      * **Auth:** works with both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      * Despite using `POST` (to carry the structured request body), this is a **read-only** operation,
@@ -230,6 +236,8 @@ export class SearchService {
      * **Auth:** accepts a publishable (`tybrite_pk_*`) key, so it is safe to call from client-side
      * storefront code on every keystroke. Requires a store-scoped key — marketplace operator keys
      * are rejected.
+     *
+     * **Plans:** available on every plan.
      *
      * **Fewer than two characters** returns an empty `suggestions` array with a `200`, not an
      * error: a shopper mid-word has not done anything wrong.
