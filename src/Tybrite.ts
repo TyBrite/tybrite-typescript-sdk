@@ -5,6 +5,7 @@
 import type { BaseHttpRequest } from './core/BaseHttpRequest';
 import type { OpenAPIConfig } from './core/OpenAPI';
 import { FetchHttpRequest } from './core/FetchHttpRequest';
+import { AgencySignupService } from './services/AgencySignupService';
 import { AgentService } from './services/AgentService';
 import { AnalyticsService } from './services/AnalyticsService';
 import { AuthenticationService } from './services/AuthenticationService';
@@ -41,6 +42,7 @@ import { TaxonomyService } from './services/TaxonomyService';
 import { WebhooksService } from './services/WebhooksService';
 type HttpRequestConstructor = new (config: OpenAPIConfig) => BaseHttpRequest;
 export class Tybrite {
+    public readonly agencySignup: AgencySignupService;
     public readonly agent: AgentService;
     public readonly analytics: AnalyticsService;
     public readonly authentication: AuthenticationService;
@@ -88,6 +90,7 @@ export class Tybrite {
             HEADERS: config?.HEADERS,
             ENCODE_PATH: config?.ENCODE_PATH,
         });
+        this.agencySignup = new AgencySignupService(this.request);
         this.agent = new AgentService(this.request);
         this.analytics = new AnalyticsService(this.request);
         this.authentication = new AuthenticationService(this.request);

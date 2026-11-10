@@ -18,6 +18,16 @@ export type IngestResult = {
     strategy?: IngestResult.strategy;
     summary?: IngestSummary;
     errors?: Array<IngestRowError>;
+    /**
+     * Present and `true` on a dry run (`dry_run=true`); nothing was written.
+     */
+    dry_run?: boolean;
+    /**
+     * On a dry run, whether each new row's delivery type was checked against the store's delivery types and plan
+     * (`false` when they could not be read just now). Absent on a real run.
+     *
+     */
+    delivery_types_checked?: boolean;
 };
 export namespace IngestResult {
     /**

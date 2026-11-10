@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { SearchRedirect } from '../models/SearchRedirect';
 import type { ShopperSubscription } from '../models/ShopperSubscription';
 import type { SubscribeSaveOffer } from '../models/SubscribeSaveOffer';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -97,19 +98,60 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
     }
     /**
      * Search by constraints
-     * Constraint search over the store's catalogue. Every result carries `match_reasons` naming which of the
-     * requested constraints it satisfied. With a `query`, the store's semantic search ranks results by meaning
-     * where it is available (`semantic_search: used`); a direct match on name, brand, category, SKU or tags is
-     * also admitted and ranked higher. `attributes` are matched against each product's variant attributes,
-     * product attributes, brand and category — use `POST /v1/agent/fit` to check a product's published
-     * specifications.
+     * Constraint search over the store's catalogue, ranked by the store's own search. With a `query`, the order is the
+     * order the store's search gives that query (`POST /v1/search` where the store's plan includes semantic search,
+     * otherwise `GET /v1/search`), with the merchant's search rules applied: a product pinned for the query is shown
+     * first in the merchant's order, a boosted one is lifted and a buried one is shown last. The constraints only remove
+     * results, so what remains keeps the store's order (`ranking: store_search`). Products the store's search did not
+     * return are added after its results and before any it buried: a direct match on brand, category, SKU or tags, and
+     * the products of a collection the query names (`collections`), so "summer" finds the store's Summer collection.
+     * Without a `query` the store's search has no order to give: the store's most-added-to-cart products come first,
+     * then products on sale or in an offer, then the rest by name (`ranking: catalogue`).
+     *
+     * The store's search also applies the merchant's synonyms, its ranking by popularity, promotions and stock when the
+     * store has turned it on, and its reading of a sentence that matches no product name (`searchProducts`): "best
+     * products for summer" is read as "summer", so the storefront's search and this search return the same products. The
+     * direct match here reads the query the same way, setting aside words that carry no product meaning.
+     *
+     * **Redirects.** When the merchant sends the query somewhere (a page address, a collection, a category or a
+     * product), `redirect` names it, with the same shape as the store search's `redirect`. It is a suggestion to offer
+     * the shopper beside the results; nothing navigates on its own. Null when there is none.
+     *
+     * **Paging.** `limit` results are returned from `offset` (default 0) of one ordered set: the store's search order,
+     * then what this search adds, then what a rule buried. `next_cursor` (or `next_offset`) continues it; a cursor is
+     * valid only for the constraints and personalisation it was issued for, and a mismatched one is refused with `400`.
+     * `total_matched` is the size of the whole set; `has_more` is false on its last page. The order is recomputed the same
+     * way for every page, so a page repeats nothing and skips nothing unless the catalogue changes between requests.
+     * Paging is for store keys; a marketplace search returns one page.
+     *
+     * Every result carries `match_reasons` (why it is in the results, in words a shopper can read) and `badges` (short
+     * labels for display). A result never carries a score. A product a rule pins or boosts carries the `featured` badge,
+     * labelled "Featured"; which products a rule buries is not disclosed.
+     *
+     * | Badge `code` | Shown when | `label` |
+     * |---|---|---|
+     * | `featured` | The merchant's search rule pins or boosts the product for this query | Featured |
+     * | `collection` | The product is in a collection the query names | The collection's name |
+     * | `on_sale` | The product's online sale price is below its online price | On sale |
+     * | `offer` | The product is part of a live buy-one-get-one or bundle offer | Buy one, get one / Bundle deal |
+     * | `bestseller` | The product is among the store's most-added-to-cart products over the last 7 days (a measured list only) | Popular |
+     * | `in_your_size` | A size was asked for in `attributes` and the product has it | In your size |
+     * | `in_stock_low` | The product is in stock at or below the store's low-stock threshold | Only N left |
+     *
+     * With a shopper credential (`x-auth-token`, `x-external-auth` or `x-idp-token`) for a shopper who has granted
+     * personalisation (`POST /v1/agent/me/consent`), the store's search ranks toward that shopper's taste, as it does on
+     * the storefront (`personalised: true`). A credential that does not verify is refused with `401`.
+     *
+     * `attributes` are matched against each product's variant attributes, product attributes, brand and category — use
+     * `POST /v1/agent/fit` to check a product's published specifications.
      *
      * `price` is the shopper price of the product's default variant: its online sale price when one
      * applies, otherwise its online price. `list_price` is that variant's online price. The amount a shopper
@@ -128,6 +170,9 @@ export class AgentService {
     public search({
         requestBody,
         fields,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
     }: {
         requestBody: {
             /**
@@ -146,11 +191,31 @@ export class AgentService {
             attributes?: Record<string, string>;
             in_stock_only?: boolean;
             limit?: number;
+            /**
+             * Skip this many results of the ordered set. Send `offset` or `cursor`, not both.
+             */
+            offset?: number;
+            /**
+             * The `next_cursor` of the previous page, sent with the same constraints. Send `offset` or `cursor`, not both.
+             */
+            cursor?: string;
         },
         /**
          * Comma-separated top-level keys of `data` to return, e.g. `fields=grand_total,lines`.
          */
         fields?: string,
+        /**
+         * The signed-in shopper, for a personalised ranking when they have granted personalisation. Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * A bring-your-own-auth assertion identifying the shopper, for a personalised ranking. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider for the shopper, for a personalised ranking. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
     }): CancelablePromise<{
         data: {
             results?: Array<{
@@ -176,16 +241,47 @@ export class AgentService {
                 has_variants?: boolean;
                 thumbnail_url?: string | null;
                 attributes?: Record<string, string>;
+                /**
+                 * Why the product is in the results, worded for a shopper. `constraint` is `query`, `price`, `category`, `attribute:<name>`, `in_stock_only`, `featured` or `collection`.
+                 */
                 match_reasons?: Array<{
                     constraint?: string;
                     detail?: string;
                 }>;
                 /**
-                 * Semantic similarity to `query`, when used.
+                 * Short display labels, in display order (see the table above). Empty on a marketplace operator key.
                  */
-                score?: number | null;
+                badges?: Array<{
+                    code: 'featured' | 'collection' | 'on_sale' | 'offer' | 'bestseller' | 'in_your_size' | 'in_stock_low';
+                    label: string;
+                }>;
             }>;
+            /**
+             * Results in the whole ordered set, across every page.
+             */
             total_matched?: number;
+            /**
+             * Where this page starts in the ordered set.
+             */
+            offset?: number;
+            limit?: number;
+            has_more?: boolean;
+            /**
+             * The `offset` of the next page; null on the last page.
+             */
+            next_offset?: number | null;
+            /**
+             * Continues this search from the next result; null on the last page.
+             */
+            next_cursor?: string | null;
+            /**
+             * Where the merchant sends this query, as a suggestion to offer beside the results; null when there is none.
+             */
+            redirect?: (SearchRedirect | null);
+            /**
+             * A one- or two-sentence lead-in to show above the results, built from facts this search computed over the whole result set, not the current page, so every page of one search reads the same (matches, the collection the words named, how many results are on sale and in stock, their price range, the filters applied). Amounts print in the store's currency, such as `$12.00`. Always present, for example `Here are 25 picks for summer, led by the Summer Essentials collection; 4 are on sale and everything is in stock; prices run from $12.00 to $80.00.`
+             */
+            summary?: string;
             /**
              * Marketplace key only — how many sellers the results come from.
              */
@@ -198,7 +294,26 @@ export class AgentService {
              * True when the catalogue is larger than one search considers (1,000 products).
              */
             catalog_truncated?: boolean;
+            /**
+             * Whether the store's semantic search ranked the results.
+             */
             semantic_search?: 'used' | 'unavailable' | 'not_requested';
+            /**
+             * `store_search`: ordered by the store's own search for `query`. `catalogue`: no query, or the store's search could not be read, so the order is popularity, offers, then name.
+             */
+            ranking?: 'store_search' | 'catalogue';
+            /**
+             * The store's search ranked toward the identified shopper's taste.
+             */
+            personalised?: boolean;
+            /**
+             * The store's collections the query names, whose products are in the results.
+             */
+            collections?: Array<{
+                collection_id?: string;
+                name?: string;
+                slug?: string | null;
+            }>;
             constraints?: {
                 /**
                  * Free text. Matched by meaning where the store has semantic search, and against name, brand, category, SKU and tags.
@@ -237,6 +352,11 @@ export class AgentService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/agent/search',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
             query: {
                 'fields': fields,
             },
@@ -247,43 +367,136 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `The store's catalogue could not be read.`,
             },
         });
     }
     /**
-     * Turn a request into search constraints
-     * A hosted helper: natural language in, the exact constraint object `POST /v1/agent/search` accepts out,
-     * plus `unresolved` — the parts of the request it could not map to a constraint.
+     * Read a shopper's message
+     * A shopper's message in, what kind of message it is (`intent`) out, and for a product request the exact constraint
+     * object `POST /v1/agent/search` accepts, plus `unresolved` — the parts of the request it could not map to a
+     * constraint.
      *
-     * It runs a model and debits the store's AI credits at the true cost of the call; `usage`
-     * reports what was debited. A failed call keeps no credits. It is limited to 60 calls a minute per client
-     * and 1,000 an hour per key, in addition to the standard limits.
+     * **It works without the hosted helpers.** A greeting, a thank-you, a goodbye, a question about an order and a plain
+     * question about the store (delivery with an optional place, returns, opening hours, payment, contact) are read by
+     * fixed rules and cost nothing, whether or not the store has hosted helpers on; a message that asks several of those
+     * is answered for each. Every other message is read by the hosted helper when the store has it on, and by the same
+     * rules over the store's own vocabulary when it does not: a price limit ("under 50", "between 20 and 40"), `in stock`,
+     * a colour that is one of the store's own colour values, and a category named as the store names it become
+     * constraints; any other words stay in `query`; a word the rules cannot turn into a filter is listed in `unresolved`.
+     * `classified_by` says which read the message. The call never answers `403 helpers_unavailable`.
      *
-     * **A publishable key spends the store's credits too.** A publishable key is public, so anyone holding it can
-     * make these calls, and each one debits the merchant's balance (and can trigger the merchant's automatic
-     * top-up). The merchant sets a daily limit on that spend, counted over the last 24 hours; once it is reached
-     * the key receives `403 helpers_unavailable`, the same answer as any other refusal. A secret key is not
-     * limited by it.
+     * | `intent` | The message | `constraints` | `reply` |
+     * |---|---|---|---|
+     * | `shop` | Asks for products, or changes an earlier product request | The search to run | Absent |
+     * | `question` | Asks about the store: delivery, returns, opening hours, contact, payment | Empty | The store's published answer |
+     * | `small_talk` | A greeting, a thank-you or a goodbye | Empty | A short answer |
+     * | `order_help` | Asks about an existing order | Empty | How to check an order, with the store's contact |
+     * | `unclear` | Cannot be read as any of these | Empty | A request for more detail |
      *
-     * **With a marketplace operator key** the call is paid from the marketplace operator's own AI
-     * credits, never a seller's. A secret key receives the reason a call is refused: `403 helpers_unavailable`
-     * with `details.reason` when the operator has not switched hosted helpers on, `402 insufficient_credits`
-     * when the operator's credits are exhausted. A publishable key receives `403 helpers_unavailable` whatever
-     * the reason, as on a single store.
+     * Only a `shop` message carries constraints, so a greeting is never searched for. A `reply` is composed from what the
+     * store has published: its shipping zones and distance tiers, its returns setting and window, its payment methods,
+     * its profile (contact, support hours) and the opening of its published shipping or returns policy. A fact the store
+     * has not published is never stated; the reply says the store has not published it and gives the contact the store
+     * did publish. A greeting, a thank-you or a goodbye on its own is recognised without a model and debits nothing
+     * (`usage.credits_debited: 0`).
+     *
+     * `suggestions` holds two or three follow-up prompts drawn from the store's live collections and the categories its
+     * online products are in. Each `text` can be sent back to `interpret` as it is.
+     *
+     * A message read by the hosted helper debits the store's AI credits at the true cost of the call; `usage` reports what
+     * was debited (`credits_debited: 0` for a message read by rules). A failed helper call keeps no credits and the
+     * message is read by the rules instead. The call is limited per shopper at the store as described under the agent
+     * fair-use budgets, in addition to the standard limits.
+     *
+     * **A publishable key spends the store's credits too, when the helper reads the message.** A publishable key is
+     * public, so anyone holding it can make these calls, and each one the helper reads debits the merchant's balance (and
+     * can trigger the merchant's automatic top-up). The merchant sets a daily limit on that spend, counted over the last
+     * 24 hours; once it is reached, or when the helpers are off, paused or out of credits, the message is read by the
+     * rules and nothing is debited.
+     *
+     * **With a marketplace operator key** a message read by the helper is paid from the marketplace operator's own AI
+     * credits, never a seller's; when the operator has not switched hosted helpers on or its credits are exhausted, the
+     * rules read the message.
+     *
+     * **A follow-up in a saved conversation.** With `conversation_id`, the request is read in the context of that
+     * storefront conversation (`/v1/agent/me/conversations`): its last six turns, the prices of the results the storefront
+     * last showed, and the constraints the previous `interpret` on it returned. "cheaper ones" or "in blue" then refine
+     * the earlier request. The call names the conversation's owner the way the conversation endpoints do (a shopper
+     * credential, or `x-session-id` for a guest), and is refused with the same codes when the store's assistant settings
+     * do not allow it (`403 shopping_assistant_disabled`, `history_disabled`, `guests_not_allowed`) or when the
+     * conversation is not the caller's (`404 not_found`). The constraints returned are kept on the conversation for the
+     * next follow-up; no turn is added. Only a `shop` message updates them, so "cheaper ones" after "thanks" still refines
+     * the last product request. A follow-up keeps the earlier request and applies the change: a new value replaces the old
+     * one, a new attribute is added, "cheaper" sets `price_max` just below the lowest price last shown, and "more expensive"
+     * sets `price_min` just above the highest.
      * @returns any The constraints
      * @throws ApiError
      */
     public interpret({
         requestBody,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
     }: {
         requestBody: {
             query: string;
+            /**
+             * A saved storefront conversation whose context the request is read in. Needs the conversation's owner (a shopper credential or `x-session-id`).
+             */
+            conversation_id?: string;
         },
+        /**
+         * With `conversation_id`, the signed-in shopper who owns it. Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * With `conversation_id`, a bring-your-own-auth assertion identifying the shopper who owns it. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * With `conversation_id`, a raw token from the store's own identity provider for the shopper who owns it. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        /**
+         * With `conversation_id` and no shopper credential, the guest session that owns it.
+         */
+        xSessionId?: string,
     }): CancelablePromise<{
         data: {
+            /**
+             * What kind of message it is (see the table above).
+             */
+            intent?: 'shop' | 'question' | 'small_talk' | 'order_help' | 'unclear';
+            /**
+             * Present when `intent` is not `shop`. Composed only from what the store has published.
+             */
+            reply?: string;
+            /**
+             * Two or three follow-up prompts from the store's live collections and categories; empty when the store has neither.
+             */
+            suggestions?: Array<{
+                /**
+                 * A prompt the shopper can send back to `interpret`, e.g. `Show me Summer Essentials`.
+                 */
+                text: string;
+                kind: 'collection' | 'category';
+                /**
+                 * With `kind` `collection`.
+                 */
+                collection_id?: string;
+                /**
+                 * With `kind` `category`.
+                 */
+                category?: string;
+            }>;
+            /**
+             * The search for a `shop` message; empty otherwise.
+             */
             constraints?: {
                 /**
                  * Free text. Matched by meaning where the store has semantic search, and against name, brand, category, SKU and tags.
@@ -302,6 +515,18 @@ export class AgentService {
                 in_stock_only?: boolean;
             };
             unresolved?: Array<string>;
+            /**
+             * `rules`: read by fixed rules over the store's own vocabulary, at no cost. `helper`: read by the hosted helper.
+             */
+            classified_by?: 'rules' | 'helper';
+            /**
+             * The conversation the request was read in, when `conversation_id` was sent.
+             */
+            conversation_id?: string;
+            /**
+             * Present when this call named the conversation, which had no title, with a short noun phrase from the first shopping request, such as `Summer Essentials`, `Blue lamps` or `Summer picks`. A title already set is never changed.
+             */
+            conversation_title?: string;
         };
         /**
          * Where each figure in `data` was read from.
@@ -333,14 +558,22 @@ export class AgentService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/agent/interpret',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `The request is invalid`,
                 401: `Authentication failed - invalid or missing API key`,
-                402: `The store has no AI credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
-                403: `Hosted helpers are unavailable. To a publishable key this is the one answer for every reason and carries no \`details\`. A secret key receives \`details.reason\` (\`disabled\`, \`paused\` or \`unavailable\`), and \`402 insufficient_credits\` when the store is out of credits.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                402: `Not returned by this endpoint. A store without AI credits has its messages read by the rules at no cost.`,
+                403: `With \`conversation_id\`, \`shopping_assistant_disabled\`, \`history_disabled\` or \`guests_not_allowed\` when the store's assistant settings do not allow the conversation to be read. Hosted helpers being off is never a refusal here.`,
+                404: `Resource not found`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `The hosted helper did not complete`,
             },
@@ -419,7 +652,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `The product could not be read.`,
             },
@@ -487,7 +721,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -589,7 +824,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -681,7 +917,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -865,7 +1102,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1008,7 +1246,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1190,8 +1429,9 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store has no AI credits available. Returned to a secret key only; a publishable key receives \`403 helpers_unavailable\` instead.`,
                 403: `Hosted helpers are unavailable. To a publishable key this is the one answer for every reason and carries no \`details\`. A secret key receives \`details.reason\` (\`disabled\`, \`paused\` or \`unavailable\`), and \`402 insufficient_credits\` when the store is out of credits.`,
-                404: `Nothing in stock matches the intent`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                404: `Nothing to draft. \`details.reason\` is \`no_candidates\` (nothing in stock matches the intent), \`no_selection\` (the helper selected nothing that fits) or \`no_product_request\` (the intent asks for no product, for example a greeting or a question about an order; \`details.intent\` names what it is).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
                 502: `The hosted helper did not complete`,
             },
@@ -1349,7 +1589,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1429,7 +1670,8 @@ export class AgentService {
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
                 409: `Already applied (\`conflict\`), or no item could be added (an envelope whose \`applied[].error\` gives the cart's reason for each refused line).`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1548,7 +1790,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1613,7 +1856,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1686,7 +1930,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1768,7 +2013,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The shopper has not granted personalisation`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1841,7 +2087,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -1914,7 +2161,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The shopper has not granted personalisation`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2007,7 +2255,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2087,7 +2336,8 @@ export class AgentService {
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
                 422: `The store has returns switched off (\`returns_disabled\`), or the order was not paid or was cancelled (\`order_not_paid\`).`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2163,7 +2413,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Personalization consent has not been granted`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2283,7 +2534,8 @@ export class AgentService {
                 403: `Personalization consent has not been granted`,
                 404: `Resource not found`,
                 409: `\`mandate_limit\` (10 already) or \`shipping_not_deliverable\``,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2367,7 +2619,8 @@ export class AgentService {
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
                 409: `Not active (already cancelled, completed or expired)`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2436,7 +2689,606 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * List the shopper's assistant conversations
+     * The storefront shopping assistant's saved conversations of the caller, most recently active first. The caller is a
+     * signed-in shopper (exactly one of `x-auth-token`, `x-external-auth`, `x-idp-token`) or, when the store allows
+     * guests, a guest session (`x-session-id`). A shopper credential wins when both are sent. Only conversations in the
+     * API key's environment are returned.
+     *
+     * The store's choices are published in `GET /v1/store/info` as `store.shopping_assistant`. While the assistant is
+     * off the call answers `403 shopping_assistant_disabled`; while conversations are not saved, `403 history_disabled`;
+     * a guest session while guests are not allowed, `403 guests_not_allowed`. Limited to 120 reads a minute per
+     * address and store, in addition to the standard limits.
+     * @returns any A page of conversations
+     * @throws ApiError
+     */
+    public listAssistantConversations({
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+        limit = 20,
+        cursor,
+    }: {
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        /**
+         * The guest session, when no shopper credential is sent. Accepted only when the store allows guests.
+         */
+        xSessionId?: string,
+        limit?: number,
+        /**
+         * `next_cursor` from the previous page.
+         */
+        cursor?: string,
+    }): CancelablePromise<{
+        data: {
+            conversations: Array<{
+                id: string;
+                /**
+                 * The title given at creation, else the start of the first user turn; null until then.
+                 */
+                title: string | null;
+                created_at: string;
+                /**
+                 * When the last turn was added. Retention is counted from here.
+                 */
+                updated_at: string;
+                turn_count: number;
+            }>;
+            /**
+             * Pass as `cursor` for the next page; null on the last page.
+             */
+            next_cursor: string | null;
+        };
+        evidence: Array<{
+            source?: string;
+            field?: string;
+        }>;
+        computed_at: string;
+        currency?: null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/agent/me/conversations',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
+            query: {
+                'limit': limit,
+                'cursor': cursor,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The store's assistant settings refuse the call (\`shopping_assistant_disabled\`, \`history_disabled\`, \`guests_not_allowed\`), or a connected app lacks the \`agent:read\` or \`agent:write\` scope (\`insufficient_scope\`).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Start an assistant conversation
+     * Starts a saved conversation for the caller (a signed-in shopper or, when the store allows guests, a guest session).
+     * A shopper keeps at most 50 conversations and a guest session 10; starting one more deletes the least recently
+     * active. Limited to 60 writes a minute per address and store.
+     * @returns any The conversation
+     * @throws ApiError
+     */
+    public createAssistantConversation({
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+        requestBody,
+    }: {
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        /**
+         * The guest session, when no shopper credential is sent. Accepted only when the store allows guests.
+         */
+        xSessionId?: string,
+        requestBody?: {
+            /**
+             * Optional. Without it, the title is the start of the first user turn.
+             */
+            title?: string;
+        },
+    }): CancelablePromise<{
+        data: {
+            id: string;
+            /**
+             * The title given at creation, else the start of the first user turn; null until then.
+             */
+            title: string | null;
+            created_at: string;
+            /**
+             * When the last turn was added. Retention is counted from here.
+             */
+            updated_at: string;
+            turn_count: number;
+        };
+        evidence: Array<{
+            source?: string;
+            field?: string;
+        }>;
+        computed_at: string;
+        currency?: null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/conversations',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The store's assistant settings refuse the call (\`shopping_assistant_disabled\`, \`history_disabled\`, \`guests_not_allowed\`), or a connected app lacks the \`agent:read\` or \`agent:write\` scope (\`insufficient_scope\`).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Delete all of the shopper's assistant conversations
+     * Deletes every saved conversation of the caller (signed-in shopper or guest session) in the API key's environment.
+     * Never refused by the store's assistant settings: a shopper can always delete their own conversations.
+     * @returns any How many were deleted
+     * @throws ApiError
+     */
+    public deleteAllAssistantConversations({
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+    }: {
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        /**
+         * The guest session, when no shopper credential is sent. Accepted only when the store allows guests.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        data: {
+            deleted: number;
+        };
+        evidence: Array<{
+            source?: string;
+            field?: string;
+        }>;
+        computed_at: string;
+        currency?: null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/agent/me/conversations',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Move a guest's conversations to the shopper who signed in
+     * Call once after a guest signs in, with the new shopper credential **and** the guest's `x-session-id`. Every saved
+     * conversation of that guest session (same store and environment) becomes the shopper's, and the guest session no
+     * longer reaches it. The shopper's 50-conversation limit then applies (`pruned` counts any deleted to keep it). The
+     * same shape as moving a guest cart with `POST /v1/cart/merge`. Calling it again moves nothing.
+     * @returns any What moved
+     * @throws ApiError
+     */
+    public adoptGuestAssistantConversations({
+        xSessionId,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The guest session whose conversations move to the shopper.
+         */
+        xSessionId: string,
+        /**
+         * The signed-in shopper. Exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token` is required.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the shopper. Exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token` is required.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token` is required.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        data: {
+            adopted: number;
+            pruned: number;
+        };
+        evidence: Array<{
+            source?: string;
+            field?: string;
+        }>;
+        computed_at: string;
+        currency?: null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/conversations/adopt',
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The store's assistant settings refuse the call (\`shopping_assistant_disabled\`, \`history_disabled\`, \`guests_not_allowed\`), or a connected app lacks the \`agent:read\` or \`agent:write\` scope (\`insufficient_scope\`).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Get an assistant conversation with its turns
+     * One of the caller's saved conversations and every turn in order. A conversation that does not exist and one that
+     * belongs to someone else both answer `404 not_found`. Money in a turn's results is in major units, as the
+     * storefront showed it.
+     * @returns any The conversation
+     * @throws ApiError
+     */
+    public getAssistantConversation({
+        id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+    }: {
+        id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        /**
+         * The guest session, when no shopper credential is sent. Accepted only when the store allows guests.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        data: {
+            id: string;
+            title: string | null;
+            created_at: string;
+            updated_at: string;
+            turn_count: number;
+            turns: Array<{
+                seq: number;
+                role: 'user' | 'assistant';
+                text: string;
+                at: string;
+                results: Array<{
+                    product_id: string;
+                    variant_id?: string | null;
+                    name: string;
+                    /**
+                     * The price shown, in major units (12.50).
+                     */
+                    price?: number | null;
+                    /**
+                     * The price before a discount, in major units, when one was shown.
+                     */
+                    list_price?: number | null;
+                    currency?: string | null;
+                    /**
+                     * An https URL.
+                     */
+                    thumbnail_url?: string | null;
+                    in_stock?: boolean | null;
+                }>;
+                unresolved: Array<string>;
+                /**
+                 * A cart draft (`/v1/agent/cart-drafts/{id}`) the turn offered.
+                 */
+                draft_id: string | null;
+            }>;
+        };
+        evidence: Array<{
+            source?: string;
+            field?: string;
+        }>;
+        computed_at: string;
+        currency?: null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/agent/me/conversations/{id}',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The store's assistant settings refuse the call (\`shopping_assistant_disabled\`, \`history_disabled\`, \`guests_not_allowed\`), or a connected app lacks the \`agent:read\` or \`agent:write\` scope (\`insufficient_scope\`).`,
+                404: `Resource not found`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Delete an assistant conversation
+     * Deletes one of the caller's conversations and its turns. Never refused by the store's assistant settings. Someone
+     * else's conversation answers `404 not_found`.
+     * @returns any Deleted
+     * @throws ApiError
+     */
+    public deleteAssistantConversation({
+        id,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+    }: {
+        id: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        /**
+         * The guest session, when no shopper credential is sent. Accepted only when the store allows guests.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        data: {
+            id: string;
+            deleted: boolean;
+        };
+        evidence: Array<{
+            source?: string;
+            field?: string;
+        }>;
+        computed_at: string;
+        currency?: null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'DELETE',
+            url: '/v1/agent/me/conversations/{id}',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
+                404: `Resource not found`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Add a turn to an assistant conversation
+     * Saves one turn exactly as the storefront showed it: what the shopper wrote (`role: user`) or what the assistant
+     * answered (`role: assistant`), with the products shown (money in major units), the parts of the request that could
+     * not be matched, and a cart draft if one was offered. Nothing is generated or changed. A conversation holds at most
+     * 200 turns (`409 conversation_full`); start a new one after that.
+     *
+     * Send an `Idempotency-Key` to make a retry safe: the same key on the same conversation returns the turn already
+     * saved, with `200`, instead of adding it twice.
+     * @returns any The same `Idempotency-Key` was already used on this conversation; the turn saved then is returned.
+     * @throws ApiError
+     */
+    public appendAssistantConversationTurn({
+        id,
+        requestBody,
+        idempotencyKey,
+        xAuthToken,
+        xExternalAuth,
+        xIdpToken,
+        xSessionId,
+    }: {
+        id: string,
+        requestBody: {
+            role: 'user' | 'assistant';
+            text: string;
+            results?: Array<{
+                product_id: string;
+                variant_id?: string | null;
+                name: string;
+                /**
+                 * The price shown, in major units (12.50).
+                 */
+                price?: number | null;
+                /**
+                 * The price before a discount, in major units, when one was shown.
+                 */
+                list_price?: number | null;
+                currency?: string | null;
+                /**
+                 * An https URL.
+                 */
+                thumbnail_url?: string | null;
+                in_stock?: boolean | null;
+            }>;
+            unresolved?: Array<string>;
+            draft_id?: string | null;
+        },
+        idempotencyKey?: string,
+        /**
+         * Customer session token from `POST /v1/auth/login` or `POST /v1/auth/verify-otp`. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xAuthToken?: string,
+        /**
+         * Bring-your-own-auth assertion identifying the customer. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider, verified by the store's configured Auth verifier. At most one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+        /**
+         * The guest session, when no shopper credential is sent. Accepted only when the store allows guests.
+         */
+        xSessionId?: string,
+    }): CancelablePromise<{
+        data: {
+            turn: {
+                seq: number;
+                role: 'user' | 'assistant';
+                text: string;
+                at: string;
+                results: Array<{
+                    product_id: string;
+                    variant_id?: string | null;
+                    name: string;
+                    /**
+                     * The price shown, in major units (12.50).
+                     */
+                    price?: number | null;
+                    /**
+                     * The price before a discount, in major units, when one was shown.
+                     */
+                    list_price?: number | null;
+                    currency?: string | null;
+                    /**
+                     * An https URL.
+                     */
+                    thumbnail_url?: string | null;
+                    in_stock?: boolean | null;
+                }>;
+                unresolved: Array<string>;
+                /**
+                 * A cart draft (`/v1/agent/cart-drafts/{id}`) the turn offered.
+                 */
+                draft_id: string | null;
+            };
+            turn_count: number;
+        };
+        evidence: Array<{
+            source?: string;
+            field?: string;
+        }>;
+        computed_at: string;
+        currency?: null;
+        environment: 'production' | 'sandbox';
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/agent/me/conversations/{id}/turns',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'Idempotency-Key': idempotencyKey,
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+                'x-session-id': xSessionId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `The store's assistant settings refuse the call (\`shopping_assistant_disabled\`, \`history_disabled\`, \`guests_not_allowed\`), or a connected app lacks the \`agent:read\` or \`agent:write\` scope (\`insufficient_scope\`).`,
+                404: `Resource not found`,
+                409: `The conversation already holds 200 turns`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2488,7 +3340,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `The shopper has not granted personalization consent (\`consent_required\`), or the key lacks the \`agent:read\` scope.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2604,7 +3457,8 @@ export class AgentService {
                 409: `Not possible as asked. \`account_required\`: no shopper credential was sent. \`items_unavailable\`,
                 \`shipping_not_deliverable\`, \`quote_incomplete\`, \`hold_limit_reached\` and \`idempotency_conflict\` are
                 as for any checkout intent.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2681,7 +3535,8 @@ export class AgentService {
                 - Item already exists in wishlist
                 - Idempotency-Key reused with a different request body
                 `,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2748,7 +3603,8 @@ export class AgentService {
                 - Item already exists in wishlist
                 - Idempotency-Key reused with a different request body
                 `,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2841,7 +3697,8 @@ export class AgentService {
                 - Item already exists in wishlist
                 - Idempotency-Key reused with a different request body
                 `,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -2922,7 +3779,8 @@ export class AgentService {
                 - Item already exists in wishlist
                 - Idempotency-Key reused with a different request body
                 `,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -3169,7 +4027,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 409: `The key was used with different items, or the basket cannot be bought as quoted. \`insufficient_stock\` means a line sold out between the quote and the hold (\`details\` is a sentence naming the variant, the stock available and the quantity asked for)`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -3349,7 +4208,8 @@ export class AgentService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -3792,7 +4652,8 @@ export class AgentService {
                 403: `The intent needs its confirmation token or the shopper it was prepared for`,
                 404: `Not found`,
                 409: `The intent is no longer pending`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -3847,7 +4708,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -3901,7 +4763,8 @@ export class AgentService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Besides the two codes every endpoint can answer (\`rate_limited\`, \`quota_exceeded\`), the shopping assistant endpoints answer \`agent_rate_limited\` when one shopper (their sign-in or guest session, with their network address, at this store) or one network address at this store passes the store's fair-use budget. There are two budgets: the tools (search, compare, product context, fit, alternatives, cart insights, quotes and drafts) and the AI helpers (\`interpret\`, \`cart-drafts/from-intent\`), which have a tighter one. Other shoppers at the store are unaffected. \`details\` names the budget, the window and when it resets; wait \`Retry-After\` seconds and retry. Not counted against the monthly quota.
+                A guest (a session with no shopper credential) and a signed-in customer have separate budgets. When a guest reaches a guest budget that is lower than the signed-in budget, the code is \`guest_limit_reached\` instead: \`details.scope\` is \`guest\`, \`details.signed_in_limit\` is the signed-in shopper's budget for the same bucket and window, and \`details.sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code and retries after sign-in, or after \`Retry-After\` seconds. A signed-in customer at their budget, and a guest stopped by a per-address or per-store ceiling, or whose budget is not lower than the signed-in one, still get \`agent_rate_limited\`. Both codes carry the same headers.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });

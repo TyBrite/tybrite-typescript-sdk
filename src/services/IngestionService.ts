@@ -41,6 +41,13 @@ export class IngestionService {
      * position, SKU, the offending field, and a human-readable reason). If **every** row
      * fails validation the response status is `422`.
      *
+     * **Updates keep the merchant's edits.** When a row's SKU already exists, each field is written
+     * only if the API owns it: the store chooses, per field, whether the API or the merchant owns it
+     * (Settings, Catalog sync, Field ownership, API push). A field the merchant owns is refreshed
+     * until the merchant changes it, then left alone. By default the merchant owns names,
+     * descriptions, categories, images, SEO fields and tags, and the API owns price, cost, stock,
+     * barcodes and product identifiers. A new product always takes every field the row carries.
+     *
      * **Required headers** (same signing scheme as orders and payments):
      * - `Idempotency-Key` — a unique key per batch; retrying with the same key returns the
      * original result instead of re-processing.
@@ -100,7 +107,7 @@ export class IngestionService {
          */
         strategy?: 'upsert_by_sku' | 'create_only',
         /**
-         * When `true`, validate and report without writing anything.
+         * When `true`, validate and report without writing anything. The report separates new rows (`rows_created`), rows that would update an existing SKU (`rows_updated`, or `rows_skipped` under `create_only`), and rows that would fail. A new row whose `fulfilment_kind` the store does not offer, or its plan does not include, is reported as failed with the sentence the real run would give. The response carries `delivery_types_checked` (`false` when the store's delivery types could not be read just now).
          */
         dryRun?: boolean,
         /**
@@ -131,7 +138,9 @@ export class IngestionService {
                 403: `Insufficient permissions - operation requires secret key`,
                 409: `The \`Idempotency-Key\` was already used for a different batch (\`idempotency_key_reused\`), or the first run with this key is still being processed (\`idempotency_in_progress\`; retry with the same key).`,
                 422: `Every row failed validation; nothing was written. A retry with the same \`Idempotency-Key\` replays this 422.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
             },
         });
     }
@@ -161,7 +170,9 @@ export class IngestionService {
             errors: {
                 400: `The \`format\` parameter is not \`json\`, \`xml\` or \`csv\`.`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
             },
         });
     }
@@ -169,7 +180,9 @@ export class IngestionService {
      * Validate a product feed (no writes)
      * Parse and validate a product feed **without writing anything** to your store, and get
      * back the same `summary` and `errors` you would receive from a real import — plus a
-     * `normalized_preview` of how Galactic Core interpreted your rows. **No API key
+     * `normalized_preview` of how Galactic Core interpreted your rows. With no store behind the
+     * request, the delivery types a store offers cannot be checked, so the response says
+     * `delivery_types_checked: false`; a dry run with a key (`dry_run=true` on the real endpoint) checks them. **No API key
      * required**, so you can perfect your feed format before integrating. Accepts JSON, XML,
      * or CSV like the real endpoint. Rate-limited to 60 requests/hour per IP.
      *
@@ -193,6 +206,10 @@ export class IngestionService {
         status?: 'valid' | 'partial' | 'invalid';
         format?: string;
         validate_only?: boolean;
+        /**
+         * Always `false` here. The open test endpoint has no store, so which delivery types a store offers is not checked.
+         */
+        delivery_types_checked?: boolean;
         summary?: IngestSummary;
         errors?: Array<IngestRowError>;
         normalized_preview?: Array<IngestProduct>;
@@ -208,7 +225,9 @@ export class IngestionService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
             },
         });
     }

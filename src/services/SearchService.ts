@@ -16,6 +16,8 @@ export class SearchService {
      * **Auth:** accepts both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys, so
      * it is safe to call directly from client-side storefront code — no customer session required.
      *
+     * **Plans:** keyword search is available on every plan.
+     *
      * **When to use:** use this GET endpoint for fast type-ahead and keyword search where exact
      * term matching is enough. For natural-language intent ("wireless headphones with noise
      * cancellation"), use the semantic `POST /v1/search` (`semanticSearch`) instead, which scores
@@ -42,9 +44,33 @@ export class SearchService {
      * requested or configured on the client: the ordering already reflects the rules, and a store with
      * none behaves exactly as before.
      *
+     * **Synonyms.** A merchant can declare words that mean the same ("sofa", "couch", "settee") or a
+     * one-way pairing ("trainers" also finds "sneakers", not the reverse). A query containing one of the
+     * words is also searched with each alternative; matches for the words typed rank first, then the
+     * matches each synonym adds.
+     *
+     * **Understanding.** When neither the words, their synonyms nor the spelling fallback match a product
+     * name, the query is read for its meaning: words that carry none ("best", "products", "for") are set
+     * aside and the rest are matched against product names, brands, categories, subcategories, SKUs and
+     * tags, together with the products of a collection the query names. "best products for summer" finds
+     * the summer range. These results carry a `matchReason` of `Related to your search` or
+     * `In the <name> collection`. `GET /v1/products?search=` applies the same reading when its own name
+     * and SKU match finds nothing, so a search page and a product list agree.
+     *
+     * **Redirects.** A merchant can send a query to one place: a page address, a collection, a category
+     * or a product. The response carries `redirect` (null when there is none) beside the results, and the
+     * storefront decides whether to navigate.
+     *
+     * **Ranking by popularity, promotions and stock.** A store can turn on a ranking that, after its
+     * rules, lifts the products shoppers add to their carts most this week and those in a live
+     * buy-one-get-one or bundle offer or on sale, nudges down a product at or below the store's low-stock
+     * level, and places sold-out products after the rest. Pinned results stay first and buried results
+     * stay last. The setting is the merchant's; nothing is requested on the client.
+     *
      * **Marketplace:** when called with a marketplace operator key, searches products across all
      * merchants in the marketplace; pass `?store_id=<merchant>` to narrow results to a single
-     * merchant.
+     * merchant. Synonyms, understanding, redirects and the ranking setting belong to a store's own search
+     * and do not apply to marketplace searches.
      *
      * @returns SearchResponse Success
      * @throws ApiError
@@ -100,7 +126,9 @@ export class SearchService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -111,6 +139,10 @@ export class SearchService {
      * queries like "wireless headphones with noise cancellation" — matching shopper intent against
      * product meaning rather than literal keyword overlap. Results carry a similarity `score` and a
      * `matchReason`.
+     *
+     * **Plans:** semantic search is Smart Search, which belongs to the store's plan. A store whose plan does not include it
+     * receives `403` `feature_not_available`; keyword search (`GET /v1/search`) and type-ahead (`GET /v1/search/autocomplete`)
+     * answer on every plan, so a storefront can fall back to them.
      *
      * **Auth:** works with both publishable (`tybrite_pk_*`) and secret (`tybrite_sk_*`) API keys.
      * Despite using `POST` (to carry the structured request body), this is a **read-only** operation,
@@ -128,6 +160,13 @@ export class SearchService {
      * label a deliberate placement rather than presenting it as an earned one. Nothing needs to be
      * requested or configured on the client: the ordering already reflects the rules, and a store with
      * none behaves exactly as before.
+     *
+     * **Synonyms, redirects and ranking.** The store's synonyms apply here too: a query containing a synonym
+     * word is embedded with its alternatives, so the meaning the merchant declared is part of the match.
+     * When the query cannot be embedded, or nothing scores above `minScore`, the keyword search answers
+     * with its synonyms and its understanding of the query (see `searchProducts`). The response carries
+     * `redirect` exactly as `searchProducts` does, and the store's ranking by popularity, promotions and
+     * stock applies after the rules.
      *
      * **When to use:** prefer this over the text `GET /v1/search` (`searchProducts`) when the query
      * is conversational or descriptive. Two tuning options:
@@ -210,7 +249,9 @@ export class SearchService {
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
                 404: `Resource not found`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -230,6 +271,8 @@ export class SearchService {
      * **Auth:** accepts a publishable (`tybrite_pk_*`) key, so it is safe to call from client-side
      * storefront code on every keystroke. Requires a store-scoped key — marketplace operator keys
      * are rejected.
+     *
+     * **Plans:** available on every plan.
      *
      * **Fewer than two characters** returns an empty `suggestions` array with a `200`, not an
      * error: a shopper mid-word has not done anything wrong.
@@ -287,7 +330,9 @@ export class SearchService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                429: `Too many requests. Two distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota) and \`quota_exceeded\` (your plan's monthly request allowance is reached).`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });

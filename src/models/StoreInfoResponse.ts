@@ -40,7 +40,7 @@ export type StoreInfoResponse = {
          */
         brand?: (StoreBrand | null);
         /**
-         * The name and logo the merchant has given their shopping assistant, for a storefront or an assistant shopping the store to present it the way the store does. Always present; each field is null when the merchant has not set it.
+         * The merchant's shopping assistant: the name and logo a storefront or an assistant shopping the store presents it with, and the merchant's choices for the storefront assistant and its saved conversations (`/v1/agent/me/conversations`). Always present. `name` and `logo_url` are null when the merchant has not set them; the choices carry their defaults when the merchant has not changed them.
          */
         shopping_assistant?: {
             /**
@@ -51,6 +51,26 @@ export type StoreInfoResponse = {
              * URL of the assistant's logo, or null if not set.
              */
             logo_url: string | null;
+            /**
+             * The storefront assistant is switched on. Default false.
+             */
+            enabled: boolean;
+            /**
+             * Shoppers who are not signed in may use it, with conversations kept for their guest session. Default false.
+             */
+            guests: boolean;
+            /**
+             * Conversations are saved. Default true.
+             */
+            history: boolean;
+            /**
+             * Days a signed-in shopper's conversation is kept after its last turn. Default 90.
+             */
+            retention_days: number;
+            /**
+             * Days a guest conversation is kept when it is never moved to an account at sign-in. Default 7.
+             */
+            guest_retention_days: number;
         };
         /**
          * Short description of the store, or null if not set.
@@ -185,6 +205,10 @@ export type StoreInfoResponse = {
                  */
                 video?: string | null;
                 image_mobile?: string | null;
+                /**
+                 * Number of active products sold online that belong to the collection, whether or not they are in stock: the same products `GET /v1/product-collections/{id}/items` returns, the rule's live members for an automatic collection. A storefront or assistant that links to collections skips any with a count of 0. Null when the count could not be read.
+                 */
+                product_count?: number | null;
             }>;
         };
         taxonomy?: {
