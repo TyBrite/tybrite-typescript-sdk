@@ -966,34 +966,38 @@ export class ProductsService {
      * **Important — this endpoint is keyed by VARIANT id, not product id.** Specifications are
      * stored per variant, so the `{id}` path segment must be a **variant** UUID (e.g. the
      * `variant_id` from a product detail, or an `id` from `GET /v1/product-specifications`).
-     * Passing a *product* id (or a variant that has no published specifications) returns
-     * `404 not_found` — "No specifications found for this product". To browse all specifications
-     * across the catalog, use `GET /v1/product-specifications` (which lists them with their
-     * `variant_id`).
+     * A product or variant that exists in the store but has no published specifications answers
+     * `200` with the same fields and an empty `specification_data` (`{}`); `id`, `template_id`,
+     * `status`, `version` and the timestamps are `null`. Only an id that matches no product or
+     * variant in the store returns `404 not_found`. To browse all specifications across the
+     * catalog, use `GET /v1/product-specifications` (which lists them with their `variant_id`).
      *
      * Read access — works with a publishable or secret key.
      *
-     * @returns any Successfully retrieved product specification
+     * @returns any The latest published specification, or empty `specification_data` when none is published
      * @throws ApiError
      */
     public getProductSpecifications({
         id,
     }: {
         /**
-         * The **variant** UUID whose specifications to fetch (NOT a product id). A product id
-         * returns 404 — specifications are variant-keyed.
+         * The **variant** UUID whose specifications to fetch. Specifications are variant-keyed, so a
+         * product id carries none and answers `200` with empty `specification_data`.
          *
          */
         id: string,
     }): CancelablePromise<{
-        id?: string;
+        id?: string | null;
         variant_id?: string;
-        template_id?: string;
+        template_id?: string | null;
+        /**
+         * Empty when the product has no published specifications.
+         */
         specification_data?: Record<string, any>;
-        status?: string;
-        version?: number;
-        created_at?: string;
-        updated_at?: string;
+        status?: string | null;
+        version?: number | null;
+        created_at?: string | null;
+        updated_at?: string | null;
     }> {
         return this.httpRequest.request({
             method: 'GET',
@@ -1006,7 +1010,7 @@ export class ProductsService {
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key.`,
-                404: `No specifications found for this product`,
+                404: `No product or variant with this id in the store`,
                 429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
                 \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
                 On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
