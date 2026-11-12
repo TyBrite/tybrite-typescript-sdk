@@ -86,6 +86,14 @@ export type Promotion = {
      */
     target_regions?: Array<string>;
     /**
+     * What a `discount` (percentage) or `fixed` promotion takes its discount from. `all` is the whole order, which is the default. `products` limits it to the products in `scope_ids`; `categories` limits it to products in the categories or subcategories in `scope_ids`. A bundle or `bogo` promotion is always `all`: it names its own products. The calculate endpoints apply it: only the covered lines are discounted, `min_purchase` is measured on those lines, a fixed amount is capped at their subtotal, and a cart with none of them is not eligible.
+     */
+    scope_type?: Promotion.scope_type;
+    /**
+     * The product ids (`scope_type` `products`) or category and subcategory ids (`scope_type` `categories`) the promotion covers. Empty when `scope_type` is `all`.
+     */
+    scope_ids?: Array<string>;
+    /**
      * Whether the promotion only applies during specific times/days.
      */
     has_time_restrictions?: boolean;
@@ -117,6 +125,14 @@ export namespace Promotion {
         DISCOUNT = 'discount',
         BUNDLE = 'bundle',
         BOGO = 'bogo',
+    }
+    /**
+     * What a `discount` (percentage) or `fixed` promotion takes its discount from. `all` is the whole order, which is the default. `products` limits it to the products in `scope_ids`; `categories` limits it to products in the categories or subcategories in `scope_ids`. A bundle or `bogo` promotion is always `all`: it names its own products. The calculate endpoints apply it: only the covered lines are discounted, `min_purchase` is measured on those lines, a fixed amount is capped at their subtotal, and a cart with none of them is not eligible.
+     */
+    export enum scope_type {
+        ALL = 'all',
+        PRODUCTS = 'products',
+        CATEGORIES = 'categories',
     }
 }
 
