@@ -94,6 +94,14 @@ export type Promotion = {
      */
     scope_ids?: Array<string>;
     /**
+     * What `min_purchase` is counted on for a promotion limited by `scope_type`. `covered` (the default) counts only the covered lines; `order` counts the whole order. A promotion for the whole order (`scope_type` `all`) is unaffected: both are the same amount.
+     */
+    min_purchase_basis?: Promotion.min_purchase_basis;
+    /**
+     * How a `fixed` promotion takes its amount. `order` (the default) takes it once per order; `item` takes it once for every covered unit (the amount times the covered quantity). Either way the discount never exceeds the subtotal of the covered lines. `item` is only available on `fixed` promotions.
+     */
+    fixed_applies?: Promotion.fixed_applies;
+    /**
      * Whether the promotion only applies during specific times/days.
      */
     has_time_restrictions?: boolean;
@@ -133,6 +141,20 @@ export namespace Promotion {
         ALL = 'all',
         PRODUCTS = 'products',
         CATEGORIES = 'categories',
+    }
+    /**
+     * What `min_purchase` is counted on for a promotion limited by `scope_type`. `covered` (the default) counts only the covered lines; `order` counts the whole order. A promotion for the whole order (`scope_type` `all`) is unaffected: both are the same amount.
+     */
+    export enum min_purchase_basis {
+        COVERED = 'covered',
+        ORDER = 'order',
+    }
+    /**
+     * How a `fixed` promotion takes its amount. `order` (the default) takes it once per order; `item` takes it once for every covered unit (the amount times the covered quantity). Either way the discount never exceeds the subtotal of the covered lines. `item` is only available on `fixed` promotions.
+     */
+    export enum fixed_applies {
+        ORDER = 'order',
+        ITEM = 'item',
     }
 }
 
