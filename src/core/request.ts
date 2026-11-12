@@ -308,6 +308,16 @@ const parseRetryAfter = (response: Response): number | null => {
     return null;
 };
 
+/** Does a 429 carry the `guest_limit_reached` code? Reads a clone, so the caller still gets the body. */
+const isGuestLimitReached = async (response: Response): Promise<boolean> => {
+    try {
+        const body = await response.clone().json();
+        return body?.error?.code === 'guest_limit_reached';
+    } catch {
+        return false;
+    }
+};
+
 /**
  * Is this request safe to auto-retry on an HTTP failure status?
  * Idempotent methods always are. POST/PATCH only when an Idempotency-Key header is present
@@ -342,6 +352,11 @@ export const sendRequestWithRetry = async (
         try {
             const response = await sendRequest(config, options, url, body, formData, headers, onCancel);
             if (!httpRetryAllowed || attempt >= maxRetries || !RETRYABLE_STATUS.has(response.status)) {
+                return response;
+            }
+            // A guest at its per-address budget is told to sign in; the budget returns at the end of the
+            // window (up to an hour), so the refusal is surfaced to the caller instead of waited out.
+            if (response.status === 429 && (await isGuestLimitReached(response))) {
                 return response;
             }
             const retryAfter = parseRetryAfter(response);

@@ -842,6 +842,23 @@ const updated = await client.orders.updateOrder({
 });
 ```
 
+### Rate limits and guest budgets
+A publishable key is limited per shopper network at each store, and a request with no verified shopper credential (a guest) has its own, lower hourly budget there when the merchant has set one. A guest past that budget receives `429` with the code `guest_limit_reached`; a signed-in shopper, or a guest whose budget is not lower than the signed-in one, receives `rate_limited`. The shopping assistant endpoints answer a guest the same way, with a per-minute or per-hour budget. `guest_limit_reached` carries `details.signed_in_limit` and `details.sign_in_raises_limit: true`, and the `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset` and `Retry-After` headers describe the window that refused the request. The SDK does not wait out a `guest_limit_reached` refusal; it throws the `ApiError` straight away so a storefront can offer sign-in.
+
+```typescript
+import { ApiError } from '@tybrite-labs/sdk';
+
+try {
+  await client.products.listProducts({});
+} catch (err) {
+  if (err instanceof ApiError && err.status === 429 && err.body?.error?.code === 'guest_limit_reached') {
+    const { signed_in_limit, retry_after } = err.body.error.details;
+    // Offer sign-in; a signed-in shopper has a budget of `signed_in_limit` in the same window.
+  }
+  throw err;
+}
+```
+
 ### HMAC Signature Verification
 Orders and payments require HMAC-SHA256 signatures, which prove the request body wasn't altered in transit and block replay attacks (a 5-minute timestamp window). HMAC does **not** vouch for the *values* in the body — see [Server is the price authority](#server-is-the-price-authority) below for how amounts are validated.
 
