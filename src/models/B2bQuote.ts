@@ -4,6 +4,10 @@
 /* eslint-disable */
 export type B2bQuote = {
     id?: string;
+    /**
+     * The quote's reference, assigned when it is created and never changed. Unique within the store.
+     */
+    quote_number?: string;
     rfq_id?: string | null;
     version?: number;
     status?: B2bQuote.status;

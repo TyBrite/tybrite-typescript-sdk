@@ -4,6 +4,10 @@
 /* eslint-disable */
 export type B2bRfq = {
     id?: string;
+    /**
+     * The request's reference, assigned when it is created and never changed. Unique within the store.
+     */
+    rfq_number?: string;
     status?: B2bRfq.status;
     line_items?: Array<Record<string, any>>;
     note?: string | null;
