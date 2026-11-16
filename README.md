@@ -59,6 +59,10 @@ The API uses **Bearer Authentication**. Your API key determines your environment
 | **Secret Key** | `tybrite_sk_...` | **Read/Write** | Server-side only. Required for Orders, Customers, and Payments. |
 | **Publishable Key** | `tybrite_pk_...` | **Catalogue reads + shopper actions** | Client-side safe. Use for the public catalog, search and CMS, and for the actions a shopper takes for themselves: cart, wishlist, reviews, storefront events, and Agent API quotes, cart drafts and checkout intents. |
 
+### Limited publishable keys
+
+A publishable key can be limited to the products that carry one tag, so a second storefront on the same store shows only that range. Reads return only the slice, a write naming a product outside it fails with `403` and the code `out_of_scope`, and a route with no slice behaviour fails with `403` and `endpoint_not_allowed`. Orders placed through the key record the tag at `attribution.key_scope`. Secret keys cannot be limited. The key is created in GC Admin under Settings, API keys, and is used like any other publishable key.
+
 ### Customer sessions
 
 Endpoints that act on a specific shopper's data (their profile, cart, wishlist, reviews, returns, disputes, threads) need the shopper identified on top of the API key, by **exactly one** of three headers:
@@ -323,7 +327,7 @@ await client.authentication.register({
 // → { status: 'verification_required', email, expires_in: 900 }   (identical for a new and an existing address)
 
 const { session, user, customer } = await client.authentication.verifyRegistration({
-  requestBody: { email: 'shopper@tybritelabs.com', code: '123456' },   // or { link_token } from the emailed link
+  requestBody: { email: 'shopper@tybritelabs.com', code: '123456', password: '...' },   // or { link_token, password } from the emailed link; password only when register sent one
 });
 // → { message, user, customer, session: { access_token, refresh_token, expires_in, expires_at, token_type: 'shopper' } }
 
