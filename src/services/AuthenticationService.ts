@@ -24,6 +24,11 @@ export class AuthenticationService {
      * A password is optional. An account created without one signs in with an emailed code
      * (`POST /v1/auth/magic-link`) and can set a password later with `POST /v1/auth/password/change`.
      *
+     * The password and profile of the most recent call for an address are the ones that apply. A repeat call
+     * within 60 seconds sends no second email: the code already sent confirms with the newest call's password,
+     * and `POST /v1/auth/register/verify` must carry that password. When no unexpired code is waiting and the
+     * address is still being slowed, the call answers `429 rate_limited` with `Retry-After`.
+     *
      * The email must be a real, deliverable address; disposable and example domains (e.g. `example.com`)
      * are refused with `400 invalid_email`.
      *
@@ -113,7 +118,10 @@ export class AuthenticationService {
      * email's link carries, and create the account. The response is the shopper's first session.
      *
      * A code is six digits, is valid for 15 minutes and is accepted 5 times; a `link_token` is single-use and
-     * shares its code's expiry and attempts. A link needs no `email`. When the address already had an
+     * shares its code's expiry and attempts. A link needs no `email`. A registration that carried a
+     * `password` is confirmed only with that same `password` alongside the code or link, and the password in
+     * force is the one from the most recent `POST /v1/auth/register` for the address; a wrong or missing
+     * password counts as one of the code's attempts. When the address already had an
      * account, the emailed code is consumed and the call answers `400 invalid_code`, the same as a wrong
      * code.
      *
@@ -149,6 +157,10 @@ export class AuthenticationService {
              * The `link_token` query parameter of the confirmation link. Replaces `email` and `code`.
              */
             link_token?: string;
+            /**
+             * The password the registration was begun with. Required, with the `code` or `link_token`, when `POST /v1/auth/register` carried a `password`; a call without it, or with a different one, answers `400 invalid_code` with `details.reason` `wrong`, and the code stays usable. Omit it when the registration carried none.
+             */
+            password?: string;
         },
     }): CancelablePromise<ShopperSignedIn> {
         return this.httpRequest.request({
