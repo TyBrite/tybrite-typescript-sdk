@@ -301,7 +301,8 @@ export class OrdersService {
                  */
                 product_name?: string;
                 /**
-                 * Product SKU
+                 * Ignored. The line's SKU is read from the variant.
+                 * @deprecated
                  */
                 product_sku?: string;
                 /**
@@ -317,7 +318,8 @@ export class OrdersService {
                  */
                 total_price?: number;
                 /**
-                 * Product variant options (e.g., color, size)
+                 * Ignored. The line's options are read from the variant.
+                 * @deprecated
                  */
                 product_options?: any | null;
                 /**
