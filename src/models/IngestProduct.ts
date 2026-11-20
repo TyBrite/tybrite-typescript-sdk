@@ -81,13 +81,17 @@ export type IngestProduct = {
      */
     barcode_type?: string;
     /**
-     * How the product is delivered. Optional: a row that omits it takes the store's default, which is `shipped` unless the store does not offer shipped products, in which case it is the first type the store offers. A row that names a type the store does not offer is rejected for that row.
+     * How the product is delivered. Optional: a row that omits it takes the store's default, which is `shipped` unless the store does not offer shipped products, in which case it is the first type the store offers. A row that names a type the store does not offer is rejected for that row. On an update (`upsert_by_sku`) a stated type changes the existing product's type.
      */
     fulfilment_kind?: IngestProduct.fulfilment_kind;
+    /**
+     * The delivery settings of the product's type, as an object (in CSV or XML, a JSON string of one): a download's files (`asset_ids`, `download_limit`, `link_ttl_minutes`, `access_days`), a code's pool (`pool_id`, `codes_per_unit`), an event ticket's rules (`admits_per_unit`, `valid_from`, `valid_until`, `sale_starts_at`, `sale_ends_at`, `max_per_order`, `capacity_group_id`, `check_in`, `entry_label`) or a service's `confirmation_note`. A setting that does not apply to the type rejects the row. A download without a file, or a code without a pool, is saved but not offered for sale until its settings are complete; the row is listed in `warnings`.
+     */
+    fulfilment_config?: Record<string, any>;
 };
 export namespace IngestProduct {
     /**
-     * How the product is delivered. Optional: a row that omits it takes the store's default, which is `shipped` unless the store does not offer shipped products, in which case it is the first type the store offers. A row that names a type the store does not offer is rejected for that row.
+     * How the product is delivered. Optional: a row that omits it takes the store's default, which is `shipped` unless the store does not offer shipped products, in which case it is the first type the store offers. A row that names a type the store does not offer is rejected for that row. On an update (`upsert_by_sku`) a stated type changes the existing product's type.
      */
     export enum fulfilment_kind {
         SHIPPED = 'shipped',

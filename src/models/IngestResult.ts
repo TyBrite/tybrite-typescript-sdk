@@ -19,6 +19,12 @@ export type IngestResult = {
     summary?: IngestSummary;
     errors?: Array<IngestRowError>;
     /**
+     * Rows that were written but are not offered for sale yet, each with the reason: the product's delivery settings
+     * are incomplete, or a field the store requires is missing. Absent when there are none.
+     *
+     */
+    warnings?: Array<IngestRowError>;
+    /**
      * Present and `true` on a dry run (`dry_run=true`); nothing was written.
      */
     dry_run?: boolean;
