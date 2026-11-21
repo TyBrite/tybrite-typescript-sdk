@@ -350,7 +350,7 @@ export const sendRequestWithRetry = async (
     // total attempts = 1 + maxRetries
     while (true) {
         try {
-            const response = await sendRequest(config, options, url, body, formData, headers, onCancel);
+            const response = await sendRequestWithRetry(config, options, url, body, formData, headers, onCancel);
             if (!httpRetryAllowed || attempt >= maxRetries || !RETRYABLE_STATUS.has(response.status)) {
                 return response;
             }

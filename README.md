@@ -75,6 +75,8 @@ Endpoints that act on a specific shopper's data (their profile, cart, wishlist, 
 
 The last two are the two bring-your-own-auth modes — they differ only in **who verifies the identity-provider token**: you (sign an assertion) or Galactic Core (forward the raw token to your verifier). Both resolve to the same customer. Passing more than one of the three returns `400`.
 
+A request that identifies a customer whose account has been closed fails with `403` and the code `account_closed` ("This customer account has been closed."), whichever of the three credentials carried the identity.
+
 ## Service Reference
 
 The SDK is organized into services matching the API resources. Access them via the client instance (e.g., `client.products`).
@@ -264,13 +266,17 @@ const { recommendations } = await server.recommendations.getRecommendations({
 });
 // → { type, recommendations: [...ranked products], fromCache, computedAt }
 // Types: similar | also-bought | next | trending | new | personalized | bundle
+// Each item carries `relation` (`complement` | `alternative`, null when the list has no anchor product)
+// and `source` (the kind of signal that produced it, which stays accurate when a list is topped up from another kind).
 ```
 
 ### giftCards
 
 ```typescript
 const card = await client.giftCards.checkGiftCard({ code: 'GIFT-XXXX-YYYY' });
-// → { valid, balance, currency } — redeem by passing gift_card_redemption to orders.createOrder
+// → { valid, balance, status, expiry_date, maximum_usage_percentage, gift_card } — redeem by passing gift_card_redemption to orders.createOrder
+// The code matches regardless of letter case and surrounding spaces. The response never includes `customer_id` or `issued_to`,
+// and `fields` naming either fails with 400.
 ```
 
 ### promotions

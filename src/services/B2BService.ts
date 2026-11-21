@@ -57,7 +57,7 @@ export class B2BService {
             errors: {
                 401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A buyer whose account has been closed receives \`account_closed\`.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -126,7 +126,7 @@ export class B2BService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -175,7 +175,7 @@ export class B2BService {
             errors: {
                 401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`. A buyer whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -225,7 +225,7 @@ export class B2BService {
             errors: {
                 401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`. A buyer whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -282,7 +282,7 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -335,7 +335,7 @@ export class B2BService {
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -380,7 +380,7 @@ export class B2BService {
             errors: {
                 401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A buyer whose account has been closed receives \`account_closed\`.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -429,7 +429,7 @@ export class B2BService {
             errors: {
                 401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`. A buyer whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -474,7 +474,7 @@ export class B2BService {
             errors: {
                 401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A buyer whose account has been closed receives \`account_closed\`.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
@@ -523,7 +523,7 @@ export class B2BService {
             errors: {
                 401: `Missing or invalid API key, or a missing or invalid buyer credential (x-auth-token, x-external-auth or x-idp-token).`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`.`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A GC Connect key without the operation's scope receives \`insufficient_scope\`. A buyer whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
@@ -602,7 +602,7 @@ export class B2BService {
                 400: `The amount is not a number, is below 0.01, has more than two decimal places, or is more than the open balance.`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `The key is publishable, or the customer has no wholesale account with this store.`,
+                403: `The key is publishable, or the customer has no wholesale account with this store. A buyer whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 409: `The invoice is already paid or was voided.`,
                 429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
@@ -655,7 +655,7 @@ export class B2BService {
                 400: `The request names more than one identity header, or its identity cannot be read.`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `No B2B buyer account for this customer on this store (\`forbidden\`).`,
+                403: `No B2B buyer account for this customer on this store (\`forbidden\`). A buyer whose account has been closed receives \`account_closed\`.`,
                 404: `B2B is not enabled for this store (\`not_available\`).`,
                 429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
                 \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
@@ -725,7 +725,7 @@ export class B2BService {
                 400: `The decision is neither \`approved\` nor \`rejected\`.`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `The key is publishable, the person is not an approver of this account, or they placed the order themselves.`,
+                403: `The key is publishable, the person is not an approver of this account, or they placed the order themselves. A buyer whose account has been closed receives \`account_closed\`.`,
                 404: `Resource not found`,
                 429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
                 \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
@@ -851,7 +851,7 @@ export class B2BService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions - operation requires secret key`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });

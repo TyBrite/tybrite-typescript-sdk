@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { GiftCard } from '../models/GiftCard';
+import type { GiftCardCheck } from '../models/GiftCardCheck';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import type { BaseHttpRequest } from '../core/BaseHttpRequest';
 export class GiftCardsService {
@@ -80,7 +81,7 @@ export class GiftCardsService {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
-                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
                 429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
                 \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
                 On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
@@ -93,6 +94,9 @@ export class GiftCardsService {
      * Look up a gift card by code and check its validity, balance, expiry and
      * maximum-usage rules. Accessible with both publishable (`tybrite_pk_*`) and
      * secret (`tybrite_sk_*`) API keys.
+     *
+     * The response describes the card and never the person it was issued to: it contains no
+     * `customer_id` or `issued_to`, so anyone holding a code learns only what the card is worth.
      *
      * The `valid` flag is `true` only when the gift card is active, has a
      * positive balance, and has not expired.
@@ -108,7 +112,7 @@ export class GiftCardsService {
         fields,
     }: {
         /**
-         * The unique gift card code to look up (e.g. `GTSA-1B2C-3D4E-5F6G`).
+         * The unique gift card code to look up (e.g. `GTSA-1B2C-3D4E-5F6G`). Matching ignores letter case and surrounding spaces, the same as redemption, so a code that redeems also checks.
          */
         code: string,
         /**
@@ -116,11 +120,12 @@ export class GiftCardsService {
          *
          * **Allowed Fields:**
          * - `id`, `code`, `value`, `balance`, `status`, `type`
-         * - `expiry_date`, `customer_id`, `issued_to`, `issued_date`, `last_used`
+         * - `expiry_date`, `issued_date`, `last_used`
          * - `minimum_purchase_amount`, `maximum_usage_percentage`, `usage_restrictions`
          * - `redemption_count`, `max_redemptions`, `created_at`, `updated_at`
          *
-         * Unknown field names will return a `400` error.
+         * The holder's identity is never returned: `customer_id` and `issued_to` are not part of the
+         * response, and naming either answers `400`. Unknown field names also return a `400` error.
          *
          */
         fields?: string,
@@ -136,7 +141,7 @@ export class GiftCardsService {
         status?: string;
         expiry_date?: string | null;
         maximum_usage_percentage?: number | null;
-        gift_card?: GiftCard;
+        gift_card?: GiftCardCheck;
     }> {
         return this.httpRequest.request({
             method: 'GET',
