@@ -550,6 +550,55 @@ export class MarketplaceService {
         });
     }
     /**
+     * Get placements for several slots
+     * Returns the placements for up to ten slots in one call, for a page that renders several slots
+     * (for example a home page with a hero, a spotlight and a promotion banner). Each entry in
+     * `slots` is the same answer `GET /v1/marketplace/ad-slots/{slot_key}` gives for that slot, in
+     * the order the keys were given; a repeated key is answered once. **Requires a marketplace
+     * operator key.** The disclosure and beacon rules of the single-slot operation apply to every
+     * placement returned.
+     *
+     * @returns any The placements for each slot, in the order asked.
+     * @throws ApiError
+     */
+    public getAdSlots({
+        keys,
+        context,
+        limit,
+    }: {
+        /**
+         * Comma-separated slot keys, at most 10.
+         */
+        keys: string,
+        /**
+         * Optional context applied to every slot — a category identifier or a search term.
+         */
+        context?: string,
+        /**
+         * Maximum number of placements to return per slot.
+         */
+        limit?: number,
+    }): CancelablePromise<{
+        context?: string | null;
+        slots?: Array<AdSlotResponse>;
+    }> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/marketplace/ad-slots',
+            query: {
+                'keys': keys,
+                'context': context,
+                'limit': limit,
+            },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
      * Get placements for a slot
      * Returns the active placements to render in a named slot on a marketplace storefront (for
      * example a hero banner, a category strip, or search results). **Requires a marketplace

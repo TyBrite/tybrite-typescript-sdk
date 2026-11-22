@@ -269,8 +269,13 @@ export class SearchService {
      * first characters are already mistyped.
      *
      * **Auth:** accepts a publishable (`tybrite_pk_*`) key, so it is safe to call from client-side
-     * storefront code on every keystroke. Requires a store-scoped key — marketplace operator keys
-     * are rejected.
+     * storefront code on every keystroke.
+     *
+     * **Marketplace.** With a marketplace operator key the suggestions span every active merchant: matching
+     * merchants first, then categories, brands and products (a product whose name starts with the text before one
+     * where it starts a later word, before a match inside a word). Merchant, category and product suggestions carry
+     * the ids a storefront links to (`merchant_store_id`, `category_id`, `product_id`, `product_slug`) and products
+     * add `merchant_store_name`, `thumbnail_url` and `price`.
      *
      * **Plans:** available on every plan.
      *
@@ -308,9 +313,19 @@ export class SearchService {
              */
             suggestion?: string;
             /**
-             * What the suggestion refers to.
+             * What the suggestion refers to (`merchant` and `category` with a marketplace operator key).
              */
-            kind?: 'product' | 'brand' | 'subcategory';
+            kind?: 'product' | 'brand' | 'subcategory' | 'merchant' | 'category';
+            /**
+             * Marketplace operator key — the merchant (a `merchant` suggestion) or the product's merchant.
+             */
+            merchant_store_id?: string;
+            merchant_store_name?: string;
+            category_id?: string;
+            product_id?: string;
+            product_slug?: string;
+            thumbnail_url?: string | null;
+            price?: number | null;
             /**
              * Relevance, highest first.
              */

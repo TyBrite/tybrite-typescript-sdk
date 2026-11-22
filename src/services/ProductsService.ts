@@ -45,8 +45,15 @@ export class ProductsService {
      * adds the exact number of matching products to `pagination`. Every filter combines with `search`,
      * `brand`, `category_id` and `subcategory_id` and with the single `cursor`. Use
      * `GET /v1/products/facets` to list the values a shopper can filter by, with a count for each.
-     * These parameters are not available on marketplace operator keys or together with `personalize`
-     * or `b2b`; those requests return `400`.
+     * With a marketplace operator key, `min_price`, `max_price`, `sort` and `include_total` apply to the
+     * marketplace's combined catalogue, priced at each product's default variant (its sale price when one is set);
+     * `brand` and `spec[...]` are not available there and return `400` (`GET /v1/brands` and
+     * `GET /v1/products/facets` list the marketplace's brands and filter values). None of these parameters combine
+     * with `personalize` or `b2b`; those requests return `400`.
+     *
+     * **Variant options.** On a marketplace listing each product carries `variant_options`: every attribute its
+     * variants differ by (for example size or colour) with the values on offer, so a grid can show swatches without
+     * a call per product. A colour attribute lists `{ value, hex }` pairs.
      *
      * **Performance:**
      * - Default variant data included at root level (price, stock, sku)
@@ -493,7 +500,11 @@ export class ProductsService {
      * currency (`display_currency`); both are `null` when nothing matches. A product's price is that of its
      * lowest-priced variant, sale included, the same price `min_price`, `max_price` and `sort` use.
      *
-     * Not available on marketplace operator keys, which return `400`.
+     * **Marketplace.** With a marketplace operator key the counts cover the marketplace's combined catalogue, with
+     * the same `search`, `category_id`, `subcategory_id` and `store_id` filters as its listing, and the response adds
+     * `merchants` (each merchant with its count) and `attributes` (the values of each variant attribute, such as size
+     * or colour, counted per product); `specs` is empty, and `brand`, `min_price`, `max_price`, `sort`,
+     * `include_total` and `spec[...]` return `400`. A product's price is its default variant's (sale included).
      *
      * @returns any Value counts for the products the filters match.
      * @throws ApiError
@@ -501,6 +512,7 @@ export class ProductsService {
     public listProductFacets({
         search,
         brand,
+        storeId,
         categoryId,
         subcategoryId,
         minPrice,
@@ -515,6 +527,10 @@ export class ProductsService {
          * Count only products of one brand (case-insensitive exact match).
          */
         brand?: string,
+        /**
+         * Marketplace operator key only. Counts only the products of this merchant.
+         */
+        storeId?: string,
         /**
          * Count only products in this category or any of its subcategories. Accepts several ids, in the
          * same forms as `GET /v1/products`.
@@ -586,6 +602,28 @@ export class ProductsService {
             truncated: boolean;
         };
         /**
+         * Marketplace operator key only. Each merchant with the number of matching products it sells.
+         */
+        merchants?: {
+            values?: Array<{
+                id?: string;
+                name?: string;
+                count?: number;
+            }>;
+            truncated?: boolean;
+        };
+        /**
+         * Marketplace operator key only. The variant attributes (such as size or colour) the matching products carry, each value with the number of products offering it; at most 10 attributes.
+         */
+        attributes?: Array<{
+            name?: string;
+            values?: Array<{
+                value?: string;
+                count?: number;
+            }>;
+            truncated?: boolean;
+        }>;
+        /**
          * Specification fields with the values the matching products carry, at most 20 fields.
          */
         specs: Array<{
@@ -613,6 +651,7 @@ export class ProductsService {
             query: {
                 'search': search,
                 'brand': brand,
+                'store_id': storeId,
                 'category_id': categoryId,
                 'subcategory_id': subcategoryId,
                 'min_price': minPrice,

@@ -31,6 +31,10 @@ import type { ProductFulfilment } from './ProductFulfilment';
  */
 export type Product = {
     /**
+     * Marketplace listing only: each attribute the product's variants differ by, with the values on offer, e.g. `{"Size": ["S", "M", "L"], "Colour": [{"value": "Moss", "hex": "#5B6B3A"}]}`. A colour attribute lists `{ value, hex }` pairs (`hex` null when the merchant set none). Empty when the product has one variant.
+     */
+    variant_options?: Record<string, any>;
+    /**
      * Present only with a marketplace operator key: the merchant that sells this product, on the product list and the product detail. Name it as the item's `merchant_store_id` at checkout.
      */
     merchant_store_id?: string;
