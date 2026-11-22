@@ -72,6 +72,8 @@ export { MarketplaceCollection } from './models/MarketplaceCollection';
 export { MarketplaceCollectionDetail } from './models/MarketplaceCollectionDetail';
 export type { MarketplaceCollectionListResponse } from './models/MarketplaceCollectionListResponse';
 export { MarketplaceInfoResponse } from './models/MarketplaceInfoResponse';
+export type { MarketplaceMerchant } from './models/MarketplaceMerchant';
+export type { MarketplaceMerchantDirectory } from './models/MarketplaceMerchantDirectory';
 export type { MarketplaceShippingDestination } from './models/MarketplaceShippingDestination';
 export { MarketplaceShippingLine } from './models/MarketplaceShippingLine';
 export { MarketplaceShippingRate } from './models/MarketplaceShippingRate';

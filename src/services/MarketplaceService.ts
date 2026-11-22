@@ -9,6 +9,7 @@ import type { MarketplaceCheckoutResponse } from '../models/MarketplaceCheckoutR
 import type { MarketplaceCollectionDetail } from '../models/MarketplaceCollectionDetail';
 import type { MarketplaceCollectionListResponse } from '../models/MarketplaceCollectionListResponse';
 import type { MarketplaceInfoResponse } from '../models/MarketplaceInfoResponse';
+import type { MarketplaceMerchantDirectory } from '../models/MarketplaceMerchantDirectory';
 import type { MarketplaceShippingDestination } from '../models/MarketplaceShippingDestination';
 import type { MarketplaceShippingSelection } from '../models/MarketplaceShippingSelection';
 import type { StoreInfoResponse } from '../models/StoreInfoResponse';
@@ -514,6 +515,29 @@ export class MarketplaceService {
                 429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
                 \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
                 On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * List the marketplace's merchants
+     * Returns every merchant selling in the marketplace, sorted by name, with its logo, description and the number of
+     * products it sells online. A storefront uses it for a "Shops" directory, a merchant filter and merchant pages;
+     * pass a merchant's `store_id` to `GET /v1/products?store_id=`, `GET /v1/categories?store_id=`,
+     * `GET /v1/brands?store_id=` and `GET /v1/marketplace/info?store_id=` for its catalogue and full profile.
+     *
+     * Requires a marketplace operator key or a marketplace key. Only merchants active in that marketplace are listed.
+     *
+     * @returns MarketplaceMerchantDirectory The marketplace's merchants.
+     * @throws ApiError
+     */
+    public listMarketplaceMerchants(): CancelablePromise<MarketplaceMerchantDirectory> {
+        return this.httpRequest.request({
+            method: 'GET',
+            url: '/v1/marketplace/info/merchants',
+            errors: {
+                401: `Authentication failed - invalid or missing API key`,
+                403: `Insufficient permissions - operation requires secret key`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });

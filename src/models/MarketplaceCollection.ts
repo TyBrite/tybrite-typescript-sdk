@@ -7,6 +7,14 @@
  */
 export type MarketplaceCollection = {
     /**
+     * The collection's banner image set by the operator, or null when none is set.
+     */
+    image?: string | null;
+    /**
+     * The banner image for narrow screens, or null when none is set.
+     */
+    image_mobile?: string | null;
+    /**
      * Stable identifier for the section. Use it to fetch the section's resolved members.
      */
     slug: string;

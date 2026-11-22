@@ -604,6 +604,10 @@ if (store.brand) applyBrand(store.brand.palette, store.brand.typography);
 const info = await client.marketplace.getMarketplaceInfo({});
 // → marketplace identity + branding; pass { storeId } for one merchant's full store info
 
+// The marketplace's merchants (a "Shops" directory or a merchant filter)
+const { merchants } = await client.marketplace.listMarketplaceMerchants();
+// → { merchants: [{ store_id, store_name, store_code, logo_url, description, product_count }], total }
+
 // The signed-in shopper's marketplace wallet (credit issued by the marketplace)
 const shopperToken = 'SHOPPER_SESSION_TOKEN'; // from client.authentication.login(...)
 const wallet = await client.marketplace.getMarketplaceWallet({ xAuthToken: shopperToken });
