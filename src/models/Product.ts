@@ -31,6 +31,14 @@ import type { ProductFulfilment } from './ProductFulfilment';
  */
 export type Product = {
     /**
+     * Present only with a marketplace operator key: the merchant that sells this product, on the product list and the product detail. Name it as the item's `merchant_store_id` at checkout.
+     */
+    merchant_store_id?: string;
+    /**
+     * Present only with a marketplace operator key — the selling merchant's store name.
+     */
+    merchant_store_name?: string | null;
+    /**
      * Product identifier. Identical to `product_id`.
      */
     id?: string;
