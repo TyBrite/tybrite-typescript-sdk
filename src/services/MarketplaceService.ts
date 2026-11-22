@@ -29,6 +29,12 @@ export class MarketplaceService {
      * amounts. Once payment succeeds, the order finalizes automatically — no further
      * call is required.
      *
+     * **Which key sees what.** A publishable operator key (a storefront's browser) and a secret
+     * operator key (the operator's server) can both check out. The operator's terms in
+     * `merchant_breakdown` (`commission_amount`, `net_amount`, `commission_rule_id`,
+     * `shipping_amount`, `shipping_retained`, `shipping_commission`) are returned to the secret key
+     * only, including on an idempotent replay.
+     *
      * **Discounts.** Pass the optional `discounts` array to apply a merchant's own
      * promotion or gift card to that merchant's portion of the basket — each entry
      * names the `merchant_store_id` and an optional `promotion_id` and/or

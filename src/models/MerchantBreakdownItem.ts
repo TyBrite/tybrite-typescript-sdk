@@ -3,7 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 /**
- * Commission, shipping and payout breakdown for a single merchant within a unified order.
+ * Commission, shipping and payout breakdown for a single merchant within a unified order. The operator's terms (`commission_amount`, `net_amount`, `commission_rule_id`, `shipping_amount`, `shipping_retained` and `shipping_commission`) are returned to a secret operator key only; a publishable key receives the other fields.
  */
 export type MerchantBreakdownItem = {
     merchant_store_id?: string;
@@ -32,15 +32,15 @@ export type MerchantBreakdownItem = {
      */
     shipping_charged?: number;
     /**
-     * The part of `shipping_charged` the merchant receives — all of it when the merchant ships, none when the marketplace does.
+     * The part of `shipping_charged` the merchant receives — all of it when the merchant ships, none when the marketplace does. Secret operator key only.
      */
     shipping_amount?: number;
     /**
-     * The part of `shipping_charged` the marketplace keeps because it ships these items.
+     * The part of `shipping_charged` the marketplace keeps because it ships these items. Secret operator key only.
      */
     shipping_retained?: number;
     /**
-     * Commission taken on the merchant's shipping, when the marketplace charges commission on shipping. Included in `commission_amount`.
+     * Commission taken on the merchant's shipping, when the marketplace charges commission on shipping. Included in `commission_amount`. Secret operator key only.
      */
     shipping_commission?: number;
     /**
@@ -48,15 +48,15 @@ export type MerchantBreakdownItem = {
      */
     shipping_pricing?: MerchantBreakdownItem.shipping_pricing;
     /**
-     * Commission deducted from this merchant's share, including any `shipping_commission`.
+     * Commission deducted from this merchant's share, including any `shipping_commission`. Secret operator key only.
      */
     commission_amount?: number;
     /**
-     * Amount this merchant receives: `merchant_gross` plus `shipping_amount`, less `commission_amount`.
+     * Amount this merchant receives: `merchant_gross` plus `shipping_amount`, less `commission_amount`. Secret operator key only.
      */
     net_amount?: number;
     /**
-     * Identifier of the commission rule applied to this merchant, or null if none matched.
+     * Identifier of the commission rule applied to this merchant, or null if none matched. Secret operator key only.
      */
     commission_rule_id?: string | null;
     /**
