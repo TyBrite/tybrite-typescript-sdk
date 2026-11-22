@@ -21,6 +21,10 @@ export type UnifiedCustomerProfile = {
          * Whether the shopper has verified their email address. Purchases made as a guest with that address are included only when it is true.
          */
         email_verified?: boolean;
+        /**
+         * Whether the shopper agreed to marketing from the marketplace, as answered at sign-up. False when they did not answer.
+         */
+        marketing_consent?: boolean;
     };
     /**
      * The merchants this shopper has a relationship with.

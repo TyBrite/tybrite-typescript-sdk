@@ -328,6 +328,12 @@ export class MarketplaceService {
      * reports which applies. A marketplace shopper holds no customer record with any
      * merchant, so `customer.ids` is empty.
      *
+     * The name, phone and marketing-consent answer given at sign-up are the shopper's profile from the moment
+     * their account exists: a shopper who has not ordered yet receives `200` with that profile and empty
+     * `stores` and `orders`, and a name or phone on the profile takes precedence over what a later checkout
+     * carried. `404` means the shopper has neither a profile nor a purchase in this marketplace (for example a
+     * shopper signed in through the marketplace's own sign-in with `x-external-auth` who has not ordered).
+     *
      * Requires the marketplace operator key plus exactly one shopper credential:
      * `x-auth-token` (a Galactic Core shopper session, also accepted as
      * `X-Customer-Token`) or `x-external-auth` (an assertion signed with the
@@ -538,6 +544,7 @@ export class MarketplaceService {
             errors: {
                 401: `Authentication failed - invalid or missing API key`,
                 403: `Insufficient permissions - operation requires secret key`,
+                404: `Resource not found`,
                 500: `Internal server error. A 5xx response never carries \`details\`.`,
             },
         });
