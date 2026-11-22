@@ -115,7 +115,8 @@ export class ProductsService {
         /**
          * Filter products to a single brand (case-insensitive exact match). Use this to build a
          * brand landing page — pair it with `GET /v1/brands` to render a "shop by brand" row, then
-         * pass the chosen brand here to list that brand's products.
+         * pass the chosen brand here to list that brand's products. Not supported with a marketplace
+         * operator key: the request is refused with `400 invalid_request`.
          *
          */
         brand?: string,

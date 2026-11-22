@@ -361,6 +361,9 @@ export class PaymentsService {
      * **Key Type Support:**
      * - ✅ Secret keys (full access)
      * - ❌ Publishable keys (forbidden - returns 403)
+     * - ❌ Marketplace operator keys (forbidden - returns 403). Verification reads one store's payment providers;
+     * a marketplace checkout is settled by the processor's notification, and the shopper's orders and their
+     * payment status are on `GET /v1/customers/me`.
      *
      * @returns any Payment verification successful
      * @throws ApiError
