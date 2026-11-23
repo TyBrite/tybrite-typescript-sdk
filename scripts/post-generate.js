@@ -117,12 +117,23 @@ function injectRetryLogic() {
   // real call site — and leave the wrapper's internal sendRequest call intact.
   const callSite = 'const response = await sendRequest(config, options, url, body, formData, headers, onCancel);';
   const routed = 'const response = await sendRequestWithRetry(config, options, url, body, formData, headers, onCancel);';
-  const lastIdx = req.lastIndexOf(callSite);
+  // A second run over an already-routed file must change nothing: there the last remaining plain call IS the
+  // wrapper's own, and rewriting it makes sendRequestWithRetry call itself forever (shipped once, 2026-11-22).
+  const lastIdx = req.includes(routed) ? -1 : req.lastIndexOf(callSite);
   if (lastIdx !== -1) {
     req = req.slice(0, lastIdx) + routed + req.slice(lastIdx + callSite.length);
     console.log('✅ Routed request() through sendRequestWithRetry (last occurrence)');
   } else {
     console.log('⏭️  request() call site already routed');
+  }
+
+  // Gate: the wrapper must call the real sendRequest, never itself, or every SDK call recurses until the stack overflows.
+  const start = req.indexOf('export const sendRequestWithRetry');
+  const end = start === -1 ? -1 : req.indexOf('\nexport ', start + 1);
+  const wrapper = start === -1 ? '' : req.slice(start, end === -1 ? undefined : end);
+  if (wrapper && /await sendRequestWithRetry\(/.test(wrapper)) {
+    console.error('❌ sendRequestWithRetry calls itself (infinite recursion); request.ts not written');
+    process.exit(1);
   }
 
   fs.writeFileSync(requestPath, req, 'utf-8');
