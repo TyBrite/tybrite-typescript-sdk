@@ -190,7 +190,7 @@ export class MarketplaceService {
                 gift_card_code?: string;
             }>;
             /**
-             * Where the shopper came from, recorded so the sale is credited to the right traffic source in the merchant's reports. The same fields are also accepted at the top level of this request body if you already send them that way.
+             * Where the shopper came from, recorded so the sale is credited to the right traffic source in the merchant's reports, and to the advertising campaign that earned it. The same fields are also accepted at the top level of this request body if you already send them that way. Every field is optional; values that are not recognisable as what the field names are ignored. Each seller's order in the basket keeps a copy.
              */
             attribution?: {
                 /**
@@ -199,7 +199,57 @@ export class MarketplaceService {
                 session_id?: string;
                 utm_source?: string;
                 utm_medium?: string;
+                /**
+                 * The campaign tag the shopper arrived with. For a marketplace's own advertising it is the campaign id carried on the ad's link.
+                 */
                 utm_campaign?: string;
+                /**
+                 * The paid keyword the shopper searched.
+                 */
+                utm_term?: string;
+                /**
+                 * The creative or placement the shopper clicked.
+                 */
+                utm_content?: string;
+                /**
+                 * The Google ad click id captured on landing. Forward the captured value unchanged.
+                 */
+                gclid?: string;
+                /**
+                 * The Google ad click id for iOS app-to-web traffic, captured on landing.
+                 */
+                gbraid?: string;
+                /**
+                 * The Google ad click id for iOS web-to-app traffic, captured on landing.
+                 */
+                wbraid?: string;
+                /**
+                 * The Meta (Facebook and Instagram) ad click id captured on landing.
+                 */
+                fbclid?: string;
+                /**
+                 * The value of the shopper's `_fbc` browser cookie (`fb.<n>.<timestamp>.<click id>`).
+                 */
+                fbc?: string;
+                /**
+                 * The value of the shopper's `_fbp` browser cookie (`fb.<n>.<timestamp>.<random number>`).
+                 */
+                fbp?: string;
+                /**
+                 * When the shopper last clicked the ad. A click is credited to a campaign only while it is inside that campaign's click window; without this field the order is credited on the tag alone.
+                 */
+                clicked_at?: string;
+                /**
+                 * What the shopper agreed to for advertising. Conversions are reported to an advertising platform only where this permits it: in the European Economic Area and where the country is unknown, `ad_user_data` must be `granted`.
+                 */
+                ad_consent?: {
+                    ad_user_data?: 'granted' | 'denied' | 'unspecified';
+                    ad_personalization?: 'granted' | 'denied' | 'unspecified';
+                    /**
+                     * The shopper's region (`EEA`, `UK`, `CH`, or an ISO country code) when the storefront resolves it; otherwise the delivery country decides.
+                     */
+                    jurisdiction?: string;
+                };
                 referrer?: string;
             };
         },

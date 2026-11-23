@@ -20,6 +20,10 @@ export type MarketplaceCheckoutQuote = {
         type?: 'percentage' | 'fixed' | 'bogo' | 'bundle';
         value?: number | null;
         /**
+         * What the offer took off this basket in total. An offer applies once to the basket and is shared across the sellers it covers.
+         */
+        amount?: number;
+        /**
          * When the offer starts (UTC).
          */
         starts_at?: string | null;
@@ -45,6 +49,26 @@ export type MarketplaceCheckoutQuote = {
     total_amount?: number;
     sellers?: Array<{
         merchant_store_id?: string;
+        /**
+         * This merchant's items before any discount.
+         */
+        merchandise_subtotal?: number;
+        /**
+         * Each discount on this merchant's items. A merchant's own promotions apply automatically; a marketplace offer appears with its share of the basket-wide amount.
+         */
+        discounts?: Array<{
+            promotion_id: string;
+            name?: string | null;
+            amount: number;
+            /**
+             * Who pays for the discount, the merchant or the marketplace.
+             */
+            funded_by: 'seller' | 'marketplace';
+        }>;
+        /**
+         * Amount redeemed from a gift card against this merchant's items.
+         */
+        gift_card_amount?: number;
         /**
          * This merchant's items after every discount.
          */

@@ -47,9 +47,15 @@ export type Return = {
      */
     total_return_amount: number;
     /**
-     * Amount refunded so far. Zero until the merchant processes the return.
+     * Money actually refunded. Zero until the merchant processes the return.
      */
     refund_amount: number;
+    /**
+     * What the return is expected to refund, while it is `pending` or `approved`. Not a commitment: the merchant may
+     * approve fewer lines. `null` once the return is processed (see `refund_amount`), rejected or cancelled.
+     *
+     */
+    estimated_refund_amount?: number | null;
     /**
      * How the refund was issued, once processed.
      */

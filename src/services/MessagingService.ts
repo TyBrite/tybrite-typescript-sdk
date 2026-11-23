@@ -14,14 +14,22 @@ export class MessagingService {
      * filtering, and server-side status/priority/archived/unread filtering. Pinned threads are
      * returned first in the result set.
      *
+     * **Marketplace key:** with a marketplace operator or marketplace key the list is the signed-in marketplace
+     * shopper's conversations across every seller of that marketplace, newest activity first. The shopper is identified
+     * by `x-auth-token` (a marketplace shopper session) or `x-external-auth` (an assertion signed with the marketplace's
+     * secret); `customer_id`, `priority`, `thread_type`, `archived` and `fields` are not used, `store_id` narrows the
+     * list to one seller, and `limit` is at most 100. Each thread carries `marketplace`, and an `order_inquiry` thread
+     * carries `order_help`. No thread carries the shopper's or the seller's email or phone.
+     *
      * @returns any Success
      * @throws ApiError
      */
     public listThreads({
-        customerId,
         xAuthToken,
         xExternalAuth,
         xIdpToken,
+        customerId,
+        storeId,
         status,
         priority,
         threadType,
@@ -31,10 +39,6 @@ export class MessagingService {
         cursor,
         fields,
     }: {
-        /**
-         * Customer UUID to filter threads by
-         */
-        customerId: string,
         /**
          * Session token of a customer signed in through Galactic Core, proving they own the threads being read. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
@@ -47,6 +51,14 @@ export class MessagingService {
          * A raw token from your own identity provider, which Galactic Core forwards to the store's configured Auth verifier. Verification is fail-closed: if the verifier rejects the token or is unreachable, the request is unauthenticated (`401`). Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
         xIdpToken?: string,
+        /**
+         * Customer UUID to filter threads by. Required with a store key; not used with a marketplace key.
+         */
+        customerId?: string,
+        /**
+         * Marketplace key only. Limits the list to the conversations with this seller.
+         */
+        storeId?: string,
         /**
          * Filter threads by status
          */
@@ -87,7 +99,35 @@ export class MessagingService {
          */
         fields?: string,
     }): CancelablePromise<{
-        threads?: Array<Thread>;
+        threads?: Array<(Thread & {
+            /**
+             * Present on a conversation opened through a marketplace. Discloses that the marketplace can read the conversation and join it, and whether it has.
+             */
+            marketplace?: {
+                /**
+                 * The marketplace's name.
+                 */
+                name?: string;
+                operator_can_read?: boolean;
+                /**
+                 * A sentence to show the shopper beside the conversation.
+                 */
+                notice?: string;
+                operator_joined?: boolean;
+                /**
+                 * When true the marketplace has paused the shopper's replies.
+                 */
+                restricted?: boolean;
+            };
+            /**
+             * Present on a marketplace `order_inquiry` conversation: the endpoints that act on the order. A conversation never opens a return or a dispute.
+             */
+            order_help?: {
+                returns?: string;
+                return_eligibility?: string;
+                disputes?: string;
+            };
+        })>;
         pagination?: {
             limit?: number;
             next_cursor?: string | null;
@@ -104,6 +144,7 @@ export class MessagingService {
             },
             query: {
                 'customer_id': customerId,
+                'store_id': storeId,
                 'status': status,
                 'priority': priority,
                 'thread_type': threadType,
@@ -114,7 +155,7 @@ export class MessagingService {
                 'fields': fields,
             },
             errors: {
-                400: `\`invalid_request\` when \`customer_id\` is missing or not a UUID, or when \`status\`, \`priority\`, \`thread_type\`, \`archived\` or \`unread\` is not one of its listed values; \`invalid_cursor\` when \`cursor\` is not one this endpoint issued.`,
+                400: `\`invalid_request\` when \`customer_id\` is missing (store key) or not a UUID, or when \`status\`, \`priority\`, \`thread_type\`, \`archived\` or \`unread\` is not one of its listed values; \`invalid_cursor\` when \`cursor\` is not one this endpoint issued.`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
@@ -127,7 +168,11 @@ export class MessagingService {
     }
     /**
      * Get thread details
-     * @returns Thread Success
+     * Returns one thread of the shopper who owns it. With a marketplace operator or marketplace key the thread is the
+     * signed-in marketplace shopper's own conversation in that marketplace and environment (any other answers `404`),
+     * and it carries `marketplace` (and `order_help` on an `order_inquiry` thread) in place of contact details.
+     *
+     * @returns any Success
      * @throws ApiError
      */
     public getThread({
@@ -170,7 +215,35 @@ export class MessagingService {
          *
          */
         fields?: string,
-    }): CancelablePromise<Thread> {
+    }): CancelablePromise<(Thread & {
+        /**
+         * Present on a conversation opened through a marketplace. Discloses that the marketplace can read the conversation and join it, and whether it has.
+         */
+        marketplace?: {
+            /**
+             * The marketplace's name.
+             */
+            name?: string;
+            operator_can_read?: boolean;
+            /**
+             * A sentence to show the shopper beside the conversation.
+             */
+            notice?: string;
+            operator_joined?: boolean;
+            /**
+             * When true the marketplace has paused the shopper's replies.
+             */
+            restricted?: boolean;
+        };
+        /**
+         * Present on a marketplace `order_inquiry` conversation: the endpoints that act on the order. A conversation never opens a return or a dispute.
+         */
+        order_help?: {
+            returns?: string;
+            return_eligibility?: string;
+            disputes?: string;
+        };
+    })> {
         return this.httpRequest.request({
             method: 'GET',
             url: '/v1/messaging/threads/{id}',
@@ -294,8 +367,13 @@ export class MessagingService {
     }
     /**
      * Get messages in a thread
-     * Returns messages in a thread. Soft-deleted messages are always excluded.
+     * Returns messages in a thread. Soft-deleted messages and the store's internal notes are always excluded.
      * Supports cursor-based pagination and sort order (default: oldest first).
+     *
+     * **Marketplace key:** the thread must be the signed-in marketplace shopper's own. A page is the newest `limit`
+     * messages (at most 200) before the cursor, returned oldest first, and `next_cursor` walks back to older messages;
+     * `order` and `fields` are not used. A message from the marketplace itself has `sender_type: system` and the
+     * marketplace's name as `sender_name`. No message carries a staff member's id.
      *
      * @returns any Success
      * @throws ApiError
@@ -499,11 +577,29 @@ export class MessagingService {
      * history in one place. It must be a thread of this shopper in the same store and environment (otherwise `400`);
      * when `order_id` or `product_id` is omitted, the earlier thread's value is used.
      *
+     * With a store key, `customer_name` and `customer_email` are required (`400` otherwise).
+     *
+     * **Marketplace key:** with a marketplace operator or marketplace key the conversation is with ONE seller, named
+     * by `store_id`, which must be active in that marketplace (`404` otherwise). The shopper is either signed in
+     * (`x-auth-token` with a marketplace shopper session, or `x-external-auth` signed with the marketplace's secret)
+     * or a guest, who must send `customer_email`; the store's replies reach the guest by email with a link for
+     * `viewGuestThread` and `replyToGuestThread`. `thread_type` is `general` (contact the shop), `product_inquiry`
+     * (needs `product_id`, a product of that seller) or `order_inquiry` (needs `order_id`). Help with an order is for
+     * the signed-in shopper who placed it: a guest is answered `401`, and an order outside the shopper's purchases in
+     * this marketplace `404`; the thread carries `order_help`, which points at returns and disputes. `customer_name`
+     * is the name the seller sees and may not contain an email address or a phone number; `customer_phone`,
+     * `customer_id`, `source_thread_id` and `priority` are refused. Neither side ever receives the other's email or
+     * phone: a signed-in shopper's reply notices go to the address their credential carries. The marketplace can read
+     * the conversation and join it, which the answer's `marketplace` discloses. At most 30 new conversations an hour
+     * per address (10 at one seller), 10 per signed-in shopper or guest email, and 3 at one seller per shopper.
+     *
      * @returns any Conversation created
      * @throws ApiError
      */
     public createConversation({
         requestBody,
+        storeId,
+        xForwardedShopperIp,
         xAuthToken,
         xExternalAuth,
         xIdpToken,
@@ -513,8 +609,8 @@ export class MessagingService {
              * Optional — links thread to an existing customer record
              */
             customer_id?: string;
-            customer_name: string;
-            customer_email: string;
+            customer_name?: string;
+            customer_email?: string;
             customer_phone?: string;
             subject: string;
             message: string;
@@ -530,6 +626,14 @@ export class MessagingService {
             priority?: 'low' | 'normal' | 'high' | 'urgent';
             thread_type?: 'general' | 'order_inquiry' | 'product_inquiry' | 'support' | 'complaint' | 'delivery' | 'return' | 'refund' | 'technical' | 'dispute';
         },
+        /**
+         * Marketplace key only, and required with one. The seller the shopper is writing to.
+         */
+        storeId?: string,
+        /**
+         * The shopper's IP address, sent by a server calling with a secret key so each shopper has their own rate-limit budget. Honoured on a secret key only; without it every request on that key counts as one address.
+         */
+        xForwardedShopperIp?: string,
         /**
          * Customer session access_token. Required when body.customer_id is supplied so the gateway can prove the caller owns that customer record.
          */
@@ -566,6 +670,41 @@ export class MessagingService {
              * The product this conversation is about, echoed from the request.
              */
             product_id?: string | null;
+            /**
+             * Marketplace key only. The seller the conversation is with.
+             */
+            store_id?: string;
+            /**
+             * Marketplace key only. The seller's name.
+             */
+            store_name?: string;
+            /**
+             * Present on a conversation opened through a marketplace. Discloses that the marketplace can read the conversation and join it, and whether it has.
+             */
+            marketplace?: {
+                /**
+                 * The marketplace's name.
+                 */
+                name?: string;
+                operator_can_read?: boolean;
+                /**
+                 * A sentence to show the shopper beside the conversation.
+                 */
+                notice?: string;
+                operator_joined?: boolean;
+                /**
+                 * When true the marketplace has paused the shopper's replies.
+                 */
+                restricted?: boolean;
+            };
+            /**
+             * Present on a marketplace `order_inquiry` conversation: the endpoints that act on the order. A conversation never opens a return or a dispute.
+             */
+            order_help?: {
+                returns?: string;
+                return_eligibility?: string;
+                disputes?: string;
+            };
         };
         message?: {
             id?: string;
@@ -576,9 +715,13 @@ export class MessagingService {
             method: 'POST',
             url: '/v1/messaging/conversations',
             headers: {
+                'X-Forwarded-Shopper-Ip': xForwardedShopperIp,
                 'x-auth-token': xAuthToken,
                 'x-external-auth': xExternalAuth,
                 'x-idp-token': xIdpToken,
+            },
+            query: {
+                'store_id': storeId,
             },
             body: requestBody,
             mediaType: 'application/json',
@@ -587,6 +730,7 @@ export class MessagingService {
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
+                404: `Marketplace key only. The seller is not active in this marketplace, or the order is not the shopper's.`,
                 429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
                 \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
                 On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
@@ -952,11 +1096,16 @@ export class MessagingService {
      * another store's) is the same `404` with no other detail; so is a body without a `token`. A body that is not a JSON object answers `400`. Internal notes and the guest's
      * contact details are never returned. At most 120 reads an hour per address and 60 per token.
      *
+     * With a marketplace operator or marketplace key the token opens a guest conversation of that marketplace only,
+     * the thread carries `marketplace`, and `seller_name` names the seller. A seller's own key never opens a marketplace
+     * conversation.
+     *
      * @returns any The conversation, oldest message first (the latest 100).
      * @throws ApiError
      */
     public viewGuestThread({
         requestBody,
+        xForwardedShopperIp,
     }: {
         requestBody: {
             /**
@@ -964,6 +1113,10 @@ export class MessagingService {
              */
             token: string;
         },
+        /**
+         * The shopper's IP address, sent by a server calling with a secret key so each shopper has their own rate-limit budget. Honoured on a secret key only; without it every request on that key counts as one address.
+         */
+        xForwardedShopperIp?: string,
     }): CancelablePromise<{
         thread?: {
             subject?: string;
@@ -985,6 +1138,9 @@ export class MessagingService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/messaging/guest-thread/view',
+            headers: {
+                'X-Forwarded-Shopper-Ip': xForwardedShopperIp,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
@@ -1004,18 +1160,24 @@ export class MessagingService {
      * Reply on a guest conversation from its email link
      * Posts the guest's message on the conversation the link opens. The token rules are those of
      * `viewGuestThread`. A resolved conversation reopens. At most 20 replies an hour per address, 12
-     * per token and 10 per conversation; past that the answer is `429`.
+     * per token and 10 per conversation; past that the answer is `429`. A conversation the marketplace has
+     * restricted answers `403`.
      *
      * @returns any Reply posted
      * @throws ApiError
      */
     public replyToGuestThread({
         requestBody,
+        xForwardedShopperIp,
     }: {
         requestBody: {
             token: string;
             message: string;
         },
+        /**
+         * The shopper's IP address, sent by a server calling with a secret key so each shopper has their own rate-limit budget. Honoured on a secret key only; without it every request on that key counts as one address.
+         */
+        xForwardedShopperIp?: string,
     }): CancelablePromise<{
         message?: {
             id?: string;
@@ -1025,11 +1187,123 @@ export class MessagingService {
         return this.httpRequest.request({
             method: 'POST',
             url: '/v1/messaging/guest-thread/reply',
+            headers: {
+                'X-Forwarded-Shopper-Ip': xForwardedShopperIp,
+            },
             body: requestBody,
             mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour.`,
+                404: `Resource not found`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Report a marketplace guest conversation from its email link
+     * A guest reports their marketplace conversation to the marketplace, authorised by the token from the reply email
+     * under the token rules of `viewGuestThread`. Available with a marketplace operator or marketplace key only. Every
+     * token failure is the same `404`. At most 20 reports an hour per address and 12 per token.
+     *
+     * @returns any Report recorded
+     * @throws ApiError
+     */
+    public reportGuestThread({
+        requestBody,
+        xForwardedShopperIp,
+    }: {
+        requestBody: {
+            token: string;
+            reason: 'spam' | 'abuse' | 'scam' | 'off_platform' | 'other';
+            note?: string;
+        },
+        /**
+         * The shopper's IP address, sent by a server calling with a secret key so each shopper has their own rate-limit budget. Honoured on a secret key only; without it every request on that key counts as one address.
+         */
+        xForwardedShopperIp?: string,
+    }): CancelablePromise<{
+        report_id?: string;
+        already_reported?: boolean;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/messaging/guest-thread/report',
+            headers: {
+                'X-Forwarded-Shopper-Ip': xForwardedShopperIp,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed - invalid or missing API key`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                404: `Resource not found`,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Report a marketplace conversation
+     * Reports a marketplace conversation to the marketplace that runs it, for spam, abuse, a scam or a request to deal
+     * off the marketplace. Available with a marketplace operator or marketplace key only; the thread must be the
+     * signed-in marketplace shopper's own (`404` otherwise). A report may name one message of the conversation. Repeating
+     * an open report on the same conversation and message answers the existing report with `already_reported: true`.
+     * At most 20 reports an hour per address and per shopper.
+     *
+     * @returns any Report recorded
+     * @throws ApiError
+     */
+    public reportThread({
+        id,
+        requestBody,
+        xAuthToken,
+        xExternalAuth,
+    }: {
+        id: string,
+        requestBody: {
+            reason: 'spam' | 'abuse' | 'scam' | 'off_platform' | 'other';
+            note?: string;
+            /**
+             * The message being reported, when it is one message.
+             */
+            message_id?: string;
+        },
+        /**
+         * A marketplace shopper session. Provide exactly one of `x-auth-token` or `x-external-auth`.
+         */
+        xAuthToken?: string,
+        /**
+         * An assertion signed with the marketplace's secret. Provide exactly one of `x-auth-token` or `x-external-auth`.
+         */
+        xExternalAuth?: string,
+    }): CancelablePromise<{
+        report_id?: string;
+        already_reported?: boolean;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/messaging/threads/{id}/report',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
                 402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
                 403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour.`,
                 404: `Resource not found`,

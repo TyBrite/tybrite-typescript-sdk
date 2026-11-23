@@ -2210,6 +2210,14 @@ export class AgentService {
             payment_status?: string;
             total?: number;
             tracking_number?: string | null;
+            /**
+             * The carrier shipping the order, from the purchased label or the merchant's own entry. `null` when none is recorded.
+             */
+            carrier?: string | null;
+            /**
+             * The carrier's tracking page for `tracking_number`. `null` when none is recorded.
+             */
+            tracking_url?: string | null;
             estimated_delivery?: string | null;
             placed_through_agent?: boolean;
             shipped_at?: string | null;

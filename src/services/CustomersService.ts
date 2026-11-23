@@ -210,6 +210,10 @@ export class CustomersService {
      * `email` to an address another customer of the store already uses returns
      * `409`.
      *
+     * A storefront with no server of its own changes a shopper's address with
+     * `POST /v1/customers/{id}/email-change` and `.../email-change/confirm`,
+     * which prove the shopper can read the new address with a one-time code.
+     *
      * @returns any Customer updated successfully
      * @throws ApiError
      */
@@ -1689,6 +1693,179 @@ export class CustomersService {
                 'x-external-auth': xExternalAuth,
                 'x-idp-token': xIdpToken,
             },
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
+                404: `Resource not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Start changing a shopper's email address
+     * Send a six-digit code to the new address, which the shopper enters in `POST /v1/customers/{id}/email-change/confirm`.
+     * The account keeps its current address until the code is confirmed, and the current address is sent a notice that a
+     * change was requested. The code is valid for 15 minutes, can be tried 5 times and works once. A new request replaces
+     * the previous pending one. Emails carry the store's name and branding.
+     *
+     * Responds `202` with the address the code was sent to. `409 conflict` when the new address is already the account's
+     * address; `409 email_managed_externally` when the account is signed in through the store's own identity system;
+     * `429` when a code was already sent to that address in the last minute, or the shopper has made 5 requests in an hour.
+     *
+     * **Customer-self access.** Works with a publishable key (safe from the browser). The credential must resolve to the
+     * customer in the `{id}` path parameter, otherwise the request returns `403`.
+     *
+     * @returns any A code was sent to the new address.
+     * @throws ApiError
+     */
+    public requestCustomerEmailChange({
+        id,
+        xAuthToken,
+        requestBody,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The shopper's customer id.
+         */
+        id: string,
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter. Only a store-managed shopper account can change its email here; a shopper signed in with `x-external-auth` or `x-idp-token` is refused with `409 email_managed_externally`, because the store's own identity system owns that address.
+         */
+        xAuthToken: string,
+        requestBody: {
+            /**
+             * The new email address.
+             */
+            email: string;
+        },
+        /**
+         * The store's bring-your-own-auth assertion. Accepted so the credential can be resolved, then refused with `409 email_managed_externally`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Accepted so the credential can be resolved, then refused with `409 email_managed_externally`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        status: 'code_sent';
+        /**
+         * The address the code was sent to.
+         */
+        email: string;
+        /**
+         * Seconds until the code expires.
+         */
+        expires_in: number;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/customers/{id}/email-change',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Invalid request - malformed data or missing required fields`,
+                401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,
+                402: `The store's subscription is not active, or the store is deactivated. Every API-keyed request for that store answers \`402\` with \`subscription_expired\` until the subscription is renewed.`,
+                403: `Insufficient permissions for this key. A GC Connect key that was not granted the operation's scope (for example \`agent:read\` or \`orders:write\`) receives \`insufficient_scope\`, and the message names the scope. A request that needs a secret key (a publishable key on a write, whatever scopes it holds), or a marketplace operator key calling a single-store operation, receives \`forbidden\`. A store whose plan does not include the feature the route belongs to receives \`feature_not_available\`, whatever the key. A publishable key limited to the products that carry one tag receives \`out_of_scope\` for a product, variant, promotion or review outside its slice, and \`endpoint_not_allowed\` on a route that has no slice behaviour. A request that identifies a customer (\`x-auth-token\`, \`x-external-auth\` or \`x-idp-token\`) whose account has been closed receives \`account_closed\`.`,
+                404: `Resource not found`,
+                409: `Conflict — the request could not be completed because it conflicts with the current state of a resource.
+                Common causes:
+                - Email already registered to another customer at this store
+                - Item already exists in wishlist
+                - Idempotency-Key reused with a different request body
+                `,
+                429: `Too many requests. Three distinct \`429\` codes: \`rate_limited\` (an abuse throttle — too many requests too fast; carries an \`X-RateLimit-Scope: abuse\` header and is NOT counted against your monthly quota), \`guest_limit_reached\` (the same per-address throttle, answered to a guest, a request with no shopper credential, whose per-address hourly budget at this store is lower than a signed-in shopper's) and \`quota_exceeded\` (your plan's monthly request allowance is reached).
+                \`guest_limit_reached\` carries \`details\`: \`scope\` is \`guest\`, \`bucket\` is \`browse\`, \`limit\` is the guest budget, \`window_seconds\` is \`3600\`, \`remaining\` is \`0\`, \`reset\` and \`retry_after\` say when the hour ends, \`signed_in_limit\` is the signed-in shopper's budget and \`sign_in_raises_limit\` is \`true\`. A storefront shows its sign-in prompt for this code. A signed-in shopper, and a guest whose budget is not lower than the signed-in one, get \`rate_limited\`.
+                On a throttle refusal (\`rate_limited\`, \`guest_limit_reached\`) \`X-RateLimit-Limit\`, \`X-RateLimit-Remaining\` and \`X-RateLimit-Reset\` describe the window that refused the request (the hour, the day or the per-address hour) and \`Retry-After\` is the time until it ends. On \`quota_exceeded\` they describe the monthly allowance.`,
+                500: `Internal server error. A 5xx response never carries \`details\`.`,
+            },
+        });
+    }
+    /**
+     * Confirm a shopper's new email address
+     * Check the code sent to the new address and change the account's email. The shopper's sign-in address and customer
+     * record change together, and the previous address is sent a notice. The address is read from the pending request,
+     * never from this call.
+     *
+     * Refusals: `400 invalid_code` (wrong, already used, or no change pending), `400 code_expired`,
+     * `429 too_many_attempts` (5 wrong codes lock the code; request a new one), `409 email_taken` (another customer of
+     * the store already uses the address), `409 email_managed_externally`. Limited to 10 confirmations per shopper per hour.
+     *
+     * **Customer-self access.** Works with a publishable key (safe from the browser). The credential must resolve to the
+     * customer in the `{id}` path parameter, otherwise the request returns `403`.
+     *
+     * @returns any The email address was changed.
+     * @throws ApiError
+     */
+    public confirmCustomerEmailChange({
+        id,
+        xAuthToken,
+        requestBody,
+        xExternalAuth,
+        xIdpToken,
+    }: {
+        /**
+         * The shopper's customer id.
+         */
+        id: string,
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter. Only a store-managed shopper account can change its email here; a shopper signed in with `x-external-auth` or `x-idp-token` is refused with `409 email_managed_externally`, because the store's own identity system owns that address.
+         */
+        xAuthToken: string,
+        requestBody: {
+            /**
+             * The six-digit code from the email.
+             */
+            code: string;
+        },
+        /**
+         * The store's bring-your-own-auth assertion. Accepted so the credential can be resolved, then refused with `409 email_managed_externally`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xExternalAuth?: string,
+        /**
+         * A raw token from the store's own identity provider. Accepted so the credential can be resolved, then refused with `409 email_managed_externally`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
+         */
+        xIdpToken?: string,
+    }): CancelablePromise<{
+        status: 'email_changed';
+        /**
+         * The account's new email address.
+         */
+        email: string;
+    }> {
+        return this.httpRequest.request({
+            method: 'POST',
+            url: '/v1/customers/{id}/email-change/confirm',
+            path: {
+                'id': id,
+            },
+            headers: {
+                'x-auth-token': xAuthToken,
+                'x-external-auth': xExternalAuth,
+                'x-idp-token': xIdpToken,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 400: `Invalid request - malformed data or missing required fields`,
                 401: `Authentication failed. \`unauthorized\` means the API key is missing or invalid, or the \`x-auth-token\` header is absent. \`invalid_token\` means the \`x-auth-token\` is not a valid sign-in token for this store and environment: expired, revoked, issued by another store, or malformed. A storefront refreshes the session once with \`POST /v1/auth/refresh\` and treats the shopper as signed out if that fails.`,

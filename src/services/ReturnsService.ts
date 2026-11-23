@@ -54,6 +54,14 @@ export class ReturnsService {
      * **When `window_days` is `null`** the merchant has stated no period, `eligible` is `true`, and
      * `closes_at` is `null` — say returns are accepted without naming a deadline.
      *
+     * **Statutory right of withdrawal.** For an order shipped to the UK, the EU or the EEA, a consumer may
+     * cancel within 14 days of delivery whatever shorter window the merchant sets. `closes_at` is the later of
+     * the two windows and `basis` names the one that governs it (`merchant_policy` or `statutory_withdrawal`).
+     * Lines the right does not cover (personalised, perishable, sealed hygiene, an excluded category, digital
+     * content, services, dated tickets) stay on the merchant window and are listed in `exempt_items`; when every
+     * line is excluded and the merchant window has closed, `reason` is `item_excluded`. A refused return carries
+     * a `message` sentence that can be shown to the shopper. The merchant's window is never shortened by this.
+     *
      * **Customer session required** — the order must belong to the signed-in shopper, so this can
      * never be used to probe whether an arbitrary order id exists on the store.
      *
@@ -96,21 +104,43 @@ export class ReturnsService {
              */
             eligible: boolean;
             /**
-             * Why not, when `eligible` is false. `window_closed` (the period has passed), `returns_disabled` (the store does not accept returns) or `not_paid` (the order was never paid, or was cancelled). Null when eligible.
+             * Why not, when `eligible` is false. `window_closed` (the period has passed), `item_excluded` (the merchant window has closed and every item on the order is outside the statutory right of withdrawal), `returns_disabled` (the store does not accept returns) or `not_paid` (the order was never paid, or was cancelled). Null when eligible.
              */
-            reason?: 'window_closed' | 'returns_disabled' | 'not_paid';
+            reason?: 'window_closed' | 'item_excluded' | 'returns_disabled' | 'not_paid';
+            /**
+             * Which rule sets `closes_at`: the store's own window, or the statutory right of withdrawal (UK, EU and EEA orders, 14 days from delivery at least) when it outlasts the store's window.
+             */
+            basis: 'merchant_policy' | 'statutory_withdrawal';
             /**
              * The store's return window, or null when it has stated none.
              */
             window_days?: number | null;
             /**
-             * When the window closes for THIS order, measured from delivery where the store records it and from the order date otherwise. Null when there is no window.
+             * The statutory withdrawal period that applies to this order, or null when none applies.
+             */
+            statutory_days?: number | null;
+            /**
+             * When the window closes for THIS order: the later of the store's window and the statutory period, measured from delivery where the store records it and from the order date otherwise. Null when there is no window, or when the statutory right is open because the order has not been delivered.
              */
             closes_at?: string | null;
             /**
-             * Whole days left, 0 once closed and null when there is no window.
+             * Whole days left, 0 once closed and null when there is no closing date.
              */
             days_remaining?: number | null;
+            /**
+             * Order lines the statutory right of withdrawal does not cover; they stay on the store's window.
+             */
+            exempt_items?: Array<{
+                order_item_id: string;
+                /**
+                 * Why the line is excluded, for example `personalised`, `perishable`, `hygiene_sealed`, `category`, `digital`, `code`, `service` or `event_ticket`.
+                 */
+                reason: string;
+            }>;
+            /**
+             * A sentence that can be shown to the shopper when `eligible` is false. Null when eligible.
+             */
+            message?: string | null;
         };
     }> {
         return this.httpRequest.request({
