@@ -94,6 +94,10 @@ export type Promotion = {
      */
     scope_ids?: Array<string>;
     /**
+     * Products this promotion never discounts, whatever its `scope_type`. Empty (the default) excludes nothing. The calculate endpoints leave an excluded product out of the covered lines: no discount comes off it, `min_purchase` is measured on the lines that remain (unless `min_purchase_basis` is `order`), and a cart holding only excluded products is not eligible. A `bundle` or `bogo` promotion that names an excluded product as one it discounts is not eligible.
+     */
+    excluded_product_ids?: Array<string>;
+    /**
      * What `min_purchase` is counted on for a promotion limited by `scope_type`. `covered` (the default) counts only the covered lines; `order` counts the whole order. A promotion for the whole order (`scope_type` `all`) is unaffected: both are the same amount.
      */
     min_purchase_basis?: Promotion.min_purchase_basis;
