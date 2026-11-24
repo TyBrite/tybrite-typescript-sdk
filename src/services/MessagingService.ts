@@ -176,17 +176,17 @@ export class MessagingService {
      * @throws ApiError
      */
     public getThread({
-        xAuthToken,
         id,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
         fields,
     }: {
+        id: string,
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
          */
-        xAuthToken: string,
-        id: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
          *
@@ -281,16 +281,12 @@ export class MessagingService {
      * @throws ApiError
      */
     public updateThread({
-        xAuthToken,
         id,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
-        /**
-         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
-         */
-        xAuthToken: string,
         id: string,
         requestBody: {
             /**
@@ -314,6 +310,10 @@ export class MessagingService {
              */
             pinned?: boolean;
         },
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
          *
@@ -379,8 +379,8 @@ export class MessagingService {
      * @throws ApiError
      */
     public getThreadMessages({
-        xAuthToken,
         id,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
         limit = 50,
@@ -388,11 +388,11 @@ export class MessagingService {
         order = 'asc',
         fields,
     }: {
+        id: string,
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
          */
-        xAuthToken: string,
-        id: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
          *
@@ -484,20 +484,20 @@ export class MessagingService {
      * @throws ApiError
      */
     public sendMessage({
-        xAuthToken,
         id,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
-        /**
-         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
-         */
-        xAuthToken: string,
         id: string,
         requestBody: {
             message: string;
         },
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
          *
@@ -748,16 +748,16 @@ export class MessagingService {
      * @throws ApiError
      */
     public markThreadRead({
-        xAuthToken,
         id,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
+        id: string,
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
          */
-        xAuthToken: string,
-        id: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
          *
@@ -814,16 +814,12 @@ export class MessagingService {
      * @throws ApiError
      */
     public editMessage({
-        xAuthToken,
         id,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
-        /**
-         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
-         */
-        xAuthToken: string,
         id: string,
         requestBody: {
             /**
@@ -831,6 +827,10 @@ export class MessagingService {
              */
             message_content: string;
         },
+        /**
+         * Customer session access_token. Required to prove ownership of the thread/message being accessed.
+         */
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
          *
@@ -893,16 +893,16 @@ export class MessagingService {
      * @throws ApiError
      */
     public deleteMessage({
-        xAuthToken,
         id,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
+        id: string,
         /**
          * Customer session access_token. Required to prove ownership of the thread/message being accessed.
          */
-        xAuthToken: string,
-        id: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). The resolved customer is used as the message author / thread participant.
          *

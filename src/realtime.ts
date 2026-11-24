@@ -26,15 +26,21 @@ export interface SubscribeToThreadOptions {
   /** Your publishable key (`tybrite_pk_*`). */
   apiKey: string;
   /**
-   * The signed-in customer's session token (from `client.auth.login`). Supply this
-   * OR `externalAuth` — one customer credential is required to authorize the socket.
+   * The signed-in customer's session token (from `client.auth.login`). Supply exactly one of
+   * `authToken`, `externalAuth` or `idpToken` to authorize the socket.
    */
   authToken?: string;
   /**
-   * A signed external-identity assertion (bring-your-own-auth). Supply this OR
-   * `authToken`.
+   * A signed external-identity assertion (bring-your-own-auth). Supply exactly one of
+   * `authToken`, `externalAuth` or `idpToken`.
    */
   externalAuth?: string;
+  /**
+   * A raw token from the store's own identity provider, verified by the store's configured
+   * verifier (the same credential as the `x-idp-token` header). Supply exactly one of
+   * `authToken`, `externalAuth` or `idpToken`.
+   */
+  idpToken?: string;
   /** Called with each new message's payload as it arrives. */
   onMessage: (message: any) => void;
   /**
@@ -83,6 +89,7 @@ export function subscribeToThread(options: SubscribeToThreadOptions): ThreadSubs
     apiKey,
     authToken,
     externalAuth,
+    idpToken,
     onMessage,
     onPresence,
     onTyping,
@@ -93,8 +100,9 @@ export function subscribeToThread(options: SubscribeToThreadOptions): ThreadSubs
 
   if (!threadId) throw new Error('subscribeToThread: threadId is required.');
   if (!apiKey) throw new Error('subscribeToThread: apiKey is required.');
-  if (!authToken && !externalAuth) {
-    throw new Error('subscribeToThread: supply authToken (Galactic Core session) or externalAuth.');
+  const credentials = [authToken, externalAuth, idpToken].filter(Boolean).length;
+  if (credentials !== 1) {
+    throw new Error('subscribeToThread: supply exactly one of authToken (Galactic Core session), externalAuth or idpToken.');
   }
   if (typeof WebSocket === 'undefined') {
     throw new Error('subscribeToThread: no global WebSocket in this runtime (Node 22+ or a browser is required).');
@@ -104,6 +112,7 @@ export function subscribeToThread(options: SubscribeToThreadOptions): ThreadSubs
   const params = new URLSearchParams({ api_key: apiKey });
   if (authToken) params.set('auth_token', authToken);
   if (externalAuth) params.set('external_auth', externalAuth);
+  if (idpToken) params.set('idp_token', idpToken);
   const url = `${wsBase}/v1/messaging/threads/${threadId}/subscribe?${params.toString()}`;
 
   const ws = new WebSocket(url);
@@ -177,6 +186,7 @@ export function subscribeToThread(options: SubscribeToThreadOptions): ThreadSubs
       const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
       if (authToken) headers['x-auth-token'] = authToken;
       if (externalAuth) headers['x-external-auth'] = externalAuth;
+      if (idpToken) headers['x-idp-token'] = idpToken;
       void fetch(`${baseUrl.replace(/\/+$/, '')}/v1/messaging/threads/${threadId}/read`, { method: 'POST', headers });
     } catch { /* best-effort */ }
   };

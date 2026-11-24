@@ -320,7 +320,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
          *
@@ -375,8 +375,8 @@ export class CustomersService {
      */
     public createAddress({
         id,
-        xAuthToken,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
@@ -384,10 +384,6 @@ export class CustomersService {
          * The shopper's customer id.
          */
         id: string,
-        /**
-         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
-         */
-        xAuthToken: string,
         requestBody: {
             full_name: string;
             line1: string;
@@ -414,6 +410,10 @@ export class CustomersService {
              */
             is_default_billing?: boolean;
         },
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
          *
@@ -471,8 +471,8 @@ export class CustomersService {
     public updateAddress({
         id,
         addressId,
-        xAuthToken,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
@@ -484,10 +484,6 @@ export class CustomersService {
          * The id of the saved address to update.
          */
         addressId: string,
-        /**
-         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
-         */
-        xAuthToken: string,
         requestBody: {
             full_name?: string;
             line1?: string;
@@ -502,6 +498,10 @@ export class CustomersService {
             is_default_shipping?: boolean;
             is_default_billing?: boolean;
         },
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
          *
@@ -573,7 +573,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose addresses are managed.
          *
@@ -643,7 +643,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -716,7 +716,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -787,8 +787,8 @@ export class CustomersService {
     public updateShopperSubscription({
         id,
         subscriptionId,
-        xAuthToken,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
@@ -800,10 +800,6 @@ export class CustomersService {
          * The id of the Subscribe & Save subscription.
          */
         subscriptionId: string,
-        /**
-         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
-         */
-        xAuthToken: string,
         requestBody: {
             interval_unit?: 'week' | 'month';
             interval_count?: number;
@@ -823,6 +819,10 @@ export class CustomersService {
             pickup_location_id?: string;
             shipping_option_id?: string;
         },
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -903,7 +903,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -988,7 +988,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -1066,7 +1066,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -1146,7 +1146,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -1250,7 +1250,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose subscriptions are managed.
          *
@@ -1327,7 +1327,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose saved cards are managed.
          *
@@ -1402,7 +1402,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose saved cards are managed.
          *
@@ -1474,7 +1474,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose data requests are managed.
          *
@@ -1549,8 +1549,8 @@ export class CustomersService {
      */
     public createCustomerDataRequest({
         id,
-        xAuthToken,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
         idempotencyKey,
@@ -1559,10 +1559,6 @@ export class CustomersService {
          * The shopper's customer id.
          */
         id: string,
-        /**
-         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
-         */
-        xAuthToken: string,
         requestBody: {
             kind: 'export' | 'erasure';
             /**
@@ -1570,6 +1566,10 @@ export class CustomersService {
              */
             confirm?: boolean;
         },
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
+         */
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose data requests are managed.
          *
@@ -1665,7 +1665,7 @@ export class CustomersService {
         /**
          * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter.
          */
-        xAuthToken: string,
+        xAuthToken?: string,
         /**
          * Bring-your-own-auth assertion for stores that manage authentication in an external identity provider (Auth0, Clerk, Cognito, Firebase, NextAuth, SSO). Resolves the shopper whose data requests are managed.
          *
@@ -1731,8 +1731,8 @@ export class CustomersService {
      */
     public requestCustomerEmailChange({
         id,
-        xAuthToken,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
@@ -1740,16 +1740,16 @@ export class CustomersService {
          * The shopper's customer id.
          */
         id: string,
-        /**
-         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter. Only a store-managed shopper account can change its email here; a shopper signed in with `x-external-auth` or `x-idp-token` is refused with `409 email_managed_externally`, because the store's own identity system owns that address.
-         */
-        xAuthToken: string,
         requestBody: {
             /**
              * The new email address.
              */
             email: string;
         },
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter. Only a store-managed shopper account can change its email here; a shopper signed in with `x-external-auth` or `x-idp-token` is refused with `409 email_managed_externally`, because the store's own identity system owns that address.
+         */
+        xAuthToken?: string,
         /**
          * The store's bring-your-own-auth assertion. Accepted so the credential can be resolved, then refused with `409 email_managed_externally`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
@@ -1819,8 +1819,8 @@ export class CustomersService {
      */
     public confirmCustomerEmailChange({
         id,
-        xAuthToken,
         requestBody,
+        xAuthToken,
         xExternalAuth,
         xIdpToken,
     }: {
@@ -1828,16 +1828,16 @@ export class CustomersService {
          * The shopper's customer id.
          */
         id: string,
-        /**
-         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter. Only a store-managed shopper account can change its email here; a shopper signed in with `x-external-auth` or `x-idp-token` is refused with `409 email_managed_externally`, because the store's own identity system owns that address.
-         */
-        xAuthToken: string,
         requestBody: {
             /**
              * The six-digit code from the email.
              */
             code: string;
         },
+        /**
+         * The signed-in shopper's session token, obtained when the shopper logs in. Must resolve to the customer in the `{id}` path parameter. Only a store-managed shopper account can change its email here; a shopper signed in with `x-external-auth` or `x-idp-token` is refused with `409 email_managed_externally`, because the store's own identity system owns that address.
+         */
+        xAuthToken?: string,
         /**
          * The store's bring-your-own-auth assertion. Accepted so the credential can be resolved, then refused with `409 email_managed_externally`. Provide exactly one of `x-auth-token`, `x-external-auth`, or `x-idp-token`.
          */
